@@ -1117,8 +1117,8 @@ window.resetStatoCassoni = async function(stato) {
   statusEl.textContent = `✅ ${n} cassoni impostati su "${lbl}"`;
   toast(`✓ ${n} cassoni → ${lbl}`, 'ok');
 };
-  if (!db) { toast('Firebase non connesso', 'err'); return; }
-  const file = event.target.files[0];
+
+window.importaClienti = async function(event) {
   if (!file) return;
   const statusEl = document.getElementById('import-clienti-status');
   statusEl.textContent = '⏳ Lettura...';
