@@ -1,0 +1,935 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Tracker Cassoni</title>
+<style>
+/* ── RESET & BASE ──────────────────────────────── */
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --ink:#1a1f2e;--ink2:#4a5568;--ink3:#8896aa;
+  --bg:#f0f2f7;--surface:#fff;--surface2:#f7f9fc;
+  --green:#0a7c4e;--green-l:#e6f7f0;--green-d:#065c39;
+  --red:#c0392b;--red-l:#fdf0ee;
+  --amber:#b45309;--amber-l:#fef3c7;
+  --blue:#1a4f8a;--blue-l:#e8f0fc;
+  --border:#dde3ef;
+  --radius:10px;--radius-sm:7px;
+  --shadow:0 2px 12px rgba(26,31,46,.09);
+  --shadow-lg:0 8px 32px rgba(26,31,46,.14);
+  --font:'Inter',system-ui,sans-serif;
+}
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+body{font-family:var(--font);background:var(--bg);color:var(--ink);min-height:100vh;-webkit-font-smoothing:antialiased}
+
+/* ── NAVBAR ─────────────────────────────────────── */
+.nav{background:var(--ink);color:#fff;padding:0 1.5rem;display:flex;align-items:center;gap:0;height:52px;position:sticky;top:0;z-index:100;box-shadow:0 2px 8px rgba(0,0,0,.25)}
+.nav-brand{font-size:15px;font-weight:700;letter-spacing:-.01em;margin-right:auto;display:flex;align-items:center;gap:8px}
+.nav-brand span{background:#0a7c4e;padding:3px 8px;border-radius:5px;font-size:11px;font-weight:800;letter-spacing:.06em}
+.nav-tabs{display:flex;height:100%}
+.nav-tab{padding:0 18px;height:100%;display:flex;align-items:center;font-size:13px;font-weight:500;color:rgba(255,255,255,.55);cursor:pointer;border:none;background:none;border-bottom:3px solid transparent;transition:all .15s;letter-spacing:.01em}
+.nav-tab.active{color:#fff;border-bottom-color:#0a7c4e}
+.nav-tab:hover:not(.active){color:rgba(255,255,255,.85)}
+.firebase-dot{width:8px;height:8px;border-radius:50%;background:#555;margin-left:12px;transition:background .3s;flex-shrink:0}
+.firebase-dot.ok{background:#0a7c4e}
+.firebase-dot.err{background:#c0392b}
+
+/* ── VIEWS ───────────────────────────────────────── */
+.view{display:none;min-height:calc(100vh - 52px)}
+.view.active{display:block}
+
+/* ── DASHBOARD ───────────────────────────────────── */
+.dash{max-width:1200px;margin:0 auto;padding:1.5rem}
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-bottom:1.5rem}
+.kpi{background:var(--surface);border-radius:var(--radius);padding:1.1rem 1.25rem;box-shadow:var(--shadow);border:1px solid var(--border)}
+.kpi-val{font-size:2.2rem;font-weight:800;line-height:1;margin-bottom:4px}
+.kpi-lbl{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--ink3)}
+.kpi-val.green{color:var(--green)}
+.kpi-val.red{color:var(--red)}
+.kpi-val.amber{color:var(--amber)}
+.kpi-val.blue{color:var(--blue)}
+
+.dash-grid{display:grid;grid-template-columns:1fr 1fr;gap:1.25rem}
+.card{background:var(--surface);border-radius:var(--radius);box-shadow:var(--shadow);border:1px solid var(--border);overflow:hidden}
+.card-header{padding:.9rem 1.25rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.card-title{font-size:13px;font-weight:700;color:var(--ink);display:flex;align-items:center;gap:7px}
+.card-body{padding:1.1rem 1.25rem}
+
+/* Piazzale live */
+.piazzale-grid{display:flex;flex-wrap:wrap;gap:8px}
+.cassone-chip{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:20px;font-size:12px;font-weight:600;border:1.5px solid;cursor:default;transition:all .15s}
+.chip-piazzale{background:var(--green-l);border-color:#a7e5cc;color:var(--green-d)}
+.chip-fuori{background:var(--red-l);border-color:#f0b8b3;color:var(--red)}
+.chip-empty{color:var(--ink3);font-style:italic;font-size:12px;padding:8px 0}
+
+/* Movimenti recenti */
+.mov-list{display:flex;flex-direction:column;gap:6px;max-height:340px;overflow-y:auto}
+.mov-row{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:var(--radius-sm);background:var(--surface2);font-size:12px}
+.mov-badge{padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;white-space:nowrap}
+.badge-out{background:var(--red-l);color:var(--red)}
+.badge-in{background:var(--green-l);color:var(--green-d)}
+.mov-cassone{font-weight:700;color:var(--ink)}
+.mov-info{color:var(--ink2);flex:1}
+.mov-time{color:var(--ink3);font-size:11px;white-space:nowrap}
+
+/* Alerts DDT */
+.alert-list{display:flex;flex-direction:column;gap:8px}
+.alert-row{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:var(--radius-sm);background:var(--amber-l);border:1px solid #fcd34d;font-size:12px}
+.alert-row.alert-in{background:var(--green-l);border-color:#a7e5cc}
+.alert-icon{font-size:16px;flex-shrink:0}
+.alert-text{flex:1;font-weight:500;color:var(--ink)}
+.btn-ddt{padding:5px 12px;border-radius:6px;border:none;font-size:11px;font-weight:700;cursor:pointer;transition:all .15s;font-family:var(--font)}
+.btn-ddt-out{background:var(--amber);color:#fff}
+.btn-ddt-in{background:var(--green);color:#fff}
+.btn-ddt:hover{opacity:.85}
+
+/* ── BOLLETTAZIONE ───────────────────────────────── */
+.boll{max-width:1100px;margin:0 auto;padding:1.5rem}
+.boll-filters{display:flex;gap:10px;margin-bottom:1.25rem;flex-wrap:wrap;align-items:center}
+.boll-filters input,.boll-filters select{font-family:var(--font);font-size:13px;padding:8px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--ink);outline:none}
+.boll-filters input:focus,.boll-filters select:focus{border-color:var(--green)}
+.btn{padding:8px 16px;border-radius:var(--radius-sm);border:none;font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;display:inline-flex;align-items:center;gap:6px}
+.btn-primary{background:var(--green);color:#fff}
+.btn-primary:hover{background:var(--green-d)}
+.btn-ghost{background:var(--surface2);color:var(--ink2);border:1.5px solid var(--border)}
+.btn-ghost:hover{background:var(--border)}
+.btn-danger{background:var(--red-l);color:var(--red);border:1px solid #f0b8b3}
+.btn-sm{padding:5px 10px;font-size:11px}
+
+.mov-table{width:100%;border-collapse:collapse;font-size:13px}
+.mov-table thead th{background:var(--ink);color:#fff;padding:9px 12px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;white-space:nowrap}
+.mov-table tbody tr{border-bottom:1px solid var(--border);transition:background .1s}
+.mov-table tbody tr:hover{background:var(--surface2)}
+.mov-table td{padding:9px 12px;vertical-align:middle}
+.status-pill{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:700}
+.pill-out{background:var(--red-l);color:var(--red)}
+.pill-in{background:var(--green-l);color:var(--green-d)}
+.pill-pend{background:var(--amber-l);color:var(--amber)}
+.ddt-tag{font-size:10px;font-weight:700;padding:2px 7px;border-radius:5px;background:#e8f0fc;color:var(--blue);border:1px solid #c5d9f7;display:inline-block}
+.ddt-tag.pend{background:var(--amber-l);color:var(--amber);border-color:#fcd34d}
+
+/* ── TRASPORTATORE (mobile) ──────────────────────── */
+.trasp{max-width:420px;margin:0 auto;padding:1rem}
+.trasp-hero{background:linear-gradient(135deg,var(--green-d),var(--green));border-radius:var(--radius);padding:1.5rem;color:#fff;text-align:center;margin-bottom:1.25rem;box-shadow:var(--shadow)}
+.trasp-hero h2{font-size:1.15rem;font-weight:800;margin-bottom:4px}
+.trasp-hero p{font-size:12px;opacity:.75}
+
+.scan-area{background:var(--surface);border-radius:var(--radius);padding:1.25rem;box-shadow:var(--shadow);border:1px solid var(--border);margin-bottom:1rem}
+.scan-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ink3);margin-bottom:8px}
+.scan-input{width:100%;font-family:var(--font);font-size:18px;font-weight:700;padding:14px 16px;border:2px solid var(--border);border-radius:var(--radius-sm);color:var(--ink);background:var(--surface2);outline:none;transition:border-color .15s;text-align:center;letter-spacing:.1em}
+.scan-input:focus{border-color:var(--green);background:#fff}
+.scan-hint{font-size:11px;color:var(--ink3);text-align:center;margin-top:6px}
+
+.trasp-form{background:var(--surface);border-radius:var(--radius);padding:1.25rem;box-shadow:var(--shadow);border:1px solid var(--border);margin-bottom:1rem;display:none}
+.trasp-form.visible{display:block}
+.form-row{margin-bottom:.9rem}
+.form-lbl{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ink3);margin-bottom:5px;display:block}
+.form-ctrl{width:100%;font-family:var(--font);font-size:14px;padding:10px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);color:var(--ink);background:var(--surface2);outline:none;transition:border-color .15s}
+.form-ctrl:focus{border-color:var(--green);background:#fff}
+
+.cassone-found{background:var(--green-l);border:2px solid #a7e5cc;border-radius:var(--radius-sm);padding:10px 14px;display:none;margin-bottom:.9rem}
+.cassone-found.visible{display:block}
+.cassone-found-id{font-size:22px;font-weight:800;color:var(--green-d);letter-spacing:.08em}
+.cassone-found-tipo{font-size:12px;color:var(--green);font-weight:600}
+
+.action-btns{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.btn-uscita{background:var(--red);color:#fff;padding:16px;font-size:15px;font-weight:800;border-radius:var(--radius-sm);border:none;cursor:pointer;font-family:var(--font);transition:all .15s;display:flex;align-items:center;justify-content:center;gap:8px}
+.btn-rientro{background:var(--green);color:#fff;padding:16px;font-size:15px;font-weight:800;border-radius:var(--radius-sm);border:none;cursor:pointer;font-family:var(--font);transition:all .15s;display:flex;align-items:center;justify-content:center;gap:8px}
+.btn-uscita:hover{background:#a93226}
+.btn-rientro:hover{background:var(--green-d)}
+.btn-uscita:disabled,.btn-rientro:disabled{opacity:.4;cursor:not-allowed}
+
+.trasp-recenti{background:var(--surface);border-radius:var(--radius);padding:1.1rem;box-shadow:var(--shadow);border:1px solid var(--border)}
+.trasp-recenti h3{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ink3);margin-bottom:.75rem}
+.trasp-rec-item{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border);font-size:12px}
+.trasp-rec-item:last-child{border-bottom:none}
+
+/* ── DDT MODAL ───────────────────────────────────── */
+.modal-overlay{position:fixed;inset:0;background:rgba(26,31,46,.55);z-index:1000;display:none;align-items:center;justify-content:center;padding:1rem}
+.modal-overlay.open{display:flex}
+.modal{background:var(--surface);border-radius:var(--radius);box-shadow:var(--shadow-lg);width:min(620px,100%);max-height:90vh;overflow-y:auto}
+.modal-header{padding:1.1rem 1.5rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.modal-title{font-size:15px;font-weight:700}
+.modal-close{background:none;border:none;font-size:22px;cursor:pointer;color:var(--ink3);line-height:1;padding:0 4px}
+.modal-body{padding:1.5rem}
+.ddt-preview{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:1.25rem;font-size:13px;line-height:1.8}
+.ddt-preview h3{font-size:14px;font-weight:800;text-align:center;margin-bottom:.5rem;text-transform:uppercase;letter-spacing:.08em}
+.ddt-preview .ddt-meta{display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin:1rem 0;border-top:1px solid var(--border);border-bottom:1px solid var(--border);padding:.75rem 0}
+.ddt-preview .ddt-meta-item label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ink3);display:block}
+.ddt-preview .ddt-meta-item span{font-weight:600;color:var(--ink)}
+.ddt-table{width:100%;border-collapse:collapse;margin-top:.75rem;font-size:12px}
+.ddt-table th{background:var(--ink);color:#fff;padding:6px 10px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em}
+.ddt-table td{padding:7px 10px;border-bottom:1px solid var(--border)}
+.modal-footer{padding:1rem 1.5rem;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end}
+
+/* ── SETUP ───────────────────────────────────────── */
+.setup{max-width:520px;margin:3rem auto;padding:1.5rem}
+.setup-card{background:var(--surface);border-radius:var(--radius);padding:2rem;box-shadow:var(--shadow-lg);border:1px solid var(--border)}
+.setup-card h2{font-size:18px;font-weight:800;margin-bottom:.5rem}
+.setup-card p{font-size:13px;color:var(--ink2);margin-bottom:1.5rem;line-height:1.6}
+.setup-form-row{margin-bottom:1rem}
+.setup-form-row label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ink3);display:block;margin-bottom:5px}
+.setup-form-row input{width:100%;font-family:var(--font);font-size:13px;padding:9px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);color:var(--ink);outline:none}
+.setup-form-row input:focus{border-color:var(--green)}
+.setup-hint{font-size:11px;color:var(--ink3);margin-top:4px}
+
+/* ── TOAST ───────────────────────────────────────── */
+.toast{position:fixed;bottom:1.5rem;right:1.5rem;z-index:9999;background:var(--ink);color:#fff;padding:10px 18px;border-radius:var(--radius-sm);font-size:13px;font-weight:600;box-shadow:var(--shadow-lg);transform:translateY(60px);opacity:0;transition:all .3s cubic-bezier(.34,1.56,.64,1)}
+.toast.show{transform:translateY(0);opacity:1}
+.toast.toast-ok{background:var(--green)}
+.toast.toast-err{background:var(--red)}
+
+/* ── RESPONSIVE ──────────────────────────────────── */
+@media(max-width:768px){
+  .kpi-row{grid-template-columns:1fr 1fr}
+  .dash-grid{grid-template-columns:1fr}
+  .nav-tab{padding:0 12px;font-size:12px}
+}
+@media(max-width:480px){
+  .kpi-row{grid-template-columns:1fr 1fr}
+  .nav-brand{font-size:13px}
+}
+</style>
+</head>
+<body>
+
+<!-- NAVBAR -->
+<nav class="nav">
+  <div class="nav-brand">🚛 <span>TRACKER</span> Cassoni</div>
+  <div class="nav-tabs">
+    <button class="nav-tab active" onclick="switchView('dashboard')">📊 Dashboard</button>
+    <button class="nav-tab" onclick="switchView('bollettazione')">📋 Bollettazione</button>
+    <button class="nav-tab" onclick="switchView('trasportatore')">📱 Trasportatore</button>
+    <button class="nav-tab" onclick="switchView('setup')">⚙️ Config</button>
+  </div>
+  <div class="firebase-dot" id="fb-dot" title="Firebase: non connesso"></div>
+</nav>
+
+<!-- ════════ DASHBOARD ════════ -->
+<div class="view active" id="view-dashboard">
+<div class="dash">
+  <div class="kpi-row">
+    <div class="kpi"><div class="kpi-val green" id="kpi-piazzale">—</div><div class="kpi-lbl">In piazzale</div></div>
+    <div class="kpi"><div class="kpi-val red" id="kpi-fuori">—</div><div class="kpi-lbl">Fuori / in giro</div></div>
+    <div class="kpi"><div class="kpi-val amber" id="kpi-ddt-pend">—</div><div class="kpi-lbl">DDT da emettere</div></div>
+    <div class="kpi"><div class="kpi-val blue" id="kpi-oggi">—</div><div class="kpi-lbl">Movimenti oggi</div></div>
+  </div>
+  <div class="dash-grid">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">🏭 Piazzale — situazione live</div>
+        <span id="last-update" style="font-size:11px;color:var(--ink3)"></span>
+      </div>
+      <div class="card-body">
+        <div class="piazzale-grid" id="piazzale-grid"><span class="chip-empty">Nessun cassone registrato</span></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">⚠️ DDT da emettere</div>
+      </div>
+      <div class="card-body">
+        <div class="alert-list" id="ddt-alerts"><span style="font-size:12px;color:var(--ink3)">Nessun DDT in sospeso</span></div>
+      </div>
+    </div>
+    <div class="card" style="grid-column:1/-1">
+      <div class="card-header">
+        <div class="card-title">🔄 Ultimi movimenti</div>
+        <button class="btn btn-ghost btn-sm" onclick="switchView('bollettazione')">Vedi tutti →</button>
+      </div>
+      <div class="card-body">
+        <div class="mov-list" id="dash-movimenti"><span style="font-size:12px;color:var(--ink3)">Nessun movimento registrato</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ════════ BOLLETTAZIONE ════════ -->
+<div class="view" id="view-bollettazione">
+<div class="boll">
+  <div class="boll-filters">
+    <input type="text" id="filt-cerca" placeholder="🔍 Cassone, cliente..." oninput="renderBollettazione()" style="flex:1;min-width:180px">
+    <select id="filt-tipo" onchange="renderBollettazione()">
+      <option value="">Tutti i movimenti</option>
+      <option value="USCITA">Solo uscite</option>
+      <option value="RIENTRO">Solo rientri</option>
+    </select>
+    <select id="filt-ddt" onchange="renderBollettazione()">
+      <option value="">Tutti i DDT</option>
+      <option value="pend">DDT da emettere</option>
+      <option value="emesso">DDT emesso</option>
+    </select>
+    <input type="date" id="filt-data" onchange="renderBollettazione()">
+    <button class="btn btn-ghost btn-sm" onclick="document.getElementById('filt-cerca').value='';document.getElementById('filt-tipo').value='';document.getElementById('filt-ddt').value='';document.getElementById('filt-data').value='';renderBollettazione()">✕ Reset</button>
+    <button class="btn btn-primary btn-sm" onclick="exportCSV()">⬇ CSV</button>
+  </div>
+  <div class="card">
+    <table class="mov-table">
+      <thead><tr>
+        <th>Data / Ora</th><th>Cassone</th><th>Tipo</th><th>Movimento</th>
+        <th>Cliente</th><th>Autista</th><th>DDT</th><th></th>
+      </tr></thead>
+      <tbody id="boll-tbody"></tbody>
+    </table>
+  </div>
+</div>
+</div>
+
+<!-- ════════ TRASPORTATORE ════════ -->
+<div class="view" id="view-trasportatore">
+<div class="trasp">
+  <div class="trasp-hero">
+    <h2>Registra movimento cassone</h2>
+    <p>Scansiona il QR code o inserisci il codice manualmente</p>
+  </div>
+
+  <div class="scan-area">
+    <div class="scan-label">Codice cassone</div>
+    <input class="scan-input" id="scan-input" type="text" placeholder="es. CS-001" autocomplete="off" autocapitalize="characters" oninput="onScanInput(this.value)" onkeydown="if(event.key==='Enter')confermaScan()">
+    <div class="scan-hint">Punta la fotocamera sul QR o digita il codice</div>
+  </div>
+
+  <div class="cassone-found" id="cassone-found">
+    <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--green);margin-bottom:2px">Cassone rilevato</div>
+    <div class="cassone-found-id" id="found-id">—</div>
+    <div class="cassone-found-tipo" id="found-tipo">—</div>
+    <div id="found-status" style="font-size:11px;margin-top:4px;font-weight:600"></div>
+  </div>
+
+  <div class="trasp-form" id="trasp-form">
+    <div class="form-row">
+      <label class="form-lbl">Cliente / Destinazione</label>
+      <input class="form-ctrl" id="t-cliente" placeholder="Ragione sociale o cantiere" list="clienti-list">
+      <datalist id="clienti-list"></datalist>
+    </div>
+    <div class="form-row">
+      <label class="form-lbl">Il tuo nome (autista)</label>
+      <input class="form-ctrl" id="t-autista" placeholder="Nome e cognome">
+    </div>
+    <div class="form-row">
+      <label class="form-lbl">Note (opzionale)</label>
+      <input class="form-ctrl" id="t-note" placeholder="Es. targa mezzo, riferimento ordine...">
+    </div>
+    <div class="action-btns">
+      <button class="btn-uscita" id="btn-uscita" onclick="registraMovimento('USCITA')" disabled>
+        🔴 USCITA
+      </button>
+      <button class="btn-rientro" id="btn-rientro" onclick="registraMovimento('RIENTRO')" disabled>
+        🟢 RIENTRO
+      </button>
+    </div>
+  </div>
+
+  <div class="trasp-recenti">
+    <h3>Ultimi tuoi movimenti</h3>
+    <div id="trasp-recenti-list"><span style="font-size:12px;color:var(--ink3)">Nessuno ancora</span></div>
+  </div>
+</div>
+</div>
+
+<!-- ════════ SETUP ════════ -->
+<div class="view" id="view-setup">
+<div class="setup">
+  <div class="setup-card">
+    <h2>⚙️ Configurazione Firebase</h2>
+    <p>Inserisci le credenziali del tuo Firebase Realtime Database. Le trovi su <strong>console.firebase.google.com</strong> → Impostazioni progetto → App web → Configurazione SDK.</p>
+    <div class="setup-form-row">
+      <label>API Key</label>
+      <input type="text" id="cfg-apikey" placeholder="AIza...">
+    </div>
+    <div class="setup-form-row">
+      <label>Auth Domain</label>
+      <input type="text" id="cfg-authdomain" placeholder="progetto.firebaseapp.com">
+    </div>
+    <div class="setup-form-row">
+      <label>Database URL</label>
+      <input type="text" id="cfg-dburl" placeholder="https://progetto-default-rtdb.europe-west1.firebasedatabase.app">
+      <div class="setup-hint">Deve includere https:// e terminare con .firebaseio.com o .firebasedatabase.app</div>
+    </div>
+    <div class="setup-form-row">
+      <label>Project ID</label>
+      <input type="text" id="cfg-projectid" placeholder="nome-progetto">
+    </div>
+    <div style="display:flex;gap:8px;margin-top:1.25rem">
+      <button class="btn btn-primary" onclick="salvaConfig()">💾 Salva e connetti</button>
+      <button class="btn btn-ghost" onclick="testConnection()">🔌 Testa connessione</button>
+    </div>
+    <div id="cfg-status" style="margin-top:1rem;font-size:12px;color:var(--ink3)"></div>
+
+    <hr style="margin:1.5rem 0;border:none;border-top:1px solid var(--border)">
+    <h3 style="font-size:13px;font-weight:700;margin-bottom:.75rem">📦 Anagrafica cassoni</h3>
+    <p style="font-size:12px;color:var(--ink2);margin-bottom:.75rem">Aggiungi i cassoni con QR code. Il codice deve corrispondere a quello stampato sul cassone.</p>
+    <div style="display:flex;gap:8px;margin-bottom:.75rem">
+      <input class="form-ctrl" id="new-cas-id" placeholder="Codice (es. CS-001)" style="flex:1;font-size:13px;padding:8px 10px">
+      <select class="form-ctrl" id="new-cas-tipo" style="font-size:13px;padding:8px 10px">
+        <option>Scarrabile</option>
+        <option>Vasca</option>
+        <option>Pianale</option>
+        <option>Centinato</option>
+        <option>Altro</option>
+      </select>
+      <button class="btn btn-primary btn-sm" onclick="aggiungiCassone()">+ Aggiungi</button>
+    </div>
+    <div id="cassoni-list-setup" style="max-height:200px;overflow-y:auto"></div>
+
+    <hr style="margin:1.5rem 0;border:none;border-top:1px solid var(--border)">
+    <h3 style="font-size:13px;font-weight:700;margin-bottom:.75rem">👥 Clienti frequenti</h3>
+    <div style="display:flex;gap:8px;margin-bottom:.75rem">
+      <input class="form-ctrl" id="new-cliente" placeholder="Nome cliente / cantiere" style="flex:1;font-size:13px;padding:8px 10px">
+      <button class="btn btn-primary btn-sm" onclick="aggiungiCliente()">+ Aggiungi</button>
+    </div>
+    <div id="clienti-list-setup" style="max-height:150px;overflow-y:auto"></div>
+  </div>
+</div>
+</div>
+
+<!-- ════════ DDT MODAL ════════ -->
+<div class="modal-overlay" id="ddt-modal" onclick="if(event.target===this)closeDDT()">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title" id="ddt-modal-title">DDT — Documento di Trasporto</span>
+      <button class="modal-close" onclick="closeDDT()">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="ddt-preview" id="ddt-preview"></div>
+      <div style="margin-top:1rem">
+        <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--ink3);display:block;margin-bottom:5px">N° DDT (da assegnare)</label>
+        <input class="form-ctrl" id="ddt-numero" placeholder="es. DDT-2025/0042" style="font-size:13px;padding:8px 12px;width:100%">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeDDT()">Annulla</button>
+      <button class="btn btn-ghost" onclick="stampaDDT()">🖨️ Stampa</button>
+      <button class="btn btn-primary" onclick="confermaDDT()">✓ Conferma emissione DDT</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script type="module">
+// ══════════════════════════════════════════════════
+//  FIREBASE INIT
+// ══════════════════════════════════════════════════
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getDatabase, ref, set, push, onValue, get, update }
+  from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
+
+let db = null;
+let _unsubMovimenti = null;
+let _unsubCassoni   = null;
+
+// ── State ──────────────────────────────────────────
+let STATE = {
+  cassoni:    {},   // { id: { tipo, statoAttuale:'piazzale'|'fuori', lastMov, cliente } }
+  movimenti:  {},   // { id: { cassoneId, tipo:'USCITA'|'RIENTRO', ts, cliente, autista, note, ddtNumero, ddtTs } }
+  clienti:    [],
+};
+
+// ── Config ─────────────────────────────────────────
+function loadConfig() {
+  try { return JSON.parse(localStorage.getItem('tracker_cfg_v1') || 'null'); } catch { return null; }
+}
+function saveConfig(cfg) {
+  localStorage.setItem('tracker_cfg_v1', JSON.stringify(cfg));
+}
+
+async function initFirebase(cfg) {
+  try {
+    const app = initializeApp(cfg, 'tracker-' + Date.now());
+    db = getDatabase(app);
+    document.getElementById('fb-dot').className = 'firebase-dot ok';
+    document.getElementById('fb-dot').title = 'Firebase: connesso';
+    subscribeAll();
+    return true;
+  } catch(e) {
+    document.getElementById('fb-dot').className = 'firebase-dot err';
+    document.getElementById('fb-dot').title = 'Firebase: errore — ' + e.message;
+    return false;
+  }
+}
+
+function subscribeAll() {
+  if (!db) return;
+  // Cassoni
+  const rCas = ref(db, 'cassoni');
+  onValue(rCas, snap => {
+    STATE.cassoni = snap.val() || {};
+    renderAll();
+  });
+  // Movimenti
+  const rMov = ref(db, 'movimenti');
+  onValue(rMov, snap => {
+    STATE.movimenti = snap.val() || {};
+    renderAll();
+  });
+  // Clienti
+  const rCli = ref(db, 'clienti');
+  onValue(rCli, snap => {
+    STATE.clienti = snap.val() || [];
+    renderClientiDatalist();
+  });
+}
+
+// ── Utility ────────────────────────────────────────
+function now() { return new Date().toISOString(); }
+function fmtDT(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  return d.toLocaleDateString('it-IT',{day:'2-digit',month:'2-digit',year:'2-digit'}) + ' ' +
+         d.toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'});
+}
+function fmtDate(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  return d.toLocaleDateString('it-IT',{day:'2-digit',month:'2-digit',year:'numeric'});
+}
+function isOggi(iso) {
+  if (!iso) return false;
+  const d = new Date(iso); const t = new Date();
+  return d.getDate()===t.getDate() && d.getMonth()===t.getMonth() && d.getFullYear()===t.getFullYear();
+}
+
+function toast(msg, type='') {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.className = 'toast show ' + (type?'toast-'+type:'');
+  clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove('show'), 2800);
+}
+
+// ── RENDER ALL ─────────────────────────────────────
+function renderAll() {
+  renderKPI();
+  renderPiazzale();
+  renderDDTAlerts();
+  renderDashMovimenti();
+  renderBollettazione();
+  renderCassoniSetup();
+}
+
+function renderKPI() {
+  const cas = Object.values(STATE.cassoni);
+  const piazzale = cas.filter(c => c.stato === 'piazzale').length;
+  const fuori    = cas.filter(c => c.stato === 'fuori').length;
+  const movs = Object.values(STATE.movimenti);
+  const ddtPend  = movs.filter(m => !m.ddtNumero).length;
+  const oggi     = movs.filter(m => isOggi(m.ts)).length;
+  document.getElementById('kpi-piazzale').textContent  = piazzale;
+  document.getElementById('kpi-fuori').textContent     = fuori;
+  document.getElementById('kpi-ddt-pend').textContent  = ddtPend;
+  document.getElementById('kpi-oggi').textContent      = oggi;
+  document.getElementById('last-update').textContent   = 'Aggiornato ' + new Date().toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'});
+}
+
+function renderPiazzale() {
+  const grid = document.getElementById('piazzale-grid');
+  const cas = Object.entries(STATE.cassoni);
+  if (!cas.length) { grid.innerHTML = '<span class="chip-empty">Nessun cassone nell\'anagrafica</span>'; return; }
+  grid.innerHTML = cas.map(([id, c]) => {
+    const cls = c.stato === 'piazzale' ? 'chip-piazzale' : 'chip-fuori';
+    const ico = c.stato === 'piazzale' ? '✅' : '🔴';
+    const title = c.stato === 'fuori' && c.clienteAttuale ? ` → ${c.clienteAttuale}` : '';
+    return `<div class="cassone-chip ${cls}" title="${id} · ${c.tipo}${title}">${ico} <strong>${id}</strong> <span style="opacity:.7;font-size:10px">${c.tipo}</span>${title ? `<span style="font-size:10px"> ${title}</span>` : ''}</div>`;
+  }).join('');
+}
+
+function renderDDTAlerts() {
+  const container = document.getElementById('ddt-alerts');
+  const movs = Object.entries(STATE.movimenti)
+    .filter(([,m]) => !m.ddtNumero)
+    .sort((a,b) => b[1].ts > a[1].ts ? 1 : -1)
+    .slice(0, 8);
+  if (!movs.length) {
+    container.innerHTML = '<span style="font-size:12px;color:var(--ink3)">✅ Nessun DDT in sospeso</span>';
+    return;
+  }
+  container.innerHTML = movs.map(([id, m]) =>
+    `<div class="alert-row ${m.tipo==='RIENTRO'?'alert-in':''}">
+      <span class="alert-icon">${m.tipo==='USCITA'?'📤':'📥'}</span>
+      <span class="alert-text">
+        <strong>${m.cassoneId}</strong> · ${m.tipo} · ${m.cliente||'—'}
+        <span style="color:var(--ink3);font-size:10px;display:block">${fmtDT(m.ts)}</span>
+      </span>
+      <button class="btn-ddt ${m.tipo==='USCITA'?'btn-ddt-out':'btn-ddt-in'}"
+        onclick="openDDT('${id}')">📄 DDT</button>
+    </div>`
+  ).join('');
+}
+
+function renderDashMovimenti() {
+  const container = document.getElementById('dash-movimenti');
+  const movs = Object.entries(STATE.movimenti)
+    .sort((a,b) => b[1].ts > a[1].ts ? 1 : -1)
+    .slice(0, 12);
+  if (!movs.length) { container.innerHTML = '<span style="font-size:12px;color:var(--ink3)">Nessun movimento</span>'; return; }
+  container.innerHTML = movs.map(([,m]) =>
+    `<div class="mov-row">
+      <span class="mov-badge ${m.tipo==='USCITA'?'badge-out':'badge-in'}">${m.tipo==='USCITA'?'↑ USCITA':'↓ RIENTRO'}</span>
+      <span class="mov-cassone">${m.cassoneId}</span>
+      <span class="mov-info">${m.cliente||'—'} ${m.autista?'· '+m.autista:''}</span>
+      <span class="mov-time">${fmtDT(m.ts)}</span>
+    </div>`
+  ).join('');
+}
+
+function renderBollettazione() {
+  const cerca = document.getElementById('filt-cerca').value.toLowerCase();
+  const tipo  = document.getElementById('filt-tipo').value;
+  const ddt   = document.getElementById('filt-ddt').value;
+  const data  = document.getElementById('filt-data').value;
+  let movs = Object.entries(STATE.movimenti)
+    .sort((a,b) => b[1].ts > a[1].ts ? 1 : -1);
+  if (tipo)  movs = movs.filter(([,m]) => m.tipo === tipo);
+  if (ddt === 'pend')   movs = movs.filter(([,m]) => !m.ddtNumero);
+  if (ddt === 'emesso') movs = movs.filter(([,m]) => !!m.ddtNumero);
+  if (data)  movs = movs.filter(([,m]) => m.ts && m.ts.startsWith(data));
+  if (cerca) movs = movs.filter(([,m]) =>
+    (m.cassoneId||'').toLowerCase().includes(cerca) ||
+    (m.cliente||'').toLowerCase().includes(cerca) ||
+    (m.autista||'').toLowerCase().includes(cerca) ||
+    (m.ddtNumero||'').toLowerCase().includes(cerca)
+  );
+  const tbody = document.getElementById('boll-tbody');
+  if (!movs.length) {
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--ink3);padding:1.5rem;font-size:13px">Nessun movimento trovato</td></tr>';
+    return;
+  }
+  tbody.innerHTML = movs.map(([id,m]) => {
+    const cas = STATE.cassoni[m.cassoneId] || {};
+    const ddtHtml = m.ddtNumero
+      ? `<span class="ddt-tag">${m.ddtNumero}</span>`
+      : `<span class="ddt-tag pend">Da emettere</span>`;
+    return `<tr>
+      <td style="white-space:nowrap;color:var(--ink2)">${fmtDT(m.ts)}</td>
+      <td><strong>${m.cassoneId}</strong></td>
+      <td style="color:var(--ink2)">${cas.tipo||'—'}</td>
+      <td><span class="status-pill ${m.tipo==='USCITA'?'pill-out':'pill-in'}">${m.tipo==='USCITA'?'↑ Uscita':'↓ Rientro'}</span></td>
+      <td>${m.cliente||'—'}</td>
+      <td style="color:var(--ink2)">${m.autista||'—'}</td>
+      <td>${ddtHtml}</td>
+      <td>
+        <button class="btn btn-ghost btn-sm" onclick="openDDT('${id}')">📄 DDT</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function renderCassoniSetup() {
+  const el = document.getElementById('cassoni-list-setup');
+  const cas = Object.entries(STATE.cassoni);
+  if (!cas.length) { el.innerHTML = '<p style="font-size:12px;color:var(--ink3)">Nessun cassone</p>'; return; }
+  el.innerHTML = `<table style="width:100%;font-size:12px;border-collapse:collapse">
+    <thead><tr style="background:var(--surface2)"><th style="padding:5px 8px;text-align:left">Codice</th><th>Tipo</th><th>Stato</th><th></th></tr></thead>
+    <tbody>${cas.map(([id,c]) =>
+      `<tr style="border-bottom:1px solid var(--border)">
+        <td style="padding:5px 8px;font-weight:700">${id}</td>
+        <td style="padding:5px 8px">${c.tipo}</td>
+        <td style="padding:5px 8px"><span class="status-pill ${c.stato==='piazzale'?'pill-in':'pill-out'}">${c.stato}</span></td>
+        <td style="padding:5px 8px"><button class="btn btn-danger btn-sm" onclick="eliminaCassone('${id}')">🗑</button></td>
+      </tr>`
+    ).join('')}</tbody></table>`;
+}
+
+function renderClientiDatalist() {
+  const dl = document.getElementById('clienti-list');
+  if (dl) dl.innerHTML = STATE.clienti.map(c => `<option value="${c}">`).join('');
+  const elSetup = document.getElementById('clienti-list-setup');
+  if (elSetup) {
+    elSetup.innerHTML = STATE.clienti.map(c =>
+      `<div style="display:flex;align-items:center;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border);font-size:12px">
+        <span>${c}</span>
+        <button class="btn btn-danger btn-sm" onclick="eliminaCliente('${c}')">✕</button>
+      </div>`
+    ).join('') || '<p style="font-size:12px;color:var(--ink3)">Nessun cliente</p>';
+  }
+}
+
+// ══ TRASPORTATORE ══════════════════════════════════
+let _scanCassoneId = null;
+
+function onScanInput(val) {
+  _scanCassoneId = null;
+  document.getElementById('cassone-found').classList.remove('visible');
+  document.getElementById('trasp-form').classList.remove('visible');
+  document.getElementById('btn-uscita').disabled = true;
+  document.getElementById('btn-rientro').disabled = true;
+  if (val.length >= 2) confermaScan(val);
+}
+
+function confermaScan(val) {
+  val = val || document.getElementById('scan-input').value.trim().toUpperCase();
+  if (!val) return;
+  const cas = STATE.cassoni[val];
+  const foundEl = document.getElementById('cassone-found');
+  if (cas) {
+    _scanCassoneId = val;
+    document.getElementById('found-id').textContent = val;
+    document.getElementById('found-tipo').textContent = cas.tipo;
+    const stato = cas.stato === 'piazzale' ? '✅ In piazzale — pronto per uscita' : '🔴 Fuori piazzale — in attesa di rientro';
+    document.getElementById('found-status').textContent = stato;
+    foundEl.classList.add('visible');
+    document.getElementById('trasp-form').classList.add('visible');
+    document.getElementById('btn-uscita').disabled  = (cas.stato !== 'piazzale');
+    document.getElementById('btn-rientro').disabled = (cas.stato !== 'fuori');
+  } else {
+    document.getElementById('found-id').textContent = val;
+    document.getElementById('found-tipo').textContent = '⚠️ Cassone non trovato in anagrafica';
+    document.getElementById('found-status').textContent = '';
+    foundEl.classList.add('visible');
+  }
+}
+
+async function registraMovimento(tipo) {
+  if (!db) { toast('Firebase non connesso', 'err'); return; }
+  if (!_scanCassoneId) { toast('Nessun cassone selezionato', 'err'); return; }
+  const cliente = document.getElementById('t-cliente').value.trim();
+  const autista = document.getElementById('t-autista').value.trim();
+  const note    = document.getElementById('t-note').value.trim();
+  if (!cliente) { toast('Inserisci il cliente', 'err'); return; }
+
+  const movRef = ref(db, 'movimenti');
+  const nuovoMov = { cassoneId:_scanCassoneId, tipo, ts:now(), cliente, autista, note, ddtNumero:'', ddtTs:'' };
+  await push(movRef, nuovoMov);
+
+  // Aggiorna stato cassone
+  const casRef = ref(db, `cassoni/${_scanCassoneId}`);
+  await update(casRef, {
+    stato: tipo === 'USCITA' ? 'fuori' : 'piazzale',
+    clienteAttuale: tipo === 'USCITA' ? cliente : '',
+    lastMov: now()
+  });
+
+  toast(tipo === 'USCITA' ? '🔴 Uscita registrata — DDT da emettere' : '🟢 Rientro registrato', 'ok');
+
+  // Reset form
+  document.getElementById('scan-input').value = '';
+  document.getElementById('t-cliente').value = '';
+  document.getElementById('t-note').value = '';
+  document.getElementById('cassone-found').classList.remove('visible');
+  document.getElementById('trasp-form').classList.remove('visible');
+  _scanCassoneId = null;
+
+  // Aggiorna recenti trasportatore
+  renderTrasportatoreRecenti(autista);
+}
+
+function renderTrasportatoreRecenti(autistaNome) {
+  const movs = Object.values(STATE.movimenti)
+    .filter(m => !autistaNome || m.autista === autistaNome)
+    .sort((a,b) => b.ts > a.ts ? 1 : -1)
+    .slice(0, 5);
+  const el = document.getElementById('trasp-recenti-list');
+  if (!movs.length) { el.innerHTML = '<span style="font-size:12px;color:var(--ink3)">Nessuno ancora</span>'; return; }
+  el.innerHTML = movs.map(m =>
+    `<div class="trasp-rec-item">
+      <span class="mov-badge ${m.tipo==='USCITA'?'badge-out':'badge-in'}" style="font-size:9px">${m.tipo}</span>
+      <strong>${m.cassoneId}</strong>
+      <span style="color:var(--ink2);flex:1">${m.cliente||'—'}</span>
+      <span style="color:var(--ink3)">${fmtDT(m.ts)}</span>
+    </div>`
+  ).join('');
+}
+
+// ══ DDT ════════════════════════════════════════════
+let _ddtMovId = null;
+
+function openDDT(movId) {
+  _ddtMovId = movId;
+  const m = STATE.movimenti[movId];
+  if (!m) return;
+  const cas = STATE.cassoni[m.cassoneId] || {};
+  const tipoLabel = m.tipo === 'USCITA' ? 'DDT USCITA' : 'DDT RIENTRO';
+  document.getElementById('ddt-modal-title').textContent = `${tipoLabel} — ${m.cassoneId}`;
+  document.getElementById('ddt-numero').value = m.ddtNumero || '';
+
+  const mittente = m.tipo === 'USCITA'
+    ? 'Centro Risorse S.p.A. — Piazzale interno'
+    : (m.cliente || '—');
+  const destinatario = m.tipo === 'USCITA'
+    ? (m.cliente || '—')
+    : 'Centro Risorse S.p.A. — Piazzale interno';
+
+  document.getElementById('ddt-preview').innerHTML = `
+    <h3>Documento di Trasporto — ${tipoLabel}</h3>
+    <div class="ddt-meta">
+      <div class="ddt-meta-item"><label>Data movimento</label><span>${fmtDT(m.ts)}</span></div>
+      <div class="ddt-meta-item"><label>N° DDT</label><span id="preview-ddt-num">${m.ddtNumero || '(da compilare)'}</span></div>
+      <div class="ddt-meta-item"><label>Mittente</label><span>${mittente}</span></div>
+      <div class="ddt-meta-item"><label>Destinatario</label><span>${destinatario}</span></div>
+      <div class="ddt-meta-item"><label>Autista / Vettore</label><span>${m.autista || '—'}</span></div>
+      <div class="ddt-meta-item"><label>Note</label><span>${m.note || '—'}</span></div>
+    </div>
+    <table class="ddt-table">
+      <thead><tr><th>Codice</th><th>Descrizione</th><th>Tipo</th><th>Qta</th><th>Causale</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>${m.cassoneId}</strong></td>
+          <td>Cassone ${cas.tipo||''} scarrabile</td>
+          <td>${cas.tipo||'—'}</td>
+          <td style="text-align:center">1</td>
+          <td>${m.tipo === 'USCITA' ? 'Resa in prestito d\'uso' : 'Reso da prestito d\'uso'}</td>
+        </tr>
+      </tbody>
+    </table>
+    <div style="margin-top:1rem;font-size:11px;color:var(--ink3)">
+      Trasporto a cura del destinatario. Il trasportatore è responsabile del mezzo e del materiale durante il trasporto.
+    </div>`;
+
+  // Aggiorna il numero DDT in anteprima al volo
+  document.getElementById('ddt-numero').oninput = function() {
+    const el = document.getElementById('preview-ddt-num');
+    if (el) el.textContent = this.value || '(da compilare)';
+  };
+
+  document.getElementById('ddt-modal').classList.add('open');
+}
+
+function closeDDT() { document.getElementById('ddt-modal').classList.remove('open'); _ddtMovId = null; }
+
+async function confermaDDT() {
+  if (!_ddtMovId || !db) return;
+  const numero = document.getElementById('ddt-numero').value.trim();
+  if (!numero) { toast('Inserisci il numero DDT', 'err'); return; }
+  await update(ref(db, `movimenti/${_ddtMovId}`), { ddtNumero: numero, ddtTs: now() });
+  toast('✓ DDT ' + numero + ' registrato', 'ok');
+  closeDDT();
+}
+
+function stampaDDT() {
+  const content = document.getElementById('ddt-preview').outerHTML;
+  const w = window.open('', '_blank');
+  w.document.write(`<html><head><title>DDT</title>
+    <style>body{font-family:Arial,sans-serif;font-size:12px;padding:2rem}h3{text-align:center;margin-bottom:1rem}
+    table{width:100%;border-collapse:collapse}th,td{border:1px solid #ccc;padding:6px 8px}th{background:#333;color:#fff}
+    .ddt-meta{display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin:1rem 0;border-top:1px solid #ccc;border-bottom:1px solid #ccc;padding:.5rem 0}
+    label{font-size:10px;font-weight:bold;display:block;color:#666}</style></head>
+    <body>${content}<br><br>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:3rem;margin-top:2rem">
+      <div style="border-top:1px solid #000;padding-top:.5rem;text-align:center;font-size:11px">Firma mittente</div>
+      <div style="border-top:1px solid #000;padding-top:.5rem;text-align:center;font-size:11px">Firma destinatario</div>
+    </div>
+    </body></html>`);
+  w.document.close(); w.print();
+}
+
+// ══ ANAGRAFICA CASSONI ═════════════════════════════
+async function aggiungiCassone() {
+  if (!db) { toast('Firebase non connesso', 'err'); return; }
+  const id   = document.getElementById('new-cas-id').value.trim().toUpperCase();
+  const tipo = document.getElementById('new-cas-tipo').value;
+  if (!id) { toast('Inserisci il codice', 'err'); return; }
+  if (STATE.cassoni[id]) { toast('Cassone già presente', 'err'); return; }
+  await set(ref(db, `cassoni/${id}`), { tipo, stato:'piazzale', clienteAttuale:'', lastMov:'' });
+  document.getElementById('new-cas-id').value = '';
+  toast('✓ Cassone ' + id + ' aggiunto', 'ok');
+}
+
+async function eliminaCassone(id) {
+  if (!confirm('Eliminare il cassone ' + id + '?')) return;
+  await set(ref(db, `cassoni/${id}`), null);
+  toast('Cassone eliminato', 'ok');
+}
+
+async function aggiungiCliente() {
+  if (!db) { toast('Firebase non connesso', 'err'); return; }
+  const nome = document.getElementById('new-cliente').value.trim();
+  if (!nome) return;
+  const lista = [...(STATE.clienti||[])];
+  if (!lista.includes(nome)) lista.push(nome);
+  await set(ref(db, 'clienti'), lista);
+  document.getElementById('new-cliente').value = '';
+  toast('✓ Cliente aggiunto', 'ok');
+}
+
+async function eliminaCliente(nome) {
+  const lista = (STATE.clienti||[]).filter(c => c !== nome);
+  await set(ref(db, 'clienti'), lista);
+}
+
+// ══ CSV ════════════════════════════════════════════
+function exportCSV() {
+  const rows = [['Data','Ora','Cassone','Tipo','Movimento','Cliente','Autista','Note','N° DDT','Data DDT']];
+  Object.values(STATE.movimenti).sort((a,b)=>b.ts>a.ts?1:-1).forEach(m => {
+    const d = new Date(m.ts);
+    rows.push([
+      d.toLocaleDateString('it-IT'), d.toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'}),
+      m.cassoneId, (STATE.cassoni[m.cassoneId]||{}).tipo||'', m.tipo,
+      m.cliente||'', m.autista||'', m.note||'', m.ddtNumero||'', m.ddtTs?fmtDate(m.ddtTs):''
+    ]);
+  });
+  const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(';')).join('\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8;'}));
+  a.download = 'movimenti_cassoni_' + new Date().toISOString().slice(0,10) + '.csv';
+  a.click();
+}
+
+// ══ NAV ════════════════════════════════════════════
+window.switchView = function(name) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('view-' + name).classList.add('active');
+  const tabs = [...document.querySelectorAll('.nav-tab')];
+  const map = {dashboard:0,bollettazione:1,trasportatore:2,setup:3};
+  if (tabs[map[name]]) tabs[map[name]].classList.add('active');
+  if (name==='bollettazione') renderBollettazione();
+};
+
+// ══ SETUP ══════════════════════════════════════════
+window.salvaConfig = async function() {
+  const cfg = {
+    apiKey:      document.getElementById('cfg-apikey').value.trim(),
+    authDomain:  document.getElementById('cfg-authdomain').value.trim(),
+    databaseURL: document.getElementById('cfg-dburl').value.trim(),
+    projectId:   document.getElementById('cfg-projectid').value.trim(),
+  };
+  if (!cfg.apiKey || !cfg.databaseURL) {
+    document.getElementById('cfg-status').textContent = '⚠️ Compila almeno API Key e Database URL';
+    return;
+  }
+  saveConfig(cfg);
+  const ok = await initFirebase(cfg);
+  document.getElementById('cfg-status').textContent = ok ? '✅ Connesso!' : '❌ Errore di connessione — controlla le credenziali';
+};
+
+window.testConnection = async function() {
+  const cfg = loadConfig();
+  if (!cfg) { document.getElementById('cfg-status').textContent = '⚠️ Nessuna config salvata'; return; }
+  document.getElementById('cfg-status').textContent = '🔄 Connessione in corso...';
+  const ok = await initFirebase(cfg);
+  document.getElementById('cfg-status').textContent = ok ? '✅ Firebase connesso e funzionante!' : '❌ Connessione fallita';
+};
+
+// Esponi funzioni globali
+window.openDDT         = openDDT;
+window.closeDDT        = closeDDT;
+window.confermaDDT     = confermaDDT;
+window.stampaDDT       = stampaDDT;
+window.aggiungiCassone = aggiungiCassone;
+window.eliminaCassone  = eliminaCassone;
+window.aggiungiCliente = aggiungiCliente;
+window.eliminaCliente  = eliminaCliente;
+window.registraMovimento = registraMovimento;
+window.renderBollettazione = renderBollettazione;
+window.exportCSV       = exportCSV;
+window.onScanInput     = onScanInput;
+
+// ══ BOOT ═══════════════════════════════════════════
+(async function boot() {
+  // Popola campi config se già salvata
+  const cfg = loadConfig();
+  if (cfg) {
+    document.getElementById('cfg-apikey').value     = cfg.apiKey     || '';
+    document.getElementById('cfg-authdomain').value = cfg.authDomain || '';
+    document.getElementById('cfg-dburl').value      = cfg.databaseURL|| '';
+    document.getElementById('cfg-projectid').value  = cfg.projectId  || '';
+    await initFirebase(cfg);
+  } else {
+    // Prima apertura: vai a setup
+    switchView('setup');
+  }
+})();
+</script>
+</body>
+</html>
