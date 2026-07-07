@@ -1241,7 +1241,6 @@ window.apriCamera = async function() {
 };
 
 async function _avviaStream() {
-  // Ferma eventuale stream precedente
   const video = document.getElementById('qr-video');
   if (video.srcObject) {
     video.srcObject.getTracks().forEach(t => t.stop());
@@ -1252,56 +1251,97 @@ async function _avviaStream() {
   const deviceId = _qrDevices[_qrDevIdx]?.deviceId;
   const constraints = {
     video: deviceId
-      ? { deviceId: { exact: deviceId }, facingMode: 'environment' }
-      : { facingMode: { ideal: 'environment' } }
+      ? { deviceId: { exact: deviceId } }
+      : { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } }
   };
 
   const stream = await navigator.mediaDevices.getUserMedia(constraints);
   video.srcObject = stream;
   await video.play();
-
   document.getElementById('qr-status').textContent = 'Inquadra il QR code';
-
-  // Avvia decodifica ZXing
-  if (typeof ZXing !== 'undefined') {
-    const codeReader = new ZXing.BrowserQRCodeReader();
-    _qrReader = codeReader;
-    _qrScanning = true;
-    _qrLoop(codeReader, video);
-  } else {
-    document.getElementById('qr-status').textContent = '⚠️ ZXing non caricato — inserisci il codice manualmente';
-  }
+  _qrScanning = true;
+  _startDecode(video);
 }
 
-async function _qrLoop(reader, video) {
-  const canvas  = document.createElement('canvas');
-  const ctx     = canvas.getContext('2d', { willReadFrequently: true });
+function _startDecode(video) {
+  const canvas = document.createElement('canvas');
+  const ctx    = canvas.getContext('2d', { willReadFrequently: true });
 
-  async function tick() {
-    if (!_qrScanning) return;
-    if (video.readyState >= 2 && video.videoWidth > 0) {
-      canvas.width  = video.videoWidth;
-      canvas.height = video.videoHeight;
-      ctx.drawImage(video, 0, 0);
-      try {
-        const result = await reader.decodeFromCanvas(canvas);
-        if (result && _qrScanning) {
-          const codice = result.getText().trim().toUpperCase();
-          document.getElementById('qr-status').textContent = '✅ ' + codice;
-          _qrScanning = false;
-          setTimeout(() => {
-            chiudiCamera();
-            document.getElementById('scan-input').value = codice;
-            onScanInput(codice);
-            if (STATE.cassoni[codice]) selezionaDaCassone(codice);
-          }, 300);
-          return;
-        }
-      } catch(e) { /* nessun QR in questo frame, continua */ }
-    }
-    if (_qrScanning) setTimeout(tick, 150);
+  // Prova BarcodeDetector nativo (Chrome Android)
+  if (typeof BarcodeDetector !== 'undefined') {
+    const detector = new BarcodeDetector({ formats: ['qr_code'] });
+    const loop = async () => {
+      if (!_qrScanning) return;
+      if (video.readyState >= 2 && video.videoWidth > 0) {
+        try {
+          const codes = await detector.detect(video);
+          if (codes.length > 0 && _qrScanning) {
+            _onQrFound(codes[0].rawValue);
+            return;
+          }
+        } catch(e) {}
+      }
+      requestAnimationFrame(loop);
+    };
+    requestAnimationFrame(loop);
+    return;
   }
-  tick();
+
+  // Fallback: ZXing su canvas
+  if (typeof ZXing !== 'undefined') {
+    let zReader;
+    try {
+      zReader = new ZXing.BrowserQRCodeReader();
+    } catch(e) {
+      document.getElementById('qr-status').textContent = '⚠️ Scanner non disponibile — inserisci il codice manualmente';
+      return;
+    }
+    _qrReader = zReader;
+    const loop = async () => {
+      if (!_qrScanning) return;
+      if (video.readyState >= 2 && video.videoWidth > 0) {
+        canvas.width  = video.videoWidth;
+        canvas.height = video.videoHeight;
+        ctx.drawImage(video, 0, 0);
+        try {
+          // Prova tutti i metodi disponibili
+          let result = null;
+          if (typeof zReader.decodeFromImageElement === 'function') {
+            const img = new Image();
+            img.src = canvas.toDataURL();
+            await new Promise(r => { img.onload = r; });
+            result = await zReader.decodeFromImageElement(img).catch(() => null);
+          }
+          if (!result && typeof zReader.decodeFromCanvas === 'function') {
+            result = await zReader.decodeFromCanvas(canvas).catch(() => null);
+          }
+          if (result && _qrScanning) {
+            _onQrFound(result.getText());
+            return;
+          }
+        } catch(e) {}
+      }
+      if (_qrScanning) setTimeout(loop, 200);
+    };
+    loop();
+    return;
+  }
+
+  document.getElementById('qr-status').textContent = '⚠️ Scanner non supportato su questo browser — inserisci il codice manualmente';
+}
+
+function _onQrFound(rawValue) {
+  const codice = rawValue.trim().toUpperCase();
+  _qrScanning = false;
+  document.getElementById('qr-status').textContent = '✅ ' + codice;
+  // Feedback vibrazione
+  if (navigator.vibrate) navigator.vibrate(100);
+  setTimeout(() => {
+    chiudiCamera();
+    document.getElementById('scan-input').value = codice;
+    onScanInput(codice);
+    if (STATE.cassoni[codice]) selezionaDaCassone(codice);
+  }, 300);
 }
 
 window.chiudiCamera = function() {
