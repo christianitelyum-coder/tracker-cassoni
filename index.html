@@ -1125,18 +1125,20 @@ document.addEventListener('click', function(e) {
 
 // ══ BOOT ═══════════════════════════════════════════
 (async function boot() {
-  // Popola campi config se già salvata
-  const cfg = loadConfig();
-  if (cfg) {
-    document.getElementById('cfg-apikey').value     = cfg.apiKey     || '';
-    document.getElementById('cfg-authdomain').value = cfg.authDomain || '';
-    document.getElementById('cfg-dburl').value      = cfg.databaseURL|| '';
-    document.getElementById('cfg-projectid').value  = cfg.projectId  || '';
-    await initFirebase(cfg);
-  } else {
-    // Prima apertura: vai a setup
-    switchView('setup');
-  }
+  // Credenziali Firebase incorporate — funziona su tutti i dispositivi
+  const hardcodedCfg = {
+    apiKey:      'AIzaSyCixZmG-Pc2hbXc-sKeuCZXvknzC_Bo52k',
+    authDomain:  'cassoni-centrorisorse.firebaseapp.com',
+    databaseURL: 'https://cassoni-centrorisorse-default-rtdb.europe-west1.firebasedatabase.app',
+    projectId:   'cassoni-centrorisorse',
+  };
+  // Popola anche i campi Config (per riferimento)
+  document.getElementById('cfg-apikey').value     = hardcodedCfg.apiKey;
+  document.getElementById('cfg-authdomain').value = hardcodedCfg.authDomain;
+  document.getElementById('cfg-dburl').value      = hardcodedCfg.databaseURL;
+  document.getElementById('cfg-projectid').value  = hardcodedCfg.projectId;
+  saveConfig(hardcodedCfg);
+  await initFirebase(hardcodedCfg);
 })();
 </script>
 </body>
