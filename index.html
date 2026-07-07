@@ -245,7 +245,7 @@ body.modo-autista .autista-header { display: block }
     <button class="nav-tab active" onclick="switchView('dashboard')">📊 Dashboard</button>
     <button class="nav-tab" onclick="switchView('bollettazione')">📋 Bollettazione</button>
     <button class="nav-tab" onclick="switchView('trasportatore')">📱 Trasportatore</button>
-    <button class="nav-tab" onclick="switchView('setup')">⚙️ Config</button>
+    <button class="nav-tab" id="nav-tab-setup" onclick="richiestaPin()" style="display:none">⚙️ Config</button>
   </div>
   <div class="firebase-dot" id="fb-dot" title="Firebase: non connesso"></div>
 </nav>
@@ -260,13 +260,31 @@ body.modo-autista .autista-header { display: block }
     <div class="kpi"><div class="kpi-val blue" id="kpi-oggi">—</div><div class="kpi-lbl">Movimenti oggi</div></div>
   </div>
   <div class="dash-grid">
-    <div class="card">
+    <!-- RICERCA RAPIDA CASSONE -->
+    <div class="card" style="grid-column:1/-1">
       <div class="card-header">
-        <div class="card-title">🏭 Piazzale — situazione live</div>
+        <div class="card-title">🔍 Verifica stato cassone</div>
+      </div>
+      <div class="card-body" style="padding-bottom:.75rem">
+        <div style="display:flex;gap:8px">
+          <input id="cerca-cassone-input" type="text" placeholder="Digita il codice cassone (es. ER002)…"
+            style="flex:1;font-family:var(--font);font-size:14px;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--radius-sm);outline:none;transition:border-color .15s"
+            oninput="cercaCassone(this.value)" autocomplete="off" autocapitalize="characters"
+            onfocus="this.style.borderColor='var(--green)'" onblur="this.style.borderColor='var(--border)'">
+          <button class="btn btn-ghost btn-sm" onclick="document.getElementById('cerca-cassone-input').value='';document.getElementById('cerca-cassone-result').innerHTML=''">✕</button>
+        </div>
+        <div id="cerca-cassone-result" style="margin-top:8px"></div>
+      </div>
+    </div>
+
+    <!-- PIAZZALE RAGGRUPPATO PER TIPO -->
+    <div class="card" style="grid-column:1/-1">
+      <div class="card-header">
+        <div class="card-title">🏭 Piazzale — situazione live per tipologia</div>
         <span id="last-update" style="font-size:11px;color:var(--ink3)"></span>
       </div>
-      <div class="card-body">
-        <div class="piazzale-grid" id="piazzale-grid"><span class="chip-empty">Nessun cassone registrato</span></div>
+      <div class="card-body" id="piazzale-grouped">
+        <span class="chip-empty">Nessun cassone registrato</span>
       </div>
     </div>
     <div class="card">
@@ -494,6 +512,30 @@ body.modo-autista .autista-header { display: block }
 </div>
 </div>
 
+<!-- ════════ PIN MODAL ════════ -->
+<div class="modal-overlay" id="pin-modal" onclick="if(event.target===this)chiudiPin()">
+  <div class="modal" style="max-width:320px">
+    <div class="modal-header">
+      <span class="modal-title">🔒 Accesso Config</span>
+      <button class="modal-close" onclick="chiudiPin()">×</button>
+    </div>
+    <div class="modal-body" style="text-align:center;padding:1.5rem">
+      <p style="font-size:13px;color:var(--ink2);margin-bottom:1rem">Inserisci il PIN per accedere alla configurazione</p>
+      <input id="pin-input" type="password" inputmode="numeric" maxlength="6"
+        placeholder="● ● ● ●"
+        style="text-align:center;font-size:28px;font-weight:800;letter-spacing:.3em;width:100%;padding:12px;border:2px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font);outline:none"
+        onfocus="this.style.borderColor='var(--green)'"
+        onblur="this.style.borderColor='var(--border)'"
+        onkeydown="if(event.key==='Enter')verificaPin()">
+      <div id="pin-error" style="color:var(--red);font-size:12px;margin-top:8px;min-height:16px"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="chiudiPin()">Annulla</button>
+      <button class="btn btn-primary" onclick="verificaPin()">🔓 Accedi</button>
+    </div>
+  </div>
+</div>
+
 <!-- ════════ DDT MODAL ════════ -->
 <div class="modal-overlay" id="ddt-modal" onclick="if(event.target===this)closeDDT()">
   <div class="modal">
@@ -634,16 +676,78 @@ function renderKPI() {
 }
 
 function renderPiazzale() {
-  const grid = document.getElementById('piazzale-grid');
+  const container = document.getElementById('piazzale-grouped');
   const cas = Object.entries(STATE.cassoni);
-  if (!cas.length) { grid.innerHTML = '<span class="chip-empty">Nessun cassone nell\'anagrafica</span>'; return; }
-  grid.innerHTML = cas.map(([id, c]) => {
-    const cls = c.stato === 'piazzale' ? 'chip-piazzale' : 'chip-fuori';
-    const ico = c.stato === 'piazzale' ? '✅' : '🔴';
-    const title = c.stato === 'fuori' && c.clienteAttuale ? ` → ${c.clienteAttuale}` : '';
-    return `<div class="cassone-chip ${cls}" title="${id} · ${c.tipo}${title}">${ico} <strong>${id}</strong> <span style="opacity:.7;font-size:10px">${c.tipo}</span>${title ? `<span style="font-size:10px"> ${title}</span>` : ''}</div>`;
+  if (!cas.length) {
+    container.innerHTML = '<span class="chip-empty">Nessun cassone nell\'anagrafica</span>';
+    return;
+  }
+
+  // Raggruppa per tipo (prima parola significativa)
+  const gruppi = {};
+  cas.forEach(([id, c]) => {
+    const tipo = (c.tipo || 'Altro').split('·')[0].trim();
+    if (!gruppi[tipo]) gruppi[tipo] = [];
+    gruppi[tipo].push({ id, ...c });
+  });
+
+  const tipiOrdinati = Object.keys(gruppi).sort();
+  container.innerHTML = tipiOrdinati.map(tipo => {
+    const lista = gruppi[tipo];
+    const inPiazzale = lista.filter(c => c.stato === 'piazzale').length;
+    const fuori      = lista.filter(c => c.stato === 'fuori').length;
+    const chips = lista
+      .sort((a,b) => a.id.localeCompare(b.id))
+      .map(c => {
+        const cls   = c.stato === 'piazzale' ? 'chip-piazzale' : 'chip-fuori';
+        const ico   = c.stato === 'piazzale' ? '✅' : '🔴';
+        const title = c.stato === 'fuori' && c.clienteAttuale ? ` → ${c.clienteAttuale}` : '';
+        return `<div class="cassone-chip ${cls}" title="${c.id}${title}">${ico} <strong>${c.id}</strong>${title ? `<span style="font-size:10px;opacity:.75"> ${title}</span>` : ''}</div>`;
+      }).join('');
+
+    return `<div style="margin-bottom:1.25rem">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;padding-bottom:5px;border-bottom:1px solid var(--border)">
+        <span style="font-size:12px;font-weight:700;color:var(--ink);flex:1">${tipo}</span>
+        <span style="font-size:11px;font-weight:600;background:var(--green-l);color:var(--green-d);padding:2px 8px;border-radius:10px">✅ ${inPiazzale}</span>
+        <span style="font-size:11px;font-weight:600;background:var(--red-l);color:var(--red);padding:2px 8px;border-radius:10px">🔴 ${fuori}</span>
+      </div>
+      <div class="piazzale-grid">${chips}</div>
+    </div>`;
   }).join('');
 }
+
+window.cercaCassone = function(val) {
+  const result = document.getElementById('cerca-cassone-result');
+  val = val.trim().toUpperCase();
+  if (!val) { result.innerHTML = ''; return; }
+
+  const matches = Object.entries(STATE.cassoni)
+    .filter(([id]) => id.includes(val))
+    .sort((a,b) => a[0].localeCompare(b[0]))
+    .slice(0, 10);
+
+  if (!matches.length) {
+    result.innerHTML = `<div style="font-size:12px;color:var(--ink3);padding:6px 0">Nessun cassone trovato per "<strong>${val}</strong>"</div>`;
+    return;
+  }
+
+  result.innerHTML = matches.map(([id, c]) => {
+    const isOut = c.stato === 'fuori';
+    const movs  = Object.values(STATE.movimenti)
+      .filter(m => m.cassoneId === id)
+      .sort((a,b) => b.ts > a.ts ? 1 : -1);
+    const ultimo = movs[0];
+    return `<div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:var(--radius-sm);background:${isOut?'var(--red-l)':'var(--green-l)'};margin-bottom:5px;border:1px solid ${isOut?'#f0b8b3':'#a7e5cc'}">
+      <span style="font-size:16px">${isOut?'🔴':'✅'}</span>
+      <div style="flex:1">
+        <div style="font-size:14px;font-weight:800;color:var(--ink)">${id}</div>
+        <div style="font-size:11px;color:var(--ink2)">${c.tipo||'—'}</div>
+        ${ultimo ? `<div style="font-size:11px;color:var(--ink3)">${ultimo.tipo} · ${ultimo.cliente||'—'} · ${fmtDT(ultimo.ts)}</div>` : ''}
+      </div>
+      <span style="font-size:12px;font-weight:700;color:${isOut?'var(--red)':'var(--green-d)'}">${isOut?'FUORI':'PIAZZALE'}</span>
+    </div>`;
+  }).join('');
+};
 
 function renderDDTAlerts() {
   const container = document.getElementById('ddt-alerts');
@@ -1295,6 +1399,34 @@ document.addEventListener('keydown', function(e) {
   if (e.key === 'Escape') chiudiCamera();
 });
 
+// ── PIN CONFIG ─────────────────────────────────────
+const CONFIG_PIN = '7575';
+
+window.richiestaPin = function() {
+  document.getElementById('pin-input').value = '';
+  document.getElementById('pin-error').textContent = '';
+  document.getElementById('pin-modal').classList.add('open');
+  setTimeout(() => document.getElementById('pin-input').focus(), 100);
+};
+
+window.chiudiPin = function() {
+  document.getElementById('pin-modal').classList.remove('open');
+};
+
+window.verificaPin = function() {
+  const pin = document.getElementById('pin-input').value;
+  if (pin === CONFIG_PIN) {
+    chiudiPin();
+    document.getElementById('nav-tab-setup').style.display = '';
+    sessionStorage.setItem('admin_ok', '1');
+    switchView('setup');
+  } else {
+    document.getElementById('pin-error').textContent = '❌ PIN errato';
+    document.getElementById('pin-input').value = '';
+    document.getElementById('pin-input').focus();
+  }
+};
+
 // Chiudi dropdown cassoni cliccando fuori
 document.addEventListener('click', function(e) {
   if (!e.target.closest('.scan-area')) {
@@ -1344,7 +1476,20 @@ document.addEventListener('click', function(e) {
   favicon.href = encoded;
   document.title = isAutista ? '🚛 Movimento Cassone' : '🖥️ Tracker Cassoni — Admin';
 
-  // ── Modalità autista: ?autista nell'URL ──────────
+  // ── Tab Config: visibile solo con click su brand 3 volte o PIN ──
+  let _brandClicks = 0;
+  document.querySelector('.nav-brand').addEventListener('click', () => {
+    _brandClicks++;
+    if (_brandClicks >= 3) {
+      _brandClicks = 0;
+      document.getElementById('nav-tab-setup').style.display = '';
+      richiestaPin();
+    }
+  });
+  // Mostra sempre il tab setup se in modalità autista=no e sessionStorage lo ricorda
+  if (sessionStorage.getItem('admin_ok') === '1') {
+    document.getElementById('nav-tab-setup').style.display = '';
+  }
   const urlParams = new URLSearchParams(window.location.search);
   const modoAutista = urlParams.has('autista');
   if (modoAutista) {
