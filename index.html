@@ -1142,9 +1142,10 @@ window.importaExcel = async function(event) {
 };
 
 // ── FOTOCAMERA / QR SCANNER ────────────────────────
-let _qrReader = null;
-let _qrDevices = [];
-let _qrDevIdx  = 0;
+let _qrReader   = null;
+let _qrDevices  = [];
+let _qrDevIdx   = 0;
+let _qrScanning = false;
 
 window.apriCamera = async function() {
   const modal = document.getElementById('qr-modal');
@@ -1152,61 +1153,81 @@ window.apriCamera = async function() {
   document.getElementById('qr-status').textContent = 'Avvio fotocamera…';
 
   try {
-    // Usa ZXing se disponibile
-    if (typeof ZXing !== 'undefined') {
-      const hints = new Map();
-      const codeReader = new ZXing.BrowserQRCodeReader(hints, {
-        delayBetweenScanAttempts: 150
-      });
-      _qrReader = codeReader;
+    // Elenca dispositivi video con API nativa
+    const allDevices = await navigator.mediaDevices.enumerateDevices();
+    _qrDevices = allDevices.filter(d => d.kind === 'videoinput');
+    // Preferisci camera posteriore
+    _qrDevIdx = _qrDevices.findIndex(d =>
+      /back|rear|environment|poster/i.test(d.label)
+    );
+    if (_qrDevIdx < 0) _qrDevIdx = _qrDevices.length > 1 ? 1 : 0;
 
-      // Elenca dispositivi video
-      _qrDevices = await ZXing.BrowserCodeReader.listVideoInputDevices();
-      // Preferisci camera posteriore
-      _qrDevIdx = _qrDevices.findIndex(d =>
-        d.label.toLowerCase().includes('back') ||
-        d.label.toLowerCase().includes('rear') ||
-        d.label.toLowerCase().includes('poster')
-      );
-      if (_qrDevIdx < 0) _qrDevIdx = _qrDevices.length > 1 ? 1 : 0;
-
-      const deviceId = _qrDevices[_qrDevIdx]?.deviceId;
-      document.getElementById('qr-status').textContent = 'Inquadra il QR code';
-
-      await codeReader.decodeFromVideoDevice(deviceId, 'qr-video', (result, err) => {
-        if (result) {
-          const codice = result.getText().trim().toUpperCase();
-          document.getElementById('qr-status').textContent = '✅ Letto: ' + codice;
-          setTimeout(() => {
-            chiudiCamera();
-            document.getElementById('scan-input').value = codice;
-            onScanInput(codice);
-            selezionaDaCassone(codice);
-          }, 400);
-        }
-      });
-    } else {
-      // Fallback: input file fotocamera su iOS/Safari
-      chiudiCamera();
-      const inp = document.createElement('input');
-      inp.type = 'file'; inp.accept = 'image/*'; inp.capture = 'environment';
-      inp.style.display = 'none';
-      inp.onchange = () => { document.body.removeChild(inp); };
-      document.body.appendChild(inp);
-      inp.click();
-      toast('Usa il campo testo per inserire il codice manualmente', 'err');
-    }
+    await _avviaStream();
   } catch(e) {
     document.getElementById('qr-status').textContent = '❌ ' + (e.message || 'Fotocamera non disponibile');
     console.error('QR camera error:', e);
   }
 };
 
-window.chiudiCamera = function() {
-  if (_qrReader) {
-    try { _qrReader.reset(); } catch(e) {}
-    _qrReader = null;
+async function _avviaStream() {
+  // Ferma eventuale stream precedente
+  const video = document.getElementById('qr-video');
+  if (video.srcObject) {
+    video.srcObject.getTracks().forEach(t => t.stop());
+    video.srcObject = null;
   }
+  if (_qrReader) { try { _qrReader.reset(); } catch(e) {} _qrReader = null; }
+
+  const deviceId = _qrDevices[_qrDevIdx]?.deviceId;
+  const constraints = {
+    video: deviceId
+      ? { deviceId: { exact: deviceId }, facingMode: 'environment' }
+      : { facingMode: { ideal: 'environment' } }
+  };
+
+  const stream = await navigator.mediaDevices.getUserMedia(constraints);
+  video.srcObject = stream;
+  await video.play();
+
+  document.getElementById('qr-status').textContent = 'Inquadra il QR code';
+
+  // Avvia decodifica ZXing
+  if (typeof ZXing !== 'undefined') {
+    const codeReader = new ZXing.BrowserQRCodeReader();
+    _qrReader = codeReader;
+    _qrScanning = true;
+    _qrLoop(codeReader, video);
+  } else {
+    document.getElementById('qr-status').textContent = '⚠️ ZXing non caricato — inserisci il codice manualmente';
+  }
+}
+
+async function _qrLoop(reader, video) {
+  while (_qrScanning) {
+    try {
+      const result = await reader.decodeFromVideoElement(video);
+      if (result && _qrScanning) {
+        const codice = result.getText().trim().toUpperCase();
+        document.getElementById('qr-status').textContent = '✅ ' + codice;
+        _qrScanning = false;
+        setTimeout(() => {
+          chiudiCamera();
+          document.getElementById('scan-input').value = codice;
+          onScanInput(codice);
+          if (STATE.cassoni[codice]) selezionaDaCassone(codice);
+        }, 350);
+        return;
+      }
+    } catch(e) {
+      if (!_qrScanning) return;
+      await new Promise(r => setTimeout(r, 150));
+    }
+  }
+}
+
+window.chiudiCamera = function() {
+  _qrScanning = false;
+  if (_qrReader) { try { _qrReader.reset(); } catch(e) {} _qrReader = null; }
   const video = document.getElementById('qr-video');
   if (video && video.srcObject) {
     video.srcObject.getTracks().forEach(t => t.stop());
@@ -1216,25 +1237,14 @@ window.chiudiCamera = function() {
 };
 
 window.switchCamera = async function() {
-  if (!_qrDevices.length || !_qrReader) return;
+  if (!_qrDevices.length) return;
   _qrDevIdx = (_qrDevIdx + 1) % _qrDevices.length;
-  const deviceId = _qrDevices[_qrDevIdx]?.deviceId;
-  try {
-    await _qrReader.decodeFromVideoDevice(deviceId, 'qr-video', (result, err) => {
-      if (result) {
-        const codice = result.getText().trim().toUpperCase();
-        setTimeout(() => {
-          chiudiCamera();
-          document.getElementById('scan-input').value = codice;
-          onScanInput(codice);
-          selezionaDaCassone(codice);
-        }, 400);
-      }
-    });
-  } catch(e) { console.error(e); }
+  _qrScanning = false;
+  await new Promise(r => setTimeout(r, 200));
+  _qrScanning = true;
+  await _avviaStream();
 };
 
-// Chiudi camera con tasto Esc
 document.addEventListener('keydown', function(e) {
   if (e.key === 'Escape') chiudiCamera();
 });
