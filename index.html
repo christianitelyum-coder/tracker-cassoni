@@ -1274,26 +1274,34 @@ async function _avviaStream() {
 }
 
 async function _qrLoop(reader, video) {
-  while (_qrScanning) {
-    try {
-      const result = await reader.decodeFromVideoElement(video);
-      if (result && _qrScanning) {
-        const codice = result.getText().trim().toUpperCase();
-        document.getElementById('qr-status').textContent = '✅ ' + codice;
-        _qrScanning = false;
-        setTimeout(() => {
-          chiudiCamera();
-          document.getElementById('scan-input').value = codice;
-          onScanInput(codice);
-          if (STATE.cassoni[codice]) selezionaDaCassone(codice);
-        }, 350);
-        return;
-      }
-    } catch(e) {
-      if (!_qrScanning) return;
-      await new Promise(r => setTimeout(r, 150));
+  const canvas  = document.createElement('canvas');
+  const ctx     = canvas.getContext('2d', { willReadFrequently: true });
+
+  async function tick() {
+    if (!_qrScanning) return;
+    if (video.readyState >= 2 && video.videoWidth > 0) {
+      canvas.width  = video.videoWidth;
+      canvas.height = video.videoHeight;
+      ctx.drawImage(video, 0, 0);
+      try {
+        const result = await reader.decodeFromCanvas(canvas);
+        if (result && _qrScanning) {
+          const codice = result.getText().trim().toUpperCase();
+          document.getElementById('qr-status').textContent = '✅ ' + codice;
+          _qrScanning = false;
+          setTimeout(() => {
+            chiudiCamera();
+            document.getElementById('scan-input').value = codice;
+            onScanInput(codice);
+            if (STATE.cassoni[codice]) selezionaDaCassone(codice);
+          }, 300);
+          return;
+        }
+      } catch(e) { /* nessun QR in questo frame, continua */ }
     }
+    if (_qrScanning) setTimeout(tick, 150);
   }
+  tick();
 }
 
 window.chiudiCamera = function() {
