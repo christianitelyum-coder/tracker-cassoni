@@ -346,13 +346,9 @@ body.modo-autista .autista-header { display: block }
         <span style="font-weight:700;font-size:14px">📷 Scansiona QR cassone</span>
         <button onclick="chiudiCamera()" style="background:none;border:none;color:#fff;font-size:22px;cursor:pointer;line-height:1">×</button>
       </div>
-      <div style="position:relative;background:#000">
-        <video id="qr-video" style="width:100%;display:block;max-height:340px;object-fit:cover" playsinline muted></video>
-        <!-- mirino -->
-        <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none">
-          <div style="width:200px;height:200px;border:3px solid var(--green);border-radius:10px;box-shadow:0 0 0 2000px rgba(0,0,0,.45)"></div>
-        </div>
-        <div id="qr-status" style="position:absolute;bottom:10px;left:0;right:0;text-align:center;color:#fff;font-size:12px;font-weight:600;text-shadow:0 1px 4px #000">Inquadra il QR code</div>
+      <div style="position:relative;background:#000;min-height:280px">
+        <div id="qr-reader-container" style="width:100%"></div>
+        <div id="qr-status" style="position:absolute;bottom:10px;left:0;right:0;text-align:center;color:#fff;font-size:12px;font-weight:600;text-shadow:0 1px 4px #000;pointer-events:none">Avvio fotocamera…</div>
       </div>
       <div style="padding:12px 16px;display:flex;gap:8px">
         <button onclick="switchCamera()" style="flex:1;padding:10px;background:#333;color:#fff;border:none;border-radius:var(--radius-sm);font-size:12px;font-weight:700;cursor:pointer">🔄 Cambia cam</button>
@@ -523,7 +519,7 @@ body.modo-autista .autista-header { display: block }
 <div class="toast" id="toast"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@zxing/library@0.19.2/umd/index.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <script type="module">
 // ══════════════════════════════════════════════════
 //  FIREBASE INIT
@@ -1213,155 +1209,86 @@ window.importaExcel = async function(event) {
 };
 
 // ── FOTOCAMERA / QR SCANNER ────────────────────────
-let _qrReader   = null;
-let _qrDevices  = [];
-let _qrDevIdx   = 0;
-let _qrScanning = false;
+let _html5Qr = null;
 
-window.apriCamera = async function() {
+window.apriCamera = function() {
   const modal = document.getElementById('qr-modal');
   modal.style.display = 'flex';
   document.getElementById('qr-status').textContent = 'Avvio fotocamera…';
+  document.getElementById('qr-video').style.display = 'none';
 
-  try {
-    // Elenca dispositivi video con API nativa
-    const allDevices = await navigator.mediaDevices.enumerateDevices();
-    _qrDevices = allDevices.filter(d => d.kind === 'videoinput');
-    // Preferisci camera posteriore
-    _qrDevIdx = _qrDevices.findIndex(d =>
-      /back|rear|environment|poster/i.test(d.label)
-    );
-    if (_qrDevIdx < 0) _qrDevIdx = _qrDevices.length > 1 ? 1 : 0;
+  // html5-qrcode usa un div come contenitore
+  const container = document.getElementById('qr-reader-container');
 
-    await _avviaStream();
-  } catch(e) {
-    document.getElementById('qr-status').textContent = '❌ ' + (e.message || 'Fotocamera non disponibile');
-    console.error('QR camera error:', e);
+  if (_html5Qr) {
+    try { _html5Qr.stop().catch(()=>{}); } catch(e) {}
+    _html5Qr = null;
   }
-};
 
-async function _avviaStream() {
-  const video = document.getElementById('qr-video');
-  if (video.srcObject) {
-    video.srcObject.getTracks().forEach(t => t.stop());
-    video.srcObject = null;
-  }
-  if (_qrReader) { try { _qrReader.reset(); } catch(e) {} _qrReader = null; }
+  _html5Qr = new Html5Qrcode('qr-reader-container');
 
-  const deviceId = _qrDevices[_qrDevIdx]?.deviceId;
-  const constraints = {
-    video: deviceId
-      ? { deviceId: { exact: deviceId } }
-      : { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } }
+  const config = {
+    fps: 10,
+    qrbox: { width: 220, height: 220 },
+    aspectRatio: 1.0,
+    supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA]
   };
 
-  const stream = await navigator.mediaDevices.getUserMedia(constraints);
-  video.srcObject = stream;
-  await video.play();
-  document.getElementById('qr-status').textContent = 'Inquadra il QR code';
-  _qrScanning = true;
-  _startDecode(video);
-}
-
-function _startDecode(video) {
-  const canvas = document.createElement('canvas');
-  const ctx    = canvas.getContext('2d', { willReadFrequently: true });
-
-  // Prova BarcodeDetector nativo (Chrome Android)
-  if (typeof BarcodeDetector !== 'undefined') {
-    const detector = new BarcodeDetector({ formats: ['qr_code'] });
-    const loop = async () => {
-      if (!_qrScanning) return;
-      if (video.readyState >= 2 && video.videoWidth > 0) {
-        try {
-          const codes = await detector.detect(video);
-          if (codes.length > 0 && _qrScanning) {
-            _onQrFound(codes[0].rawValue);
-            return;
-          }
-        } catch(e) {}
-      }
-      requestAnimationFrame(loop);
-    };
-    requestAnimationFrame(loop);
-    return;
-  }
-
-  // Fallback: ZXing su canvas
-  if (typeof ZXing !== 'undefined') {
-    let zReader;
-    try {
-      zReader = new ZXing.BrowserQRCodeReader();
-    } catch(e) {
-      document.getElementById('qr-status').textContent = '⚠️ Scanner non disponibile — inserisci il codice manualmente';
-      return;
-    }
-    _qrReader = zReader;
-    const loop = async () => {
-      if (!_qrScanning) return;
-      if (video.readyState >= 2 && video.videoWidth > 0) {
-        canvas.width  = video.videoWidth;
-        canvas.height = video.videoHeight;
-        ctx.drawImage(video, 0, 0);
-        try {
-          // Prova tutti i metodi disponibili
-          let result = null;
-          if (typeof zReader.decodeFromImageElement === 'function') {
-            const img = new Image();
-            img.src = canvas.toDataURL();
-            await new Promise(r => { img.onload = r; });
-            result = await zReader.decodeFromImageElement(img).catch(() => null);
-          }
-          if (!result && typeof zReader.decodeFromCanvas === 'function') {
-            result = await zReader.decodeFromCanvas(canvas).catch(() => null);
-          }
-          if (result && _qrScanning) {
-            _onQrFound(result.getText());
-            return;
-          }
-        } catch(e) {}
-      }
-      if (_qrScanning) setTimeout(loop, 200);
-    };
-    loop();
-    return;
-  }
-
-  document.getElementById('qr-status').textContent = '⚠️ Scanner non supportato su questo browser — inserisci il codice manualmente';
-}
-
-function _onQrFound(rawValue) {
-  const codice = rawValue.trim().toUpperCase();
-  _qrScanning = false;
-  document.getElementById('qr-status').textContent = '✅ ' + codice;
-  // Feedback vibrazione
-  if (navigator.vibrate) navigator.vibrate(100);
-  setTimeout(() => {
-    chiudiCamera();
-    document.getElementById('scan-input').value = codice;
-    onScanInput(codice);
-    if (STATE.cassoni[codice]) selezionaDaCassone(codice);
-  }, 300);
-}
+  _html5Qr.start(
+    { facingMode: 'environment' },
+    config,
+    (decodedText) => {
+      const codice = decodedText.trim().toUpperCase();
+      if (navigator.vibrate) navigator.vibrate(100);
+      chiudiCamera();
+      document.getElementById('scan-input').value = codice;
+      onScanInput(codice);
+      if (STATE.cassoni[codice]) selezionaDaCassone(codice);
+      else toast('Cassone ' + codice + ' non trovato in anagrafica', 'err');
+    },
+    () => {} // frame senza QR — silenzioso
+  ).then(() => {
+    document.getElementById('qr-status').textContent = 'Inquadra il QR code del cassone';
+  }).catch(err => {
+    document.getElementById('qr-status').textContent = '❌ ' + (err || 'Fotocamera non disponibile');
+  });
+};
 
 window.chiudiCamera = function() {
-  _qrScanning = false;
-  if (_qrReader) { try { _qrReader.reset(); } catch(e) {} _qrReader = null; }
-  const video = document.getElementById('qr-video');
-  if (video && video.srcObject) {
-    video.srcObject.getTracks().forEach(t => t.stop());
-    video.srcObject = null;
+  if (_html5Qr) {
+    _html5Qr.stop().catch(() => {});
+    _html5Qr.clear();
+    _html5Qr = null;
   }
   document.getElementById('qr-modal').style.display = 'none';
 };
 
-window.switchCamera = async function() {
-  if (!_qrDevices.length) return;
-  _qrDevIdx = (_qrDevIdx + 1) % _qrDevices.length;
-  _qrScanning = false;
-  await new Promise(r => setTimeout(r, 200));
-  _qrScanning = true;
-  await _avviaStream();
+window.switchCamera = function() {
+  // html5-qrcode gestisce automaticamente il cambio camera
+  // Riavvia con la camera frontale se era posteriore e viceversa
+  if (!_html5Qr) return;
+  const wasFront = _html5Qr._currentCamera?.facingMode === 'user';
+  chiudiCamera();
+  setTimeout(() => {
+    const container = document.getElementById('qr-reader-container');
+    _html5Qr = new Html5Qrcode('qr-reader-container');
+    _html5Qr.start(
+      { facingMode: wasFront ? 'environment' : 'user' },
+      { fps: 10, qrbox: { width: 220, height: 220 } },
+      (decodedText) => {
+        const codice = decodedText.trim().toUpperCase();
+        if (navigator.vibrate) navigator.vibrate(100);
+        chiudiCamera();
+        document.getElementById('scan-input').value = codice;
+        onScanInput(codice);
+        if (STATE.cassoni[codice]) selezionaDaCassone(codice);
+      },
+      () => {}
+    ).catch(err => {
+      document.getElementById('qr-status').textContent = '❌ ' + err;
+    });
+    document.getElementById('qr-modal').style.display = 'flex';
+  }, 300);
 };
 
 document.addEventListener('keydown', function(e) {
