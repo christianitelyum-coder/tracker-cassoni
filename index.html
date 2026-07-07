@@ -458,6 +458,26 @@ body.modo-autista .autista-header { display: block }
     <div id="cassoni-list-setup" style="max-height:200px;overflow-y:auto"></div>
 
     <hr style="margin:1.5rem 0;border:none;border-top:1px solid var(--border)">
+    <h3 style="font-size:13px;font-weight:700;margin-bottom:.75rem">⚠️ Reset stato cassoni</h3>
+    <p style="font-size:12px;color:var(--ink2);margin-bottom:.75rem">Imposta tutti i cassoni su "Fuori / in giro" o "In piazzale" in un colpo solo.</p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn btn-danger" onclick="resetStatoCassoni('fuori')">🔴 Tutti FUORI / IN GIRO</button>
+      <button class="btn btn-primary" onclick="resetStatoCassoni('piazzale')">✅ Tutti IN PIAZZALE</button>
+    </div>
+    <div id="reset-stato-status" style="font-size:11px;color:var(--ink3);margin-top:8px"></div>
+
+    <hr style="margin:1.5rem 0;border:none;border-top:1px solid var(--border)">
+    <h3 style="font-size:13px;font-weight:700;margin-bottom:.75rem">🔗 Link rapidi</h3>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <a id="link-admin" href="#" target="_blank" style="flex:1;min-width:140px;padding:10px 12px;background:var(--blue-l);border:1.5px solid #c5d9f7;border-radius:var(--radius-sm);font-size:12px;font-weight:700;color:var(--blue);text-decoration:none;display:flex;align-items:center;gap:8px">
+        🖥️ Versione ufficio / admin
+      </a>
+      <a id="link-autista" href="#" target="_blank" style="flex:1;min-width:140px;padding:10px 12px;background:var(--green-l);border:1.5px solid #a7e5cc;border-radius:var(--radius-sm);font-size:12px;font-weight:700;color:var(--green-d);text-decoration:none;display:flex;align-items:center;gap:8px">
+        🚛 Versione autista
+      </a>
+    </div>
+
+    <hr style="margin:1.5rem 0;border:none;border-top:1px solid var(--border)">
     <h3 style="font-size:13px;font-weight:700;margin-bottom:.75rem">👥 Clienti frequenti</h3>
     <!-- Import da Excel -->
     <div style="background:var(--green-l);border:1.5px dashed #a7e5cc;border-radius:var(--radius-sm);padding:10px 14px;margin-bottom:.75rem">
@@ -1080,7 +1100,23 @@ window.onScanKeydown    = onScanKeydown;
 window.selezionaDaCassone = selezionaDaCassone;
 
 // ── Import Excel ────────────────────────────────────
-window.importaClienti = async function(event) {
+window.resetStatoCassoni = async function(stato) {
+  if (!db) { toast('Firebase non connesso', 'err'); return; }
+  const n = Object.keys(STATE.cassoni).length;
+  const lbl = stato === 'fuori' ? 'FUORI / IN GIRO' : 'IN PIAZZALE';
+  if (!confirm(`Impostare TUTTI i ${n} cassoni su "${lbl}"?\nQuesta operazione non può essere annullata.`)) return;
+  const statusEl = document.getElementById('reset-stato-status');
+  statusEl.textContent = '⏳ Aggiornamento in corso…';
+  const updates = {};
+  Object.keys(STATE.cassoni).forEach(id => {
+    updates[`cassoni/${id}/stato`] = stato;
+    updates[`cassoni/${id}/clienteAttuale`] = '';
+  });
+  const { update: fbUpdate } = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js');
+  await fbUpdate(ref(db, '/'), updates);
+  statusEl.textContent = `✅ ${n} cassoni impostati su "${lbl}"`;
+  toast(`✓ ${n} cassoni → ${lbl}`, 'ok');
+};
   if (!db) { toast('Firebase non connesso', 'err'); return; }
   const file = event.target.files[0];
   if (!file) return;
@@ -1294,6 +1330,45 @@ document.addEventListener('click', function(e) {
 
 // ══ BOOT ═══════════════════════════════════════════
 (async function boot() {
+  // ── Favicon e link dinamici ─────────────────────
+  const baseUrl = window.location.origin + window.location.pathname;
+  const adminUrl   = baseUrl;
+  const autistaUrl = baseUrl + '?autista';
+
+  // Aggiorna link nel setup
+  const la = document.getElementById('link-admin');
+  const lu = document.getElementById('link-autista');
+  if (la) la.href = adminUrl;
+  if (lu) lu.href = autistaUrl;
+
+  // Favicon differenziata
+  const isAutista = new URLSearchParams(window.location.search).has('autista');
+  const faviconSvg = isAutista
+    ? `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'>
+        <rect width='64' height='64' rx='12' fill='%230a7c4e'/>
+        <rect x='4' y='28' width='44' height='20' rx='4' fill='%23fff' opacity='.95'/>
+        <rect x='36' y='18' width='20' height='18' rx='3' fill='%23fff' opacity='.85'/>
+        <circle cx='14' cy='50' r='6' fill='%230a7c4e' stroke='%23fff' stroke-width='2.5'/>
+        <circle cx='38' cy='50' r='6' fill='%230a7c4e' stroke='%23fff' stroke-width='2.5'/>
+        <rect x='4' y='24' width='44' height='6' rx='2' fill='%23fff' opacity='.4'/>
+      </svg>`
+    : `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'>
+        <rect width='64' height='64' rx='12' fill='%231a4f8a'/>
+        <rect x='12' y='16' width='40' height='28' rx='3' fill='%23fff' opacity='.9'/>
+        <rect x='16' y='20' width='32' height='4' rx='2' fill='%231a4f8a' opacity='.3'/>
+        <rect x='16' y='27' width='32' height='3' rx='1.5' fill='%231a4f8a' opacity='.3'/>
+        <rect x='16' y='33' width='20' height='3' rx='1.5' fill='%231a4f8a' opacity='.3'/>
+        <rect x='12' y='46' width='40' height='4' rx='2' fill='%23fff' opacity='.5'/>
+        <circle cx='20' cy='48' r='2' fill='%23fff'/>
+        <circle cx='44' cy='48' r='2' fill='%23fff'/>
+      </svg>`;
+
+  const encoded = 'data:image/svg+xml,' + faviconSvg.replace(/\s+/g,' ');
+  let favicon = document.querySelector("link[rel='icon']");
+  if (!favicon) { favicon = document.createElement('link'); favicon.rel = 'icon'; document.head.appendChild(favicon); }
+  favicon.href = encoded;
+  document.title = isAutista ? '🚛 Movimento Cassone' : '🖥️ Tracker Cassoni — Admin';
+
   // ── Modalità autista: ?autista nell'URL ──────────
   const urlParams = new URLSearchParams(window.location.search);
   const modoAutista = urlParams.has('autista');
