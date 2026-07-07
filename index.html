@@ -115,11 +115,20 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);min-height:10
 .trasp-hero h2{font-size:1.15rem;font-weight:800;margin-bottom:4px}
 .trasp-hero p{font-size:12px;opacity:.75}
 
-.scan-area{background:var(--surface);border-radius:var(--radius);padding:1.25rem;box-shadow:var(--shadow);border:1px solid var(--border);margin-bottom:1rem}
+.scan-area{background:var(--surface);border-radius:var(--radius);padding:1.25rem;box-shadow:var(--shadow);border:1px solid var(--border);margin-bottom:1rem;position:relative}
 .scan-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ink3);margin-bottom:8px}
 .scan-input{width:100%;font-family:var(--font);font-size:18px;font-weight:700;padding:14px 16px;border:2px solid var(--border);border-radius:var(--radius-sm);color:var(--ink);background:var(--surface2);outline:none;transition:border-color .15s;text-align:center;letter-spacing:.1em}
 .scan-input:focus{border-color:var(--green);background:#fff}
 .scan-hint{font-size:11px;color:var(--ink3);text-align:center;margin-top:6px}
+.scan-drop{display:none;position:absolute;left:0;right:0;background:var(--surface);border:1.5px solid var(--green);border-radius:var(--radius-sm);box-shadow:var(--shadow-lg);z-index:200;max-height:260px;overflow-y:auto;margin-top:2px}
+.scan-drop-item{padding:11px 14px;cursor:pointer;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border);transition:background .1s}
+.scan-drop-item:last-child{border-bottom:none}
+.scan-drop-item:hover,.scan-drop-item.sdactive{background:var(--green-l)}
+.scan-drop-code{font-size:15px;font-weight:800;color:var(--green-d);letter-spacing:.06em;min-width:72px}
+.scan-drop-tipo{font-size:11px;color:var(--ink2);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.scan-drop-stato{font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;flex-shrink:0}
+.stato-piazzale{background:var(--green-l);color:var(--green-d)}
+.stato-fuori{background:var(--red-l);color:var(--red)}
 
 .trasp-form{background:var(--surface);border-radius:var(--radius);padding:1.25rem;box-shadow:var(--shadow);border:1px solid var(--border);margin-bottom:1rem;display:none}
 .trasp-form.visible{display:block}
@@ -287,8 +296,9 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);min-height:10
 
   <div class="scan-area">
     <div class="scan-label">Codice cassone</div>
-    <input class="scan-input" id="scan-input" type="text" placeholder="es. CS-001" autocomplete="off" autocapitalize="characters" oninput="onScanInput(this.value)" onkeydown="if(event.key==='Enter')confermaScan()">
-    <div class="scan-hint">Punta la fotocamera sul QR o digita il codice</div>
+    <input class="scan-input" id="scan-input" type="text" placeholder="es. ER002" autocomplete="off" autocapitalize="characters" oninput="onScanInput(this.value)" onkeydown="onScanKeydown(event)">
+    <div class="scan-drop" id="scan-drop"></div>
+    <div class="scan-hint">Punta la fotocamera sul QR o digita le prime lettere del codice</div>
   </div>
 
   <div class="cassone-found" id="cassone-found">
@@ -361,6 +371,19 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);min-height:10
     <hr style="margin:1.5rem 0;border:none;border-top:1px solid var(--border)">
     <h3 style="font-size:13px;font-weight:700;margin-bottom:.75rem">📦 Anagrafica cassoni</h3>
     <p style="font-size:12px;color:var(--ink2);margin-bottom:.75rem">Aggiungi i cassoni con QR code. Il codice deve corrispondere a quello stampato sul cassone.</p>
+
+    <!-- Import da Excel -->
+    <div style="background:var(--blue-l);border:1.5px dashed #a0bce0;border-radius:var(--radius-sm);padding:10px 14px;margin-bottom:1rem">
+      <div style="font-size:12px;font-weight:700;color:var(--blue);margin-bottom:6px">📥 Importa da Excel (censimento)</div>
+      <div style="font-size:11px;color:var(--ink2);margin-bottom:8px">Seleziona il file Excel con il censimento cassoni. Colonne richieste: <strong>NR.INTERNO = codice</strong>, <strong>Descrizione Cespite</strong>, <strong>NOTE MAX SU COPERCHIO</strong>.</div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <label style="flex:1;padding:8px 12px;background:var(--blue);color:#fff;border-radius:var(--radius-sm);font-size:12px;font-weight:700;cursor:pointer;text-align:center">
+          📂 Scegli file Excel
+          <input type="file" accept=".xlsx,.xls" onchange="importaExcel(event)" style="display:none">
+        </label>
+        <div id="import-status" style="font-size:11px;color:var(--ink3)"></div>
+      </div>
+    </div>
     <div style="display:flex;gap:8px;margin-bottom:.75rem">
       <input class="form-ctrl" id="new-cas-id" placeholder="Codice (es. CS-001)" style="flex:1;font-size:13px;padding:8px 10px">
       <select class="form-ctrl" id="new-cas-tipo" style="font-size:13px;padding:8px 10px">
@@ -376,6 +399,16 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);min-height:10
 
     <hr style="margin:1.5rem 0;border:none;border-top:1px solid var(--border)">
     <h3 style="font-size:13px;font-weight:700;margin-bottom:.75rem">👥 Clienti frequenti</h3>
+    <!-- Import da Excel -->
+    <div style="background:var(--green-l);border:1.5px dashed #a7e5cc;border-radius:var(--radius-sm);padding:10px 14px;margin-bottom:.75rem">
+      <div style="font-size:12px;font-weight:700;color:var(--green-d);margin-bottom:5px">📥 Importa clienti da Excel</div>
+      <div style="font-size:11px;color:var(--ink2);margin-bottom:7px">Prima colonna = Ragione Sociale. Importa tutta la rubrica in un colpo.</div>
+      <label style="padding:7px 12px;background:var(--green);color:#fff;border-radius:var(--radius-sm);font-size:12px;font-weight:700;cursor:pointer;display:inline-block">
+        📂 Scegli file Excel clienti
+        <input type="file" accept=".xlsx,.xls" onchange="importaClienti(event)" style="display:none">
+      </label>
+      <span id="import-clienti-status" style="font-size:11px;color:var(--ink3);margin-left:8px"></span>
+    </div>
     <div style="display:flex;gap:8px;margin-bottom:.75rem">
       <input class="form-ctrl" id="new-cliente" placeholder="Nome cliente / cantiere" style="flex:1;font-size:13px;padding:8px 10px">
       <button class="btn btn-primary btn-sm" onclick="aggiungiCliente()">+ Aggiungi</button>
@@ -409,6 +442,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);min-height:10
 
 <div class="toast" id="toast"></div>
 
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script type="module">
 // ══════════════════════════════════════════════════
 //  FIREBASE INIT
@@ -648,13 +682,80 @@ function renderClientiDatalist() {
 // ══ TRASPORTATORE ══════════════════════════════════
 let _scanCassoneId = null;
 
+let _scanDropIdx = -1;
+
 function onScanInput(val) {
+  val = val.trim().toUpperCase();
   _scanCassoneId = null;
+  _scanDropIdx = -1;
   document.getElementById('cassone-found').classList.remove('visible');
   document.getElementById('trasp-form').classList.remove('visible');
   document.getElementById('btn-uscita').disabled = true;
   document.getElementById('btn-rientro').disabled = true;
-  if (val.length >= 2) confermaScan(val);
+
+  const drop = document.getElementById('scan-drop');
+
+  if (!val) { drop.style.display = 'none'; return; }
+
+  // Filtra cassoni che corrispondono (codice o tipo)
+  const matches = Object.entries(STATE.cassoni)
+    .filter(([id, c]) =>
+      id.toUpperCase().includes(val) ||
+      (c.tipo||'').toUpperCase().includes(val)
+    )
+    .sort((a, b) => {
+      // Priorità: inizia con il valore cercato
+      const aStart = a[0].startsWith(val) ? 0 : 1;
+      const bStart = b[0].startsWith(val) ? 0 : 1;
+      return aStart - bStart || a[0].localeCompare(b[0]);
+    })
+    .slice(0, 20);
+
+  if (!matches.length) { drop.style.display = 'none'; return; }
+
+  drop.innerHTML = matches.map(([id, c], i) => {
+    const statoCls = c.stato === 'piazzale' ? 'stato-piazzale' : 'stato-fuori';
+    const statoLbl = c.stato === 'piazzale' ? '✅ Piazzale' : '🔴 Fuori';
+    const tipo = (c.tipo||'').length > 40 ? c.tipo.slice(0,38)+'…' : (c.tipo||'');
+    return `<div class="scan-drop-item" data-id="${id}" onmousedown="selezionaDaCassone('${id}')">
+      <span class="scan-drop-code">${id}</span>
+      <span class="scan-drop-tipo">${tipo}</span>
+      <span class="scan-drop-stato ${statoCls}">${statoLbl}</span>
+    </div>`;
+  }).join('');
+  drop.style.display = 'block';
+
+  // Se esiste corrispondenza esatta → seleziona subito
+  if (STATE.cassoni[val]) selezionaDaCassone(val);
+}
+
+function onScanKeydown(e) {
+  const drop = document.getElementById('scan-drop');
+  const items = drop.querySelectorAll('.scan-drop-item');
+  if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    _scanDropIdx = Math.min(_scanDropIdx + 1, items.length - 1);
+    items.forEach((el,i) => el.classList.toggle('sdactive', i === _scanDropIdx));
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    _scanDropIdx = Math.max(_scanDropIdx - 1, 0);
+    items.forEach((el,i) => el.classList.toggle('sdactive', i === _scanDropIdx));
+  } else if (e.key === 'Enter') {
+    if (_scanDropIdx >= 0 && items[_scanDropIdx]) {
+      selezionaDaCassone(items[_scanDropIdx].dataset.id);
+    } else {
+      confermaScan();
+    }
+  } else if (e.key === 'Escape') {
+    drop.style.display = 'none';
+  }
+}
+
+function selezionaDaCassone(id) {
+  const drop = document.getElementById('scan-drop');
+  drop.style.display = 'none';
+  document.getElementById('scan-input').value = id;
+  confermaScan(id);
 }
 
 function confermaScan(val) {
@@ -913,7 +1014,114 @@ window.eliminaCliente  = eliminaCliente;
 window.registraMovimento = registraMovimento;
 window.renderBollettazione = renderBollettazione;
 window.exportCSV       = exportCSV;
-window.onScanInput     = onScanInput;
+window.onScanInput      = onScanInput;
+window.onScanKeydown    = onScanKeydown;
+window.selezionaDaCassone = selezionaDaCassone;
+
+// ── Import Excel ────────────────────────────────────
+window.importaClienti = async function(event) {
+  if (!db) { toast('Firebase non connesso', 'err'); return; }
+  const file = event.target.files[0];
+  if (!file) return;
+  const statusEl = document.getElementById('import-clienti-status');
+  statusEl.textContent = '⏳ Lettura...';
+  const reader = new FileReader();
+  reader.onload = async function(e) {
+    try {
+      const wb   = XLSX.read(e.target.result, {type:'array'});
+      const ws   = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
+      const clientiNuovi = [];
+      rows.forEach(row => {
+        const v = String(row[0]||'').trim();
+        if (v && v.toLowerCase() !== 'ragione sociale' && v !== 'nan') clientiNuovi.push(v);
+      });
+      const uniq = [...new Set([...(STATE.clienti||[]), ...clientiNuovi])].sort();
+      await set(ref(db, 'clienti'), uniq);
+      statusEl.textContent = `✅ ${clientiNuovi.length} clienti importati`;
+      toast(`✓ ${clientiNuovi.length} clienti caricati`, 'ok');
+      event.target.value = '';
+    } catch(err) {
+      statusEl.textContent = '❌ ' + err.message;
+    }
+  };
+  reader.readAsArrayBuffer(file);
+};
+
+window.importaExcel = async function(event) {
+  if (!db) { toast('Firebase non connesso', 'err'); return; }
+  const file = event.target.files[0];
+  if (!file) return;
+  const statusEl = document.getElementById('import-status');
+  statusEl.textContent = '⏳ Lettura file...';
+
+  const reader = new FileReader();
+  reader.onload = async function(e) {
+    try {
+      const wb = XLSX.read(e.target.result, {type:'array'});
+      // Cerca il foglio "ELENCO UFFICIALE" o usa il primo
+      const sheetName = wb.SheetNames.find(n => n.toUpperCase().includes('UFFICIALE') || n.toUpperCase().includes('ELENCO')) || wb.SheetNames[0];
+      const ws  = wb.Sheets[sheetName];
+      const rows = XLSX.utils.sheet_to_json(ws, {defval:''});
+
+      let contatore = 0;
+      const updates = {};
+
+      rows.forEach(row => {
+        // Cerca colonne per nome (case-insensitive, spazi flessibili)
+        const keys = Object.keys(row);
+        const findVal = (...candidates) => {
+          for (const c of candidates) {
+            const k = keys.find(k => k.trim().toUpperCase().includes(c.toUpperCase()));
+            if (k && row[k] !== undefined && row[k] !== '') return String(row[k]).trim();
+          }
+          return '';
+        };
+        const codice = findVal('NR.INTERNO','INTERNO','CODICE').toUpperCase();
+        const desc   = findVal('DESCRIZIONE CESPITE','DESCRIZIONE','DESC');
+        const note   = findVal('NOTE MAX','NOTE','COPERCHIO');
+        const matr   = findVal('MATRICOLA','MATR');
+
+        if (!codice || codice === 'NAN') return;
+        let tipo = desc || 'Cassone';
+        if (note && !['', 'NAN', '???'].includes(note.toUpperCase())) tipo += ' · ' + note;
+
+        // Non sovrascrive cassoni già esistenti nel db
+        if (!STATE.cassoni[codice]) {
+          updates[`cassoni/${codice}`] = {
+            tipo, matricola: matr !== 'NAN' ? matr : '',
+            stato:'piazzale', clienteAttuale:'', lastMov:''
+          };
+          contatore++;
+        }
+      });
+
+      if (!contatore) {
+        statusEl.textContent = '⚠️ Nessun cassone nuovo da importare';
+        return;
+      }
+
+      // Scrivi su Firebase in batch
+      const { update: fbUpdate } = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js');
+      await fbUpdate(ref(db, '/'), updates);
+      statusEl.textContent = `✅ ${contatore} cassoni importati da "${sheetName}"`;
+      toast(`✓ ${contatore} cassoni importati`, 'ok');
+      event.target.value = '';
+    } catch(err) {
+      statusEl.textContent = '❌ Errore: ' + err.message;
+      console.error(err);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+};
+
+// Chiudi dropdown cassoni cliccando fuori
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('.scan-area')) {
+    var drop = document.getElementById('scan-drop');
+    if (drop) drop.style.display = 'none';
+  }
+});
 
 // ══ BOOT ═══════════════════════════════════════════
 (async function boot() {
