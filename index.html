@@ -365,8 +365,11 @@ body.modo-autista .autista-header { display: block }
         <button onclick="chiudiCamera()" style="background:none;border:none;color:#fff;font-size:22px;cursor:pointer;line-height:1">×</button>
       </div>
       <div style="position:relative;background:#000;min-height:280px">
-        <div id="qr-reader-container" style="width:100%"></div>
-        <div id="qr-status" style="position:absolute;bottom:10px;left:0;right:0;text-align:center;color:#fff;font-size:12px;font-weight:600;text-shadow:0 1px 4px #000;pointer-events:none">Avvio fotocamera…</div>
+        <video id="qr-video" style="width:100%;display:block;max-height:340px;object-fit:cover" playsinline muted></video>
+        <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none">
+          <div style="width:200px;height:200px;border:3px solid #0a7c4e;border-radius:10px;box-shadow:0 0 0 2000px rgba(0,0,0,.5)"></div>
+        </div>
+        <div id="qr-status" style="position:absolute;bottom:10px;left:0;right:0;text-align:center;color:#fff;font-size:12px;font-weight:700;text-shadow:0 1px 4px #000;pointer-events:none">Avvio fotocamera…</div>
       </div>
       <div style="padding:12px 16px;display:flex;gap:8px">
         <button onclick="switchCamera()" style="flex:1;padding:10px;background:#333;color:#fff;border:none;border-radius:var(--radius-sm);font-size:12px;font-weight:700;cursor:pointer">🔄 Cambia cam</button>
@@ -561,7 +564,7 @@ body.modo-autista .autista-header { display: block }
 <div class="toast" id="toast"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
 <script type="module">
 // ══════════════════════════════════════════════════
 //  FIREBASE INIT
@@ -1313,86 +1316,108 @@ window.importaExcel = async function(event) {
 };
 
 // ── FOTOCAMERA / QR SCANNER ────────────────────────
-let _html5Qr = null;
+// ── FOTOCAMERA QR — getUserMedia + BarcodeDetector ──
+let _qrStream   = null;
+let _qrRunning  = false;
+let _qrFacing   = 'environment';
 
-window.apriCamera = function() {
-  const modal = document.getElementById('qr-modal');
-  modal.style.display = 'flex';
+window.apriCamera = async function() {
+  document.getElementById('qr-modal').style.display = 'flex';
   document.getElementById('qr-status').textContent = 'Avvio fotocamera…';
-  document.getElementById('qr-video').style.display = 'none';
-
-  // html5-qrcode usa un div come contenitore
-  const container = document.getElementById('qr-reader-container');
-
-  if (_html5Qr) {
-    try { _html5Qr.stop().catch(()=>{}); } catch(e) {}
-    _html5Qr = null;
-  }
-
-  _html5Qr = new Html5Qrcode('qr-reader-container');
-
-  const config = {
-    fps: 10,
-    qrbox: { width: 220, height: 220 },
-    aspectRatio: 1.0,
-    supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA]
-  };
-
-  _html5Qr.start(
-    { facingMode: 'environment' },
-    config,
-    (decodedText) => {
-      const codice = decodedText.trim().toUpperCase();
-      if (navigator.vibrate) navigator.vibrate(100);
-      chiudiCamera();
-      document.getElementById('scan-input').value = codice;
-      onScanInput(codice);
-      if (STATE.cassoni[codice]) selezionaDaCassone(codice);
-      else toast('Cassone ' + codice + ' non trovato in anagrafica', 'err');
-    },
-    () => {} // frame senza QR — silenzioso
-  ).then(() => {
-    document.getElementById('qr-status').textContent = 'Inquadra il QR code del cassone';
-  }).catch(err => {
-    document.getElementById('qr-status').textContent = '❌ ' + (err || 'Fotocamera non disponibile');
-  });
+  await _avviaQr(_qrFacing);
 };
 
-window.chiudiCamera = function() {
-  if (_html5Qr) {
-    _html5Qr.stop().catch(() => {});
-    _html5Qr.clear();
-    _html5Qr = null;
+async function _avviaQr(facingMode) {
+  // Ferma stream precedente
+  if (_qrStream) { _qrStream.getTracks().forEach(t => t.stop()); _qrStream = null; }
+  _qrRunning = false;
+
+  const video = document.getElementById('qr-video');
+  video.style.display = 'block';
+
+  try {
+    _qrStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: facingMode }, width: { ideal: 1280 } }
+    });
+    video.srcObject = _qrStream;
+    video.setAttribute('playsinline', true);
+    await video.play();
+    _qrRunning = true;
+    document.getElementById('qr-status').textContent = 'Inquadra il QR code del cassone';
+    _qrDecode(video);
+  } catch(e) {
+    document.getElementById('qr-status').textContent = '❌ ' + e.message;
   }
+}
+
+function _qrDecode(video) {
+  const canvas = document.createElement('canvas');
+  const ctx    = canvas.getContext('2d', { willReadFrequently: true });
+
+  // BarcodeDetector nativo (Chrome 83+, Android)
+  if (typeof BarcodeDetector !== 'undefined') {
+    const det = new BarcodeDetector({ formats: ['qr_code'] });
+    const scan = async () => {
+      if (!_qrRunning) return;
+      try {
+        if (video.readyState >= 2) {
+          const codes = await det.detect(video);
+          if (codes.length) { _qrHit(codes[0].rawValue); return; }
+        }
+      } catch(e) {}
+      requestAnimationFrame(scan);
+    };
+    requestAnimationFrame(scan);
+    return;
+  }
+
+  // Fallback jsQR (caricato inline come script)
+  if (typeof jsQR !== 'undefined') {
+    const scan = () => {
+      if (!_qrRunning) return;
+      if (video.readyState >= 2) {
+        canvas.width  = video.videoWidth;
+        canvas.height = video.videoHeight;
+        ctx.drawImage(video, 0, 0);
+        const img  = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const code = jsQR(img.data, img.width, img.height, { inversionAttempts: 'dontInvert' });
+        if (code) { _qrHit(code.data); return; }
+      }
+      setTimeout(scan, 150);
+    };
+    scan();
+    return;
+  }
+
+  document.getElementById('qr-status').textContent = '⚠️ Scanner non supportato — digita il codice manualmente';
+}
+
+function _qrHit(rawValue) {
+  if (!_qrRunning) return;
+  _qrRunning = false;
+  const codice = rawValue.trim().toUpperCase();
+  document.getElementById('qr-status').textContent = '✅ ' + codice;
+  if (navigator.vibrate) navigator.vibrate([80, 40, 80]);
+  setTimeout(() => {
+    chiudiCamera();
+    document.getElementById('scan-input').value = codice;
+    onScanInput(codice);
+    if (STATE.cassoni[codice]) selezionaDaCassone(codice);
+    else toast('Cassone ' + codice + ' non in anagrafica', 'err');
+  }, 400);
+}
+
+window.chiudiCamera = function() {
+  _qrRunning = false;
+  if (_qrStream) { _qrStream.getTracks().forEach(t => t.stop()); _qrStream = null; }
+  const video = document.getElementById('qr-video');
+  if (video) { video.srcObject = null; }
   document.getElementById('qr-modal').style.display = 'none';
 };
 
 window.switchCamera = function() {
-  // html5-qrcode gestisce automaticamente il cambio camera
-  // Riavvia con la camera frontale se era posteriore e viceversa
-  if (!_html5Qr) return;
-  const wasFront = _html5Qr._currentCamera?.facingMode === 'user';
-  chiudiCamera();
-  setTimeout(() => {
-    const container = document.getElementById('qr-reader-container');
-    _html5Qr = new Html5Qrcode('qr-reader-container');
-    _html5Qr.start(
-      { facingMode: wasFront ? 'environment' : 'user' },
-      { fps: 10, qrbox: { width: 220, height: 220 } },
-      (decodedText) => {
-        const codice = decodedText.trim().toUpperCase();
-        if (navigator.vibrate) navigator.vibrate(100);
-        chiudiCamera();
-        document.getElementById('scan-input').value = codice;
-        onScanInput(codice);
-        if (STATE.cassoni[codice]) selezionaDaCassone(codice);
-      },
-      () => {}
-    ).catch(err => {
-      document.getElementById('qr-status').textContent = '❌ ' + err;
-    });
-    document.getElementById('qr-modal').style.display = 'flex';
-  }, 300);
+  _qrFacing = _qrFacing === 'environment' ? 'user' : 'environment';
+  _avviaQr(_qrFacing);
 };
 
 document.addEventListener('keydown', function(e) {
