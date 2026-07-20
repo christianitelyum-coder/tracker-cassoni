@@ -1038,6 +1038,8 @@ function aggiornaSegnalazioni() {
   if (altroTesto) altroTesto.style.display = altroCheck?.checked ? 'block' : 'none';
 }
 window.aggiornaSegnalazioni = aggiornaSegnalazioni;
+
+async function registraMovimento(tipo) {
   if (!db) { toast('Firebase non connesso', 'err'); return; }
   if (!_scanCassoneId) { toast('Nessun cassone selezionato', 'err'); return; }
   const cliente = document.getElementById('t-cliente').value.trim();
