@@ -899,6 +899,8 @@ async function eliminaMovimento(movId) {
   toast(`✓ Movimento eliminato — ${cassoneId} → ${labelRip}`, 'ok');
 }
 window.eliminaMovimento = eliminaMovimento;
+
+function renderCassoniSetup() {
   const el = document.getElementById('cassoni-list-setup');
   const cas = Object.entries(STATE.cassoni);
   if (!cas.length) { el.innerHTML = '<p style="font-size:12px;color:var(--ink3)">Nessun cassone</p>'; return; }
