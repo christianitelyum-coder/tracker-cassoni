@@ -396,8 +396,32 @@ body.modo-autista .autista-header { display: block }
       <input class="form-ctrl" id="t-autista" placeholder="Nome e cognome">
     </div>
     <div class="form-row">
-      <label class="form-lbl">Note (opzionale)</label>
+      <label class="form-lbl">Note manutenzione</label>
       <input class="form-ctrl" id="t-note" placeholder="Es. targa mezzo, riferimento ordine...">
+    </div>
+    <div class="form-row">
+      <label class="form-lbl">Segnalazioni</label>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-top:4px">
+        <label style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--s2,#f7f9fc);border-radius:7px;border:1.5px solid var(--border,#dde3ef);cursor:pointer;font-size:13px;font-weight:500">
+          <input type="checkbox" id="flag-tag" onchange="aggiornaSegnalazioni()" style="width:16px;height:16px;accent-color:#c0392b;cursor:pointer">
+          🏷️ Manca tag
+        </label>
+        <label style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--s2,#f7f9fc);border-radius:7px;border:1.5px solid var(--border,#dde3ef);cursor:pointer;font-size:13px;font-weight:500">
+          <input type="checkbox" id="flag-rotture" onchange="aggiornaSegnalazioni()" style="width:16px;height:16px;accent-color:#c0392b;cursor:pointer">
+          🔧 Presenta rotture
+        </label>
+        <label style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--s2,#f7f9fc);border-radius:7px;border:1.5px solid var(--border,#dde3ef);cursor:pointer;font-size:13px;font-weight:500">
+          <input type="checkbox" id="flag-telo" onchange="aggiornaSegnalazioni()" style="width:16px;height:16px;accent-color:#c0392b;cursor:pointer">
+          🪟 Telo danneggiato
+        </label>
+        <label style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--s2,#f7f9fc);border-radius:7px;border:1.5px solid var(--border,#dde3ef);cursor:pointer;font-size:13px;font-weight:500">
+          <input type="checkbox" id="flag-altro" onchange="aggiornaSegnalazioni()" style="width:16px;height:16px;accent-color:#c0392b;cursor:pointer">
+          ⚠️ Altro
+        </label>
+        <textarea id="flag-altro-testo" placeholder="Descrivi il problema..." rows="2"
+          style="display:none;font-family:var(--sans,sans-serif);font-size:13px;padding:8px 12px;border:1.5px solid var(--border,#dde3ef);border-radius:7px;background:var(--s2,#f7f9fc);color:var(--ink,#0f1923);resize:vertical;outline:none;transition:border-color .15s"
+          onfocus="this.style.borderColor='var(--green,#0a7c4e)'" onblur="this.style.borderColor='var(--border,#dde3ef)'"></textarea>
+      </div>
     </div>
     <div class="action-btns">
       <button class="btn-uscita" id="btn-uscita" onclick="registraMovimento('USCITA')" disabled>
@@ -570,7 +594,7 @@ body.modo-autista .autista-header { display: block }
 //  FIREBASE INIT
 // ══════════════════════════════════════════════════
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-import { getDatabase, ref, set, push, onValue, get, update }
+import { getDatabase, ref, set, push, onValue, get, update, remove }
   from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
 
 let db = null;
@@ -826,14 +850,55 @@ function renderBollettazione() {
       <td>${m.cliente||'—'}</td>
       <td style="color:var(--ink2)">${m.autista||'—'}</td>
       <td>${ddtHtml}</td>
-      <td>
+      <td style="white-space:nowrap">
         <button class="btn btn-ghost btn-sm" onclick="openDDT('${id}')">📄 DDT</button>
+        <button class="btn btn-ghost btn-sm" onclick="eliminaMovimento('${id}')" style="color:var(--red,#c0392b);margin-left:4px" title="Elimina movimento e ripristina stato cassone">🗑</button>
       </td>
     </tr>`;
   }).join('');
 }
 
-function renderCassoniSetup() {
+async function eliminaMovimento(movId) {
+  if (!db) { toast('Firebase non connesso', 'err'); return; }
+  const mov = STATE.movimenti[movId];
+  if (!mov) { toast('Movimento non trovato', 'err'); return; }
+
+  const cassoneId = mov.cassoneId;
+  const tipoMov   = mov.tipo; // 'USCITA' o 'RIENTRO'
+  const data      = fmtDT(mov.ts);
+  const cliente   = mov.cliente || '—';
+
+  // Stato inverso: se era USCITA → torna in PIAZZALE, se era RIENTRO → torna FUORI
+  const statoRipristino = tipoMov === 'USCITA' ? 'piazzale' : 'fuori';
+  const labelRip = statoRipristino === 'piazzale' ? 'IN PIAZZALE' : 'FUORI';
+
+  const conferma = confirm(
+    `Eliminare questo movimento?\n\n` +
+    `Cassone: ${cassoneId}\n` +
+    `Tipo: ${tipoMov}\n` +
+    `Data: ${data}\n` +
+    `Cliente: ${cliente}\n\n` +
+    `Il cassone verrà ripristinato a "${labelRip}".`
+  );
+  if (!conferma) return;
+
+  const { remove: fbRemove } = { remove };
+
+  // Elimina il movimento
+  await fbRemove(ref(db, `movimenti/${movId}`));
+
+  // Ripristina stato cassone
+  const aggCassone = { stato: statoRipristino };
+  if (statoRipristino === 'piazzale') {
+    aggCassone.clienteAttuale = '';
+  } else {
+    aggCassone.clienteAttuale = mov.cliente || '';
+  }
+  await update(ref(db, `cassoni/${cassoneId}`), aggCassone);
+
+  toast(`✓ Movimento eliminato — ${cassoneId} → ${labelRip}`, 'ok');
+}
+window.eliminaMovimento = eliminaMovimento;
   const el = document.getElementById('cassoni-list-setup');
   const cas = Object.entries(STATE.cassoni);
   if (!cas.length) { el.innerHTML = '<p style="font-size:12px;color:var(--ink3)">Nessun cassone</p>'; return; }
@@ -965,16 +1030,32 @@ function confermaScan(val) {
   }
 }
 
-async function registraMovimento(tipo) {
+function aggiornaSegnalazioni() {
+  const altroCheck = document.getElementById('flag-altro');
+  const altroTesto = document.getElementById('flag-altro-testo');
+  if (altroTesto) altroTesto.style.display = altroCheck?.checked ? 'block' : 'none';
+}
+window.aggiornaSegnalazioni = aggiornaSegnalazioni;
   if (!db) { toast('Firebase non connesso', 'err'); return; }
   if (!_scanCassoneId) { toast('Nessun cassone selezionato', 'err'); return; }
   const cliente = document.getElementById('t-cliente').value.trim();
   const autista = document.getElementById('t-autista').value.trim();
   const note    = document.getElementById('t-note').value.trim();
+
+  // Raccoglie segnalazioni manutenzione
+  const segnalazioni = [];
+  if (document.getElementById('flag-tag')?.checked)     segnalazioni.push('Manca tag');
+  if (document.getElementById('flag-rotture')?.checked) segnalazioni.push('Presenta rotture');
+  if (document.getElementById('flag-telo')?.checked)    segnalazioni.push('Telo danneggiato');
+  if (document.getElementById('flag-altro')?.checked) {
+    const altroTesto = document.getElementById('flag-altro-testo')?.value.trim();
+    segnalazioni.push(altroTesto ? 'Altro: ' + altroTesto : 'Altro');
+  }
+  const noteManutenzione = [note, ...segnalazioni].filter(Boolean).join(' | ');
   if (!cliente) { toast('Inserisci il cliente', 'err'); return; }
 
   const movRef = ref(db, 'movimenti');
-  const nuovoMov = { cassoneId:_scanCassoneId, tipo, ts:now(), cliente, autista, note, ddtNumero:'', ddtTs:'' };
+  const nuovoMov = { cassoneId:_scanCassoneId, tipo, ts:now(), cliente, autista, note:noteManutenzione, ddtNumero:'', ddtTs:'' };
   await push(movRef, nuovoMov);
 
   // Aggiorna stato cassone
@@ -991,6 +1072,12 @@ async function registraMovimento(tipo) {
   document.getElementById('scan-input').value = '';
   document.getElementById('t-cliente').value = '';
   document.getElementById('t-note').value = '';
+  // Reset segnalazioni
+  ['flag-tag','flag-rotture','flag-telo','flag-altro'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.checked = false;
+  });
+  const altroTesto = document.getElementById('flag-altro-testo');
+  if (altroTesto) { altroTesto.value = ''; altroTesto.style.display = 'none'; }
   document.getElementById('cassone-found').classList.remove('visible');
   document.getElementById('trasp-form').classList.remove('visible');
   _scanCassoneId = null;
