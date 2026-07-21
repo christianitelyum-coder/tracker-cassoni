@@ -604,6 +604,38 @@ body.modo-autista .autista-header { display: block }
   </div>
 </div>
 
+<!-- ════════ MODAL SEGNALAZIONI ════════ -->
+<div class="modal-overlay" id="segn-modal" onclick="if(event.target===this)closeSegn()" style="display:none">
+  <div class="modal-box" style="max-width:420px">
+    <div class="modal-header">
+      <span class="modal-title">🔧 Segnalazioni manutenzione</span>
+      <button class="modal-close" onclick="closeSegn()">×</button>
+    </div>
+    <div class="modal-body" style="display:flex;flex-direction:column;gap:10px">
+      <div id="segn-cassone-label" style="font-size:13px;font-weight:600;color:var(--ink2)"></div>
+      <label style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--s2);border-radius:7px;border:1.5px solid var(--border);cursor:pointer;font-size:13px">
+        <input type="checkbox" id="segn-tag" style="width:16px;height:16px;accent-color:#c0392b"> 🏷️ Manca tag
+      </label>
+      <label style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--s2);border-radius:7px;border:1.5px solid var(--border);cursor:pointer;font-size:13px">
+        <input type="checkbox" id="segn-rotture" style="width:16px;height:16px;accent-color:#c0392b"> 🔧 Presenta rotture
+      </label>
+      <label style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--s2);border-radius:7px;border:1.5px solid var(--border);cursor:pointer;font-size:13px">
+        <input type="checkbox" id="segn-telo" style="width:16px;height:16px;accent-color:#c0392b"> 🪟 Telo danneggiato
+      </label>
+      <label style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--s2);border-radius:7px;border:1.5px solid var(--border);cursor:pointer;font-size:13px">
+        <input type="checkbox" id="segn-altro" onchange="document.getElementById('segn-altro-testo').style.display=this.checked?'block':'none'" style="width:16px;height:16px;accent-color:#c0392b"> ⚠️ Altro
+      </label>
+      <textarea id="segn-altro-testo" placeholder="Descrivi il problema..." rows="2"
+        style="display:none;font-family:inherit;font-size:13px;padding:8px 12px;border:1.5px solid var(--border);border-radius:7px;background:var(--s2);color:var(--ink);resize:vertical;outline:none"></textarea>
+      <input id="segn-note-libere" class="form-ctrl" placeholder="Note aggiuntive (opzionale)" style="font-size:13px">
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeSegn()">Annulla</button>
+      <button class="btn btn-primary" onclick="salvaSegnalazioni()">✓ Salva</button>
+    </div>
+  </div>
+</div>
+
 <!-- ════════ DDT MODAL ════════ -->
 <div class="modal-overlay" id="ddt-modal" onclick="if(event.target===this)closeDDT()">
   <div class="modal">
@@ -906,7 +938,52 @@ function renderBollettazione() {
   }).join('');
 }
 
-async function eliminaMovimento(movId) {
+let _segnMovId = null;
+
+function openSegnalazioniModal(movId) {
+  _segnMovId = movId;
+  const m = STATE.movimenti[movId];
+  if (!m) return;
+  const flags = estraiFlag(m.note);
+  const altroTesto = (m.note||'').match(/Altro: ([^|]+)/)?.[1]?.trim() || '';
+  const noteLibere = (m.note||'').split(' | ').filter(p => !FLAGS.some(f => p.startsWith(f))).join(' | ');
+
+  document.getElementById('segn-cassone-label').textContent = `Cassone ${m.cassoneId} — ${fmtDT(m.ts)}`;
+  document.getElementById('segn-tag').checked     = flags.includes('Manca tag');
+  document.getElementById('segn-rotture').checked = flags.includes('Presenta rotture');
+  document.getElementById('segn-telo').checked    = flags.includes('Telo danneggiato');
+  const hasAltro = flags.some(f => f.startsWith('Altro'));
+  document.getElementById('segn-altro').checked   = hasAltro;
+  document.getElementById('segn-altro-testo').value   = altroTesto;
+  document.getElementById('segn-altro-testo').style.display = hasAltro ? 'block' : 'none';
+  document.getElementById('segn-note-libere').value   = noteLibere;
+  document.getElementById('segn-modal').style.display = 'flex';
+}
+window.openSegnalazioniModal = openSegnalazioniModal;
+
+function closeSegn() {
+  document.getElementById('segn-modal').style.display = 'none';
+  _segnMovId = null;
+}
+window.closeSegn = closeSegn;
+
+async function salvaSegnalazioni() {
+  if (!_segnMovId || !db) return;
+  const segnalazioni = [];
+  if (document.getElementById('segn-tag').checked)     segnalazioni.push('Manca tag');
+  if (document.getElementById('segn-rotture').checked) segnalazioni.push('Presenta rotture');
+  if (document.getElementById('segn-telo').checked)    segnalazioni.push('Telo danneggiato');
+  if (document.getElementById('segn-altro').checked) {
+    const t = document.getElementById('segn-altro-testo').value.trim();
+    segnalazioni.push(t ? 'Altro: ' + t : 'Altro');
+  }
+  const noteLibere = document.getElementById('segn-note-libere').value.trim();
+  const nuovaNota  = [noteLibere, ...segnalazioni].filter(Boolean).join(' | ');
+  await update(ref(db, `movimenti/${_segnMovId}`), { note: nuovaNota });
+  toast('✓ Segnalazioni aggiornate', 'ok');
+  closeSegn();
+}
+window.salvaSegnalazioni = salvaSegnalazioni;
   if (!db) { toast('Firebase non connesso', 'err'); return; }
   const mov = STATE.movimenti[movId];
   if (!mov) { toast('Movimento non trovato', 'err'); return; }
