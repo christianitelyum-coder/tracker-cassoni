@@ -918,21 +918,29 @@ function renderBollettazione() {
   }
   tbody.innerHTML = movs.map(([id,m]) => {
     const cas = STATE.cassoni[m.cassoneId] || {};
+    const isUscita = m.tipo === 'USCITA';
     const ddtHtml = m.ddtNumero
       ? `<span class="ddt-tag">${m.ddtNumero}</span>`
-      : `<span class="ddt-tag pend">Da emettere</span>`;
+      : isUscita
+        ? `<span class="ddt-tag pend">Da emettere</span>`
+        : `<span style="color:var(--ink3);font-size:12px">—</span>`;
+    const flagsAttuali = (STATE.movimenti[id]?.note||'').split(' | ').filter(p => ['Manca tag','Presenta rotture','Telo danneggiato'].some(f=>p.startsWith(f)) || p.startsWith('Altro'));
+    const flagBadge = flagsAttuali.filter(Boolean).length
+      ? `<span style="font-size:10px;background:#fef2f2;color:#c0392b;border:1px solid #fca5a5;border-radius:10px;padding:1px 5px;font-weight:700;vertical-align:middle">${flagsAttuali.filter(Boolean).length}</span>`
+      : '';
     return `<tr>
       <td style="white-space:nowrap;color:var(--ink2)">${fmtDT(m.ts)}</td>
       <td><strong>${m.cassoneId}</strong></td>
       <td style="color:var(--ink2)">${cas.tipo||'—'}</td>
-      <td><span class="status-pill ${m.tipo==='USCITA'?'pill-out':'pill-in'}" onclick="toggleTipoMovimento('${id}',this)" style="cursor:pointer;user-select:none" title="Clicca per cambiare tipo">${m.tipo==='USCITA'?'↑ Uscita':'↓ Rientro'}</span></td>
+      <td><span class="status-pill ${isUscita?'pill-out':'pill-in'}" onclick="toggleTipoMovimento('${id}',this)" style="cursor:pointer;user-select:none" title="Clicca per cambiare tipo">${isUscita?'↑ Uscita':'↓ Rientro'}</span></td>
       <td>${m.cliente||'—'}</td>
       <td style="color:var(--ink2)">${m.autista||'—'}</td>
       <td>${ddtHtml}</td>
       <td style="white-space:nowrap">
-        <button class="btn btn-ghost btn-sm" onclick="openDDT('${id}')">📄 ${m.ddtNumero ? 'Modifica' : 'DDT'}</button>
-        ${m.ddtNumero ? `<button class="btn btn-ghost btn-sm" onclick="stampaDDTDiretto('${id}')" style="margin-left:4px" title="Stampa DDT ${m.ddtNumero}">🖨️</button>` : ''}
-        <button class="btn btn-ghost btn-sm" onclick="eliminaMovimento('${id}')" style="color:var(--red,#c0392b);margin-left:4px" title="Elimina movimento">🗑</button>
+        ${isUscita ? `<button class="btn btn-ghost btn-sm" onclick="openDDT('${id}')">📄 ${m.ddtNumero?'Modifica':'DDT'}</button>` : ''}
+        ${isUscita && m.ddtNumero ? `<button class="btn btn-ghost btn-sm" onclick="stampaDDTDiretto('${id}')" style="margin-left:4px" title="Stampa">🖨️</button>` : ''}
+        <button class="btn btn-ghost btn-sm" onclick="openSegnalazioniModal('${id}')" style="margin-left:4px" title="Segnalazioni">🔧 ${flagBadge}</button>
+        <button class="btn btn-ghost btn-sm" onclick="eliminaMovimento('${id}')" style="color:var(--red,#c0392b);margin-left:4px" title="Elimina">🗑</button>
       </td>
     </tr>`;
   }).join('');
