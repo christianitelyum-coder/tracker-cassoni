@@ -1039,13 +1039,6 @@ function aggiornaSegnalazioni() {
 }
 window.aggiornaSegnalazioni = aggiornaSegnalazioni;
 
-function aggiornaSegnalazioni() {
-  const altroCheck = document.getElementById('flag-altro');
-  const altroTesto = document.getElementById('flag-altro-testo');
-  if (altroTesto) altroTesto.style.display = altroCheck?.checked ? 'block' : 'none';
-}
-window.aggiornaSegnalazioni = aggiornaSegnalazioni;
-
 async function registraMovimento(tipo) {
   if (!db) { toast('Firebase non connesso', 'err'); return; }
   if (!_scanCassoneId) { toast('Nessun cassone selezionato', 'err'); return; }
