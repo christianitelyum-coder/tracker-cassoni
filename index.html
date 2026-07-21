@@ -572,9 +572,15 @@ body.modo-autista .autista-header { display: block }
     </div>
     <div class="modal-body">
       <div class="ddt-preview" id="ddt-preview"></div>
-      <div style="margin-top:1rem">
-        <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--ink3);display:block;margin-bottom:5px">N° DDT (da assegnare)</label>
-        <input class="form-ctrl" id="ddt-numero" placeholder="es. DDT-2025/0042" style="font-size:13px;padding:8px 12px;width:100%">
+      <div style="margin-top:1rem;display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div>
+          <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--ink3);display:block;margin-bottom:5px">N° DDT (automatico)</label>
+          <input class="form-ctrl" id="ddt-numero" placeholder="01/26" style="font-size:13px;padding:8px 12px;width:100%">
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--ink3);display:block;margin-bottom:5px">Trasportatore</label>
+          <input class="form-ctrl" id="ddt-trasportatore" placeholder="Nome trasportatore" style="font-size:13px;padding:8px 12px;width:100%">
+        </div>
       </div>
     </div>
     <div class="modal-footer">
@@ -1116,21 +1122,23 @@ async function aggiornaTipoMovimento(movId, nuovoTipo) {
 }
 window.aggiornaTipoMovimento = aggiornaTipoMovimento;
 
-async function eliminaMovimento(movId) {
-  if (!db) { toast('Firebase non connesso', 'err'); return; }
-  const mov = STATE.movimenti[movId];
-  if (!mov) { toast('Movimento non trovato', 'err'); return; }
-  const cassoneId = mov.cassoneId;
-  const tipoMov = mov.tipo;
-  const statoRipristino = tipoMov === 'USCITA' ? 'piazzale' : 'fuori';
-  const labelRip = statoRipristino === 'piazzale' ? 'IN PIAZZALE' : 'FUORI';
-  if (!confirm(`Eliminare questo movimento?\n\nCassone: ${cassoneId}\nTipo: ${tipoMov}\nData: ${fmtDT(mov.ts)}\nCliente: ${mov.cliente||'—'}\n\nIl cassone tornerà "${labelRip}".`)) return;
-  await remove(ref(db, `movimenti/${movId}`));
-  const agg = { stato: statoRipristino, clienteAttuale: statoRipristino === 'piazzale' ? '' : (mov.cliente||'') };
-  await update(ref(db, `cassoni/${cassoneId}`), agg);
-  toast(`✓ Movimento eliminato — ${cassoneId} → ${labelRip}`, 'ok');
+
+function calcolaProssimoNumero() {
+  const anno = new Date().getFullYear().toString().slice(-2);
+  const movs = Object.values(STATE.movimenti || {});
+  let maxNum = 0;
+  movs.forEach(m => {
+    if (m.ddtNumero) {
+      const match = m.ddtNumero.match(/^(\d+)\//);
+      if (match) {
+        const n = parseInt(match[1]);
+        if (n > maxNum) maxNum = n;
+      }
+    }
+  });
+  const prossimo = String(maxNum + 1).padStart(2, '0');
+  return `${prossimo}/${anno}`;
 }
-window.eliminaMovimento = eliminaMovimento;
 
 function openDDT(movId) {
   _ddtMovId = movId;
@@ -1147,13 +1155,13 @@ function openDDT(movId) {
   const causale = isUscita ? 'POSIZIONAMENTO CASSONE' : 'RITIRO CASSONE';
   const ddtNum = m.ddtNumero || '____________________';
   document.getElementById('ddt-modal-title').textContent = `DDT — ${m.cassoneId} — ${isUscita?'USCITA':'RIENTRO'}`;
-  document.getElementById('ddt-numero').value = m.ddtNumero || '';
+  document.getElementById('ddt-numero').value = m.ddtNumero || calcolaProssimoNumero();
+  document.getElementById('ddt-trasportatore').value = m.autista || '';
   document.getElementById('ddt-preview').innerHTML = `
 <div id="ddt-print-area" style="font-family:Arial,sans-serif;font-size:12px;color:#111;max-width:740px;margin:0 auto">
   <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px">
     <div>
-      <div style="font-size:22px;font-weight:900;letter-spacing:-1px;color:#003366">ITELYUM<sup style="font-size:12px">®</sup></div>
-      <div style="font-size:8px;font-weight:700;color:#333;letter-spacing:1px;border:1px solid #333;padding:1px 4px;display:inline-block;margin-top:2px">SOLUZIONI PER L'AMBIENTE</div>
+      <img src="data:image/png;base64,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" alt="Itelyum" style="height:60px;width:auto;display:block">
     </div>
   </div>
   <table style="width:100%;border-collapse:collapse;border:2px solid #111;margin-bottom:10px">
@@ -1192,7 +1200,7 @@ function openDDT(movId) {
       <td style="border:1px solid #999;padding:6px 8px;text-align:center;vertical-align:top">Nr.</td>
       <td style="border:1px solid #999;padding:6px 8px;vertical-align:top;font-size:11px;line-height:1.7">
         <strong>PROPRIETARIO/COMMITTENTE/CARICATORE:<br>CENTRO RISORSE SPA</strong>
-        ${m.autista?'<br><br>TRASPORTATORE : '+m.autista:''}
+        ${document.getElementById('ddt-trasportatore')?.value ? '<br><br>TRASPORTATORE : '+document.getElementById('ddt-trasportatore').value : (m.autista?'<br><br>TRASPORTATORE : '+m.autista:'')}
         ${m.note?'<br><br>'+m.note:''}
         <br><br>N. CASSONE POSIZIONATO<br>
         <span style="border-bottom:1px solid #111;display:inline-block;min-width:80px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>
@@ -1223,7 +1231,7 @@ function openDDT(movId) {
       <th style="border:1px solid #999;padding:4px 8px;text-align:center;width:15%">Ora trasporto</th>
     </tr></thead>
     <tbody><tr>
-      <td style="border:1px solid #999;padding:6px 8px;font-size:11px">${m.autista||'KEOMA S.R.L.'}<br>Via Lazio 48 - 31045 - MOTTA DI LIVENZA (TV)<br>C.F. 00429860315</td>
+      <td style="border:1px solid #999;padding:6px 8px;font-size:11px">${document.getElementById('ddt-trasportatore')?.value || m.autista || 'KEOMA S.R.L.'}<br>Via Lazio 48 - 31045 - MOTTA DI LIVENZA (TV)<br>C.F. 00429860315</td>
       <td style="border:1px solid #999;padding:6px 8px;text-align:center">________</td>
       <td style="border:1px solid #999;padding:6px 8px;text-align:center">${dataMov}</td>
       <td style="border:1px solid #999;padding:6px 8px;text-align:center">______</td>
@@ -1242,6 +1250,9 @@ function openDDT(movId) {
     const el = document.getElementById('ddt-num-preview');
     if (el) el.textContent = this.value || '____________________';
   };
+  document.getElementById('ddt-trasportatore').oninput = function() {
+    // Aggiorna anteprima trasportatore — il template viene rigenerato al click stampa
+  };
   document.getElementById('ddt-modal').classList.add('open');
 }
 function closeDDT() { document.getElementById('ddt-modal').classList.remove('open'); _ddtMovId = null; }
@@ -1256,10 +1267,13 @@ async function confermaDDT() {
 }
 
 function stampaDDT() {
+  // Aggiorna numero e trasportatore nell'anteprima prima di stampare
+  const numEl = document.getElementById('ddt-num-preview');
+  if (numEl) numEl.textContent = document.getElementById('ddt-numero')?.value || '____________________';
   const area = document.getElementById('ddt-print-area');
   if (!area) return;
   const w = window.open('', '_blank');
-  w.document.write('<!DOCTYPE html><html><head><title>DDT</title><style>@page{size:A4;margin:15mm}body{font-family:Arial,sans-serif;font-size:12px;color:#111;margin:0;padding:0}*{box-sizing:border-box}</style></head><body>' + area.outerHTML + '</body></html>');
+  w.document.write('<!DOCTYPE html><html><head><title>DDT</title><style>@page{size:A4;margin:15mm}body{font-family:Arial,sans-serif;font-size:12px;color:#111;margin:0;padding:0}*{box-sizing:border-box}img{max-width:100%}</style></head><body>' + area.outerHTML + '</body></html>');
   w.document.close();
   setTimeout(() => w.print(), 400);
 }
