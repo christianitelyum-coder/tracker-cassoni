@@ -984,6 +984,8 @@ async function salvaSegnalazioni() {
   closeSegn();
 }
 window.salvaSegnalazioni = salvaSegnalazioni;
+
+async function eliminaMovimento(movId) {
   if (!db) { toast('Firebase non connesso', 'err'); return; }
   const mov = STATE.movimenti[movId];
   if (!mov) { toast('Movimento non trovato', 'err'); return; }
