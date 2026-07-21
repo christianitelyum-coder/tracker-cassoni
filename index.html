@@ -1054,17 +1054,6 @@ async function registraMovimento(tipo) {
     segnalazioni.push(alt ? 'Altro: ' + alt : 'Altro');
   }
   const noteManutenzione = [note, ...segnalazioni].filter(Boolean).join(' | ');
-
-  // Raccoglie segnalazioni manutenzione
-  const segnalazioni = [];
-  if (document.getElementById('flag-tag')?.checked)     segnalazioni.push('Manca tag');
-  if (document.getElementById('flag-rotture')?.checked) segnalazioni.push('Presenta rotture');
-  if (document.getElementById('flag-telo')?.checked)    segnalazioni.push('Telo danneggiato');
-  if (document.getElementById('flag-altro')?.checked) {
-    const altroTesto = document.getElementById('flag-altro-testo')?.value.trim();
-    segnalazioni.push(altroTesto ? 'Altro: ' + altroTesto : 'Altro');
-  }
-  const noteManutenzione = [note, ...segnalazioni].filter(Boolean).join(' | ');
   if (!cliente) { toast('Inserisci il cliente', 'err'); return; }
 
   const movRef = ref(db, 'movimenti');
