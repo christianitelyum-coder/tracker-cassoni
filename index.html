@@ -846,13 +846,7 @@ function renderBollettazione() {
       <td style="white-space:nowrap;color:var(--ink2)">${fmtDT(m.ts)}</td>
       <td><strong>${m.cassoneId}</strong></td>
       <td style="color:var(--ink2)">${cas.tipo||'—'}</td>
-      <td>
-        <select onchange="aggiornaTipoMovimento('${id}', this.value)"
-          style="font-family:var(--font);font-size:12px;font-weight:700;padding:3px 7px;border-radius:5px;border:1.5px solid var(--border);background:var(--surface);color:${m.tipo==='USCITA'?'var(--red)':'var(--green-d)'};cursor:pointer;outline:none">
-          <option value="USCITA" ${m.tipo==='USCITA'?'selected':''} style="color:var(--red)">↑ Uscita</option>
-          <option value="RIENTRO" ${m.tipo==='RIENTRO'?'selected':''} style="color:var(--green-d)">↓ Rientro</option>
-        </select>
-      </td>
+      <td><span class="status-pill ${m.tipo==='USCITA'?'pill-out':'pill-in'}">${m.tipo==='USCITA'?'↑ Uscita':'↓ Rientro'}</span></td>
       <td>${m.cliente||'—'}</td>
       <td style="color:var(--ink2)">${m.autista||'—'}</td>
       <td>${ddtHtml}</td>
@@ -864,184 +858,7 @@ function renderBollettazione() {
   }).join('');
 }
 
-async function aggiornaTipoMovimento(movId, nuovoTipo) {
-  if (!db) return;
-  await update(ref(db, `movimenti/${movId}`), { tipo: nuovoTipo });
-  toast(`✓ Tipo aggiornato → ${nuovoTipo}`, 'ok');
-}
-window.aggiornaTipoMovimento = aggiornaTipoMovimento;
-
-function openDDT(movId) {
-  _ddtMovId = movId;
-  const m = STATE.movimenti[movId];
-  if (!m) return;
-  const cas  = STATE.cassoni[m.cassoneId] || {};
-  const oggi = new Date();
-  const dataFmt = d => {
-    const dt = d ? new Date(d) : oggi;
-    return `${String(dt.getDate()).padStart(2,'0')}/${String(dt.getMonth()+1).padStart(2,'0')}/${dt.getFullYear()}`;
-  };
-  const isUscita = m.tipo === 'USCITA';
-  document.getElementById('ddt-modal-title').textContent = `DDT — ${m.cassoneId} — ${isUscita?'USCITA':'RIENTRO'}`;
-  document.getElementById('ddt-numero').value = m.ddtNumero || '';
-
-  const mittente    = isUscita ? 'CENTRO RISORSE S.p.A.\nVia Lazio 48 - 31045 - MOTTA DI LIVENZA (TV)\nC.F. 00584180269 · P.IVA 00584180269' : (m.cliente||'—');
-  const destinatario= isUscita ? (m.cliente||'—') : 'CENTRO RISORSE S.p.A.\nVia Lazio 48 - 31045 - MOTTA DI LIVENZA (TV)';
-  const causale     = isUscita ? 'POSIZIONAMENTO CASSONE' : 'RITIRO CASSONE';
-  const ddtNum      = m.ddtNumero || '____________________';
-  const dataMov     = dataFmt(m.ts ? m.ts*1000 : null);
-
-  document.getElementById('ddt-preview').innerHTML = buildDDTHtml({ m, cas, mittente, destinatario, causale, ddtNum, dataMov });
-
-  document.getElementById('ddt-numero').oninput = function() {
-    const el = document.getElementById('ddt-num-preview');
-    if (el) el.textContent = this.value || '____________________';
-  };
-  document.getElementById('ddt-modal').classList.add('open');
-}
-
-function buildDDTHtml({ m, cas, mittente, destinatario, causale, ddtNum, dataMov }) {
-  return `<div id="ddt-print-area" style="font-family:Arial,sans-serif;font-size:12px;color:#111;max-width:740px;margin:0 auto">
-
-  <!-- HEADER ITELYUM -->
-  <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px">
-    <div>
-      <div style="font-size:22px;font-weight:900;letter-spacing:-1px;color:#003366">ITELYUM<sup style="font-size:12px">®</sup></div>
-      <div style="font-size:8px;font-weight:700;color:#333;letter-spacing:1px;border:1px solid #333;padding:1px 4px;display:inline-block;margin-top:2px">SOLUZIONI PER L'AMBIENTE</div>
-    </div>
-  </div>
-
-  <!-- BOX PRINCIPALE -->
-  <table style="width:100%;border-collapse:collapse;border:2px solid #111;margin-bottom:10px">
-    <tr>
-      <td style="width:30%;border-right:2px solid #111;border-bottom:2px solid #111;padding:8px 12px;vertical-align:top">
-        <div style="font-size:20px;font-weight:900;line-height:1.2">DOCUMENTO<br>DI<br>TRASPORTO<br><span style="font-size:14px">(D.d.t.)</span></div>
-      </td>
-      <td style="border-bottom:2px solid #111;padding:6px 10px;vertical-align:top">
-        <div style="font-weight:700;font-size:12px">CENTRO RISORSE S.P.A.</div>
-        <div>Via Lazio 48 - 31045 - MOTTA DI LIVENZA (TV)</div>
-        <div>C.F.&nbsp;&nbsp;&nbsp;&nbsp;00584180269</div>
-        <div>P.IVA&nbsp;&nbsp;00584180269</div>
-        <div style="margin-top:8px"><em>Destinatario</em>&nbsp;&nbsp;<strong>${destinatario.replace(/\n/g,'<br>')}</strong></div>
-      </td>
-    </tr>
-    <tr>
-      <td colspan="2" style="padding:5px 10px;border-bottom:1px solid #ccc">
-        <strong>Bolla N° <span id="ddt-num-preview">${ddtNum}</span></strong>
-        &nbsp;&nbsp;&nbsp;&nbsp; del ${dataMov}
-        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-        <strong>Luogo di destinazione</strong>&nbsp; ${destinatario.split('\n')[0]}
-      </td>
-    </tr>
-  </table>
-
-  <!-- TABELLA MERCI -->
-  <table style="width:100%;border-collapse:collapse;border:1.5px solid #111;margin-bottom:10px">
-    <thead>
-      <tr style="background:#eee">
-        <th style="border:1px solid #999;padding:5px 8px;text-align:left;width:12%">Codice</th>
-        <th style="border:1px solid #999;padding:5px 8px;text-align:left">Descrizione</th>
-        <th style="border:1px solid #999;padding:5px 8px;text-align:center;width:8%">Quantità</th>
-        <th style="border:1px solid #999;padding:5px 8px;text-align:center;width:8%">U.M.</th>
-        <th style="border:1px solid #999;padding:5px 8px;text-align:left">Note</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr>
-        <td style="border:1px solid #999;padding:6px 8px;font-weight:700;vertical-align:top">${m.cassoneId}</td>
-        <td style="border:1px solid #999;padding:6px 8px;vertical-align:top">
-          ${cas.tipo ? cas.tipo.toUpperCase() : 'CASSONE'} SCARRABILE${cas.tipo ? ' ' + cas.tipo.toUpperCase() : ''}<br>
-          ${cas.tipo || ''}
-        </td>
-        <td style="border:1px solid #999;padding:6px 8px;text-align:center;vertical-align:top">1</td>
-        <td style="border:1px solid #999;padding:6px 8px;text-align:center;vertical-align:top">Nr.</td>
-        <td style="border:1px solid #999;padding:6px 8px;vertical-align:top;font-size:11px;line-height:1.6">
-          <strong>PROPRIETARIO/COMMITTENTE/<br>CARICATORE:<br>CENTRO RISORSE SPA</strong>
-          ${m.autista ? `<br><br>TRASPORTATORE : ${m.autista}` : ''}
-          ${m.note ? `<br><br>${m.note}` : ''}
-          <br><br>N. CASSONE POSIZIONATO<br>
-          <span style="border-bottom:1px solid #111;display:inline-block;min-width:80px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>
-        </td>
-      </tr>
-    </tbody>
-  </table>
-
-  <!-- TABELLA INFERIORE -->
-  <table style="width:100%;border-collapse:collapse;border:1.5px solid #111;margin-bottom:10px">
-    <thead>
-      <tr style="background:#eee">
-        <th style="border:1px solid #999;padding:4px 8px;text-align:center;width:8%">N.colli</th>
-        <th style="border:1px solid #999;padding:4px 8px;text-align:left">Aspetto esteriore</th>
-        <th style="border:1px solid #999;padding:4px 8px;text-align:left">Causale di trasporto</th>
-        <th style="border:1px solid #999;padding:4px 8px;text-align:left">Porto</th>
-        <th style="border:1px solid #999;padding:4px 8px;text-align:left">Trasporto a cura</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr>
-        <td style="border:1px solid #999;padding:6px 8px;text-align:center">1</td>
-        <td style="border:1px solid #999;padding:6px 8px">A VISTA</td>
-        <td style="border:1px solid #999;padding:6px 8px">${causale}</td>
-        <td style="border:1px solid #999;padding:6px 8px">PORTO FRANCO</td>
-        <td style="border:1px solid #999;padding:6px 8px">Vettore</td>
-      </tr>
-    </tbody>
-  </table>
-
-  <!-- TRASPORTATORE + FIRME -->
-  <table style="width:100%;border-collapse:collapse;border:1.5px solid #111;margin-bottom:16px">
-    <thead>
-      <tr style="background:#eee">
-        <th style="border:1px solid #999;padding:4px 8px;text-align:left;width:55%">Trasportatore</th>
-        <th style="border:1px solid #999;padding:4px 8px;text-align:center;width:15%">Targa</th>
-        <th style="border:1px solid #999;padding:4px 8px;text-align:center;width:15%">Data trasporto</th>
-        <th style="border:1px solid #999;padding:4px 8px;text-align:center;width:15%">Ora trasporto</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr>
-        <td style="border:1px solid #999;padding:6px 8px">
-          ${m.autista || 'KEOMA S.R.L.'}<br>
-          Via Lazio 48 - 31045 - MOTTA DI LIVENZA (TV)<br>
-          C.F. 00429860315
-        </td>
-        <td style="border:1px solid #999;padding:6px 8px;text-align:center">________</td>
-        <td style="border:1px solid #999;padding:6px 8px;text-align:center">${dataMov}</td>
-        <td style="border:1px solid #999;padding:6px 8px;text-align:center">______</td>
-      </tr>
-    </tbody>
-  </table>
-
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:3rem;margin-top:2rem">
-    <div style="text-align:center">
-      <div style="border-top:1px solid #111;padding-top:6px;font-size:11px">Firma destinatario</div>
-    </div>
-    <div style="text-align:center">
-      <div style="border-top:1px solid #111;padding-top:6px;font-size:11px">Firma trasportatore</div>
-    </div>
-  </div>
-
-  <!-- FOOTER -->
-  <div style="margin-top:24px;border-top:1px solid #ccc;padding-top:8px;font-size:9px;color:#666;display:flex;justify-content:space-between">
-    <div>CENTRO RISORSE S.p.A.<br>Via Lazio 48 · 31045 Motta di Livenza (TV) Italy<br>T +39 0422 50 37 11 · F +39 0422 86 19 80</div>
-    <div>Codice fiscale, Partita IVA e Registro Imprese di Treviso n. 00584180263<br>REA Treviso n. 128757 · Capitale Sociale € 2.000.000</div>
-    <div style="font-size:8px;font-style:italic">Società a socio unico, soggetta all'attività di direzione<br>e coordinamento di ITELYUM Regeneration S.p.A.</div>
-  </div>
-</div>`;
-}
-
-function stampaDDT() {
-  const content = document.getElementById('ddt-print-area')?.outerHTML || document.getElementById('ddt-preview').innerHTML;
-  const w = window.open('', '_blank');
-  w.document.write(`<!DOCTYPE html><html><head><title>DDT</title>
-    <style>
-      @page { size: A4; margin: 15mm; }
-      body { font-family: Arial, sans-serif; font-size: 12px; color: #111; margin: 0; padding: 0; }
-      * { box-sizing: border-box; }
-    </style></head><body>${content}</body></html>`);
-  w.document.close();
-  setTimeout(() => w.print(), 400);
-}
+async function eliminaMovimento(movId) {
   if (!db) { toast('Firebase non connesso', 'err'); return; }
   const mov = STATE.movimenti[movId];
   if (!mov) { toast('Movimento non trovato', 'err'); return; }
@@ -1222,12 +1039,28 @@ function aggiornaSegnalazioni() {
 }
 window.aggiornaSegnalazioni = aggiornaSegnalazioni;
 
+function aggiornaSegnalazioni() {
+  const altroCheck = document.getElementById('flag-altro');
+  const altroTesto = document.getElementById('flag-altro-testo');
+  if (altroTesto) altroTesto.style.display = altroCheck?.checked ? 'block' : 'none';
+}
+window.aggiornaSegnalazioni = aggiornaSegnalazioni;
+
 async function registraMovimento(tipo) {
   if (!db) { toast('Firebase non connesso', 'err'); return; }
   if (!_scanCassoneId) { toast('Nessun cassone selezionato', 'err'); return; }
   const cliente = document.getElementById('t-cliente').value.trim();
   const autista = document.getElementById('t-autista').value.trim();
   const note    = document.getElementById('t-note').value.trim();
+  const segnalazioni = [];
+  if (document.getElementById('flag-tag')?.checked)     segnalazioni.push('Manca tag');
+  if (document.getElementById('flag-rotture')?.checked) segnalazioni.push('Presenta rotture');
+  if (document.getElementById('flag-telo')?.checked)    segnalazioni.push('Telo danneggiato');
+  if (document.getElementById('flag-altro')?.checked) {
+    const alt = document.getElementById('flag-altro-testo')?.value.trim();
+    segnalazioni.push(alt ? 'Altro: ' + alt : 'Altro');
+  }
+  const noteManutenzione = [note, ...segnalazioni].filter(Boolean).join(' | ');
 
   // Raccoglie segnalazioni manutenzione
   const segnalazioni = [];
@@ -1293,57 +1126,142 @@ function renderTrasportatoreRecenti(autistaNome) {
 // ══ DDT ════════════════════════════════════════════
 let _ddtMovId = null;
 
+
+async function aggiornaTipoMovimento(movId, nuovoTipo) {
+  if (!db) return;
+  await update(ref(db, `movimenti/${movId}`), { tipo: nuovoTipo });
+  toast(`✓ Tipo aggiornato → ${nuovoTipo}`, 'ok');
+}
+window.aggiornaTipoMovimento = aggiornaTipoMovimento;
+
+async function eliminaMovimento(movId) {
+  if (!db) { toast('Firebase non connesso', 'err'); return; }
+  const mov = STATE.movimenti[movId];
+  if (!mov) { toast('Movimento non trovato', 'err'); return; }
+  const cassoneId = mov.cassoneId;
+  const tipoMov = mov.tipo;
+  const statoRipristino = tipoMov === 'USCITA' ? 'piazzale' : 'fuori';
+  const labelRip = statoRipristino === 'piazzale' ? 'IN PIAZZALE' : 'FUORI';
+  if (!confirm(`Eliminare questo movimento?\n\nCassone: ${cassoneId}\nTipo: ${tipoMov}\nData: ${fmtDT(mov.ts)}\nCliente: ${mov.cliente||'—'}\n\nIl cassone tornerà "${labelRip}".`)) return;
+  await remove(ref(db, `movimenti/${movId}`));
+  const agg = { stato: statoRipristino, clienteAttuale: statoRipristino === 'piazzale' ? '' : (mov.cliente||'') };
+  await update(ref(db, `cassoni/${cassoneId}`), agg);
+  toast(`✓ Movimento eliminato — ${cassoneId} → ${labelRip}`, 'ok');
+}
+window.eliminaMovimento = eliminaMovimento;
+
 function openDDT(movId) {
   _ddtMovId = movId;
   const m = STATE.movimenti[movId];
   if (!m) return;
   const cas = STATE.cassoni[m.cassoneId] || {};
-  const tipoLabel = m.tipo === 'USCITA' ? 'DDT USCITA' : 'DDT RIENTRO';
-  document.getElementById('ddt-modal-title').textContent = `${tipoLabel} — ${m.cassoneId}`;
-  document.getElementById('ddt-numero').value = m.ddtNumero || '';
-
-  const mittente = m.tipo === 'USCITA'
-    ? 'Centro Risorse S.p.A. — Piazzale interno'
-    : (m.cliente || '—');
-  const destinatario = m.tipo === 'USCITA'
-    ? (m.cliente || '—')
-    : 'Centro Risorse S.p.A. — Piazzale interno';
-
-  document.getElementById('ddt-preview').innerHTML = `
-    <h3>Documento di Trasporto — ${tipoLabel}</h3>
-    <div class="ddt-meta">
-      <div class="ddt-meta-item"><label>Data movimento</label><span>${fmtDT(m.ts)}</span></div>
-      <div class="ddt-meta-item"><label>N° DDT</label><span id="preview-ddt-num">${m.ddtNumero || '(da compilare)'}</span></div>
-      <div class="ddt-meta-item"><label>Mittente</label><span>${mittente}</span></div>
-      <div class="ddt-meta-item"><label>Destinatario</label><span>${destinatario}</span></div>
-      <div class="ddt-meta-item"><label>Autista / Vettore</label><span>${m.autista || '—'}</span></div>
-      <div class="ddt-meta-item"><label>Note</label><span>${m.note || '—'}</span></div>
-    </div>
-    <table class="ddt-table">
-      <thead><tr><th>Codice</th><th>Descrizione</th><th>Tipo</th><th>Qta</th><th>Causale</th></tr></thead>
-      <tbody>
-        <tr>
-          <td><strong>${m.cassoneId}</strong></td>
-          <td>Cassone ${cas.tipo||''} scarrabile</td>
-          <td>${cas.tipo||'—'}</td>
-          <td style="text-align:center">1</td>
-          <td>${m.tipo === 'USCITA' ? 'Resa in prestito d\'uso' : 'Reso da prestito d\'uso'}</td>
-        </tr>
-      </tbody>
-    </table>
-    <div style="margin-top:1rem;font-size:11px;color:var(--ink3)">
-      Trasporto a cura del destinatario. Il trasportatore è responsabile del mezzo e del materiale durante il trasporto.
-    </div>`;
-
-  // Aggiorna il numero DDT in anteprima al volo
-  document.getElementById('ddt-numero').oninput = function() {
-    const el = document.getElementById('preview-ddt-num');
-    if (el) el.textContent = this.value || '(da compilare)';
+  const isUscita = m.tipo === 'USCITA';
+  const dataFmt = ts => {
+    const d = ts ? new Date(ts*1000) : new Date();
+    return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear();
   };
-
+  const dataMov = dataFmt(m.ts);
+  const destinatario = isUscita ? (m.cliente||'—') : 'CENTRO RISORSE S.p.A. — Via Lazio 48 - 31045 - MOTTA DI LIVENZA (TV)';
+  const causale = isUscita ? 'POSIZIONAMENTO CASSONE' : 'RITIRO CASSONE';
+  const ddtNum = m.ddtNumero || '____________________';
+  document.getElementById('ddt-modal-title').textContent = `DDT — ${m.cassoneId} — ${isUscita?'USCITA':'RIENTRO'}`;
+  document.getElementById('ddt-numero').value = m.ddtNumero || '';
+  document.getElementById('ddt-preview').innerHTML = `
+<div id="ddt-print-area" style="font-family:Arial,sans-serif;font-size:12px;color:#111;max-width:740px;margin:0 auto">
+  <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px">
+    <div>
+      <div style="font-size:22px;font-weight:900;letter-spacing:-1px;color:#003366">ITELYUM<sup style="font-size:12px">®</sup></div>
+      <div style="font-size:8px;font-weight:700;color:#333;letter-spacing:1px;border:1px solid #333;padding:1px 4px;display:inline-block;margin-top:2px">SOLUZIONI PER L'AMBIENTE</div>
+    </div>
+  </div>
+  <table style="width:100%;border-collapse:collapse;border:2px solid #111;margin-bottom:10px">
+    <tr>
+      <td style="width:28%;border-right:2px solid #111;border-bottom:2px solid #111;padding:8px 12px;vertical-align:top">
+        <div style="font-size:18px;font-weight:900;line-height:1.3">DOCUMENTO<br>DI<br>TRASPORTO<br><span style="font-size:12px">(D.d.t.)</span></div>
+      </td>
+      <td style="border-bottom:2px solid #111;padding:6px 10px;vertical-align:top;font-size:11px">
+        <div style="font-weight:700">CENTRO RISORSE S.P.A.</div>
+        <div>Via Lazio 48 - 31045 - MOTTA DI LIVENZA (TV)</div>
+        <div>C.F.&nbsp;&nbsp;00584180269 &nbsp;&nbsp; P.IVA&nbsp;&nbsp;00584180269</div>
+        <div style="margin-top:6px"><em>Destinatario</em>&nbsp;&nbsp;<strong>${destinatario}</strong></div>
+      </td>
+    </tr>
+    <tr>
+      <td colspan="2" style="padding:5px 10px;font-size:11px">
+        <strong>Bolla N° <span id="ddt-num-preview">${ddtNum}</span></strong>
+        &nbsp;&nbsp; del ${dataMov}
+        &nbsp;&nbsp;&nbsp;&nbsp;
+        <strong>Luogo di destinazione</strong>&nbsp; ${destinatario.split(' —')[0]}
+      </td>
+    </tr>
+  </table>
+  <table style="width:100%;border-collapse:collapse;border:1.5px solid #111;margin-bottom:10px">
+    <thead><tr style="background:#eee">
+      <th style="border:1px solid #999;padding:5px 8px;text-align:left;width:10%">Codice</th>
+      <th style="border:1px solid #999;padding:5px 8px;text-align:left">Descrizione</th>
+      <th style="border:1px solid #999;padding:5px 8px;text-align:center;width:8%">Qta</th>
+      <th style="border:1px solid #999;padding:5px 8px;text-align:center;width:7%">U.M.</th>
+      <th style="border:1px solid #999;padding:5px 8px;text-align:left;width:30%">Note</th>
+    </tr></thead>
+    <tbody><tr>
+      <td style="border:1px solid #999;padding:6px 8px;font-weight:700;vertical-align:top">${m.cassoneId}</td>
+      <td style="border:1px solid #999;padding:6px 8px;vertical-align:top">${cas.tipo?cas.tipo.toUpperCase():''} SCARRABILE</td>
+      <td style="border:1px solid #999;padding:6px 8px;text-align:center;vertical-align:top">1</td>
+      <td style="border:1px solid #999;padding:6px 8px;text-align:center;vertical-align:top">Nr.</td>
+      <td style="border:1px solid #999;padding:6px 8px;vertical-align:top;font-size:11px;line-height:1.7">
+        <strong>PROPRIETARIO/COMMITTENTE/CARICATORE:<br>CENTRO RISORSE SPA</strong>
+        ${m.autista?'<br><br>TRASPORTATORE : '+m.autista:''}
+        ${m.note?'<br><br>'+m.note:''}
+        <br><br>N. CASSONE POSIZIONATO<br>
+        <span style="border-bottom:1px solid #111;display:inline-block;min-width:80px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>
+      </td>
+    </tr></tbody>
+  </table>
+  <table style="width:100%;border-collapse:collapse;border:1.5px solid #111;margin-bottom:10px">
+    <thead><tr style="background:#eee">
+      <th style="border:1px solid #999;padding:4px 8px;text-align:center;width:8%">N.colli</th>
+      <th style="border:1px solid #999;padding:4px 8px;text-align:left">Aspetto esteriore</th>
+      <th style="border:1px solid #999;padding:4px 8px;text-align:left">Causale di trasporto</th>
+      <th style="border:1px solid #999;padding:4px 8px;text-align:left">Porto</th>
+      <th style="border:1px solid #999;padding:4px 8px;text-align:left">Trasporto a cura</th>
+    </tr></thead>
+    <tbody><tr>
+      <td style="border:1px solid #999;padding:6px 8px;text-align:center">1</td>
+      <td style="border:1px solid #999;padding:6px 8px">A VISTA</td>
+      <td style="border:1px solid #999;padding:6px 8px">${causale}</td>
+      <td style="border:1px solid #999;padding:6px 8px">PORTO FRANCO</td>
+      <td style="border:1px solid #999;padding:6px 8px">Vettore</td>
+    </tr></tbody>
+  </table>
+  <table style="width:100%;border-collapse:collapse;border:1.5px solid #111;margin-bottom:16px">
+    <thead><tr style="background:#eee">
+      <th style="border:1px solid #999;padding:4px 8px;text-align:left;width:55%">Trasportatore</th>
+      <th style="border:1px solid #999;padding:4px 8px;text-align:center;width:15%">Targa</th>
+      <th style="border:1px solid #999;padding:4px 8px;text-align:center;width:15%">Data trasporto</th>
+      <th style="border:1px solid #999;padding:4px 8px;text-align:center;width:15%">Ora trasporto</th>
+    </tr></thead>
+    <tbody><tr>
+      <td style="border:1px solid #999;padding:6px 8px;font-size:11px">${m.autista||'KEOMA S.R.L.'}<br>Via Lazio 48 - 31045 - MOTTA DI LIVENZA (TV)<br>C.F. 00429860315</td>
+      <td style="border:1px solid #999;padding:6px 8px;text-align:center">________</td>
+      <td style="border:1px solid #999;padding:6px 8px;text-align:center">${dataMov}</td>
+      <td style="border:1px solid #999;padding:6px 8px;text-align:center">______</td>
+    </tr></tbody>
+  </table>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:3rem;margin-top:2rem">
+    <div style="text-align:center"><div style="border-top:1px solid #111;padding-top:6px;font-size:11px">Firma destinatario</div></div>
+    <div style="text-align:center"><div style="border-top:1px solid #111;padding-top:6px;font-size:11px">Firma trasportatore</div></div>
+  </div>
+  <div style="margin-top:20px;border-top:1px solid #ccc;padding-top:8px;font-size:9px;color:#666;display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px">
+    <div>CENTRO RISORSE S.p.A. · Via Lazio 48 · 31045 Motta di Livenza (TV)<br>T +39 0422 50 37 11 · F +39 0422 86 19 80 · info@centrorisorse.com</div>
+    <div>C.F. e P.IVA 00584180263 · REA TV 128757 · Capitale Sociale € 2.000.000</div>
+  </div>
+</div>`;
+  document.getElementById('ddt-numero').oninput = function() {
+    const el = document.getElementById('ddt-num-preview');
+    if (el) el.textContent = this.value || '____________________';
+  };
   document.getElementById('ddt-modal').classList.add('open');
 }
-
 function closeDDT() { document.getElementById('ddt-modal').classList.remove('open'); _ddtMovId = null; }
 
 async function confermaDDT() {
@@ -1356,20 +1274,12 @@ async function confermaDDT() {
 }
 
 function stampaDDT() {
-  const content = document.getElementById('ddt-preview').outerHTML;
+  const area = document.getElementById('ddt-print-area');
+  if (!area) return;
   const w = window.open('', '_blank');
-  w.document.write(`<html><head><title>DDT</title>
-    <style>body{font-family:Arial,sans-serif;font-size:12px;padding:2rem}h3{text-align:center;margin-bottom:1rem}
-    table{width:100%;border-collapse:collapse}th,td{border:1px solid #ccc;padding:6px 8px}th{background:#333;color:#fff}
-    .ddt-meta{display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin:1rem 0;border-top:1px solid #ccc;border-bottom:1px solid #ccc;padding:.5rem 0}
-    label{font-size:10px;font-weight:bold;display:block;color:#666}</style></head>
-    <body>${content}<br><br>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:3rem;margin-top:2rem">
-      <div style="border-top:1px solid #000;padding-top:.5rem;text-align:center;font-size:11px">Firma mittente</div>
-      <div style="border-top:1px solid #000;padding-top:.5rem;text-align:center;font-size:11px">Firma destinatario</div>
-    </div>
-    </body></html>`);
-  w.document.close(); w.print();
+  w.document.write('<!DOCTYPE html><html><head><title>DDT</title><style>@page{size:A4;margin:15mm}body{font-family:Arial,sans-serif;font-size:12px;color:#111;margin:0;padding:0}*{box-sizing:border-box}</style></head><body>' + area.outerHTML + '</body></html>');
+  w.document.close();
+  setTimeout(() => w.print(), 400);
 }
 
 // ══ ANAGRAFICA CASSONI ═════════════════════════════
