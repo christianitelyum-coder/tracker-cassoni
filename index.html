@@ -2,1596 +2,1896 @@
 <html lang="it">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Centrale Operativa — Programmazione Viaggi</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.css">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Tracker Cassoni</title>
 <style>
-:root {
-  --ink:    #0f1923;
-  --ink2:   #4a5568;
-  --ink3:   #8896aa;
-  --bg:     #f2f4f8;
-  --surface:#ffffff;
-  --s2:     #f7f9fc;
-  --border: #dde3ef;
-
-  --teal:   #0b7c6e;
-  --teal-l: #e0f5f2;
-  --teal-d: #075549;
-  --amber:  #f97316;
-  --amber-l:#fff7ed;
-  --red:    #c0392b;
-  --red-l:  #fdf0ee;
-  --blue:   #1a4f8a;
-  --blue-l: #e8f0fc;
-
-  --mono: 'IBM Plex Mono', monospace;
-  --sans: 'IBM Plex Sans', system-ui, sans-serif;
-  --r:    8px;
-  --sh:   0 2px 12px rgba(15,25,35,.08);
-  --sh2:  0 6px 28px rgba(15,25,35,.13);
-}
+/* ── RESET & BASE ──────────────────────────────── */
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:var(--sans);background:var(--bg);color:var(--ink);min-height:100vh;-webkit-font-smoothing:antialiased}
-/* ------- */
-/* ── PANNELLO OGGI ─────────────────────────────────── */
-.oggi-panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);margin-bottom:.85rem;overflow:hidden;box-shadow:var(--sh)}
-.oggi-header{padding:.6rem 1rem;background:var(--ink);color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;gap:8px}
-.oggi-header .oggi-data{font-family:var(--mono);color:rgba(255,255,255,.6);font-weight:400;font-size:11px;margin-left:auto}
-.oggi-list{display:flex;flex-wrap:wrap;gap:6px;padding:.75rem}
-.oggi-card{display:flex;align-items:center;gap:8px;padding:7px 12px;border-radius:7px;border:1.5px solid var(--border);background:var(--surface2);cursor:pointer;transition:all .15s;font-size:12px;min-width:200px;flex:1}
-.oggi-card:hover{border-color:var(--teal);background:var(--teal-l);transform:translateY(-1px);box-shadow:var(--sh)}
-.oggi-card.loading{opacity:.6;cursor:wait}
-.oggi-sem{width:8px;height:8px;border-radius:50%;flex-shrink:0}
-.oggi-info{flex:1;min-width:0}
-.oggi-cliente{font-weight:700;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.oggi-sub{font-size:10px;color:var(--ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.oggi-ora{font-family:var(--mono);font-size:11px;color:var(--ink3);flex-shrink:0}
-.oggi-pin{font-size:14px;flex-shrink:0;opacity:.4}
-.oggi-card:hover .oggi-pin{opacity:1}
-.oggi-empty{padding:.75rem 1rem;font-size:12px;color:var(--ink3);font-style:italic}
-#map-container{height:calc(100vh - 54px - 380px);min-height:260px;border-radius:var(--r);overflow:hidden;box-shadow:var(--sh2);border:1px solid var(--border)}
-#map{height:100%;width:100%;background:#e8edf2}
-.map-toolbar{display:flex;align-items:center;gap:8px;margin-bottom:.75rem;flex-wrap:wrap}
-.map-legend{display:flex;gap:12px;align-items:center;padding:6px 12px;background:var(--surface);border-radius:var(--r);border:1px solid var(--border);font-size:11px;font-weight:600}
-.leg-dot{width:10px;height:10px;border-radius:50%;display:inline-block;margin-right:4px}
-.leg-done{background:#0b7c6e}
-.leg-partial{background:#f97316}
-.leg-none{background:#c0392b}
-/* Popup Leaflet custom */
-.leaflet-popup-content-wrapper{border-radius:10px!important;box-shadow:0 4px 20px rgba(15,25,35,.18)!important;padding:0!important;overflow:hidden}
-.leaflet-popup-content{margin:0!important;width:260px!important}
-.map-popup-header{padding:10px 14px;font-weight:700;font-size:13px;color:#fff}
-.map-popup-body{padding:10px 14px;font-size:12px;color:#374151}
-.map-popup-task{display:flex;align-items:center;gap:6px;padding:3px 0;border-bottom:1px solid #f3f4f6}
-.map-popup-task:last-child{border-bottom:none}
-.prossimi-panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);margin-bottom:.85rem;overflow:hidden;box-shadow:var(--sh)}
-.prossimi-header{padding:.6rem 1rem;background:var(--blue,#1a4f8a);color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-.prossimi-nav{display:flex;align-items:center;gap:6px;margin-left:auto}
-.prossimi-nav button{background:rgba(255,255,255,.2);border:none;color:#fff;padding:3px 10px;border-radius:5px;cursor:pointer;font-size:12px;font-weight:700;font-family:var(--sans)}
-.prossimi-nav button:hover{background:rgba(255,255,255,.35)}
-.prossimi-nav span{font-family:var(--mono);font-size:11px;color:rgba(255,255,255,.7);white-space:nowrap}
-.prossimi-settimana{padding:.5rem .75rem}
-.sett-label{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--ink3);padding:.4rem .25rem .25rem;border-bottom:1px solid var(--border);margin-bottom:.4rem}
-.prossimi-list{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:.5rem}bottom:48px;left:50%;transform:translateX(-50%);background:rgba(15,25,35,.9);color:#fff;font-size:11px;font-weight:700;padding:4px 8px;border-radius:5px;white-space:nowrap;pointer-events:none;opacity:0;transition:opacity .15s;font-family:system-ui,sans-serif}
-.leaflet-marker-icon:hover .marker-tooltip{opacity:1}
+:root{
+  --ink:#1a1f2e;--ink2:#4a5568;--ink3:#8896aa;
+  --bg:#f0f2f7;--surface:#fff;--surface2:#f7f9fc;
+  --green:#0a7c4e;--green-l:#e6f7f0;--green-d:#065c39;
+  --red:#c0392b;--red-l:#fdf0ee;
+  --amber:#b45309;--amber-l:#fef3c7;
+  --blue:#1a4f8a;--blue-l:#e8f0fc;
+  --border:#dde3ef;
+  --radius:10px;--radius-sm:7px;
+  --shadow:0 2px 12px rgba(26,31,46,.09);
+  --shadow-lg:0 8px 32px rgba(26,31,46,.14);
+  --font:'Inter',system-ui,sans-serif;
+}
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+body{font-family:var(--font);background:var(--bg);color:var(--ink);min-height:100vh;-webkit-font-smoothing:antialiased}
 
-/* ------- */
+/* ── NAVBAR ─────────────────────────────────────── */
+.nav{background:var(--ink);color:#fff;padding:0 1.5rem;display:flex;align-items:center;gap:0;height:52px;position:sticky;top:0;z-index:100;box-shadow:0 2px 8px rgba(0,0,0,.25)}
+.nav-brand{font-size:15px;font-weight:700;letter-spacing:-.01em;margin-right:auto;display:flex;align-items:center;gap:8px}
+.nav-brand span{background:#0a7c4e;padding:3px 8px;border-radius:5px;font-size:11px;font-weight:800;letter-spacing:.06em}
+.nav-tabs{display:flex;height:100%}
+.nav-tab{padding:0 18px;height:100%;display:flex;align-items:center;font-size:13px;font-weight:500;color:rgba(255,255,255,.55);cursor:pointer;border:none;background:none;border-bottom:3px solid transparent;transition:all .15s;letter-spacing:.01em}
+.nav-tab.active{color:#fff;border-bottom-color:#0a7c4e}
+.nav-tab:hover:not(.active){color:rgba(255,255,255,.85)}
+.firebase-dot{width:8px;height:8px;border-radius:50%;background:#555;margin-left:12px;transition:background .3s;flex-shrink:0}
+.firebase-dot.ok{background:#0a7c4e}
+.firebase-dot.err{background:#c0392b}
 
-
-/* ------- */
-.header{background:var(--ink);color:#fff;padding:0 1.5rem;height:54px;display:flex;align-items:center;gap:0;position:sticky;top:0;z-index:100;box-shadow:0 2px 8px rgba(0,0,0,.3)}
-.logo{font-family:var(--mono);font-size:13px;font-weight:600;letter-spacing:.08em;margin-right:auto;display:flex;align-items:center;gap:8px}
-.logo em{background:var(--teal);color:#fff;padding:2px 8px;border-radius:4px;font-style:normal;font-size:10px;letter-spacing:.1em}
-.nav-pills{display:flex;gap:2px}
-.npill{padding:6px 14px;border-radius:6px;font-size:12px;font-weight:500;cursor:pointer;border:none;background:none;color:rgba(255,255,255,.5);transition:all .15s;font-family:var(--sans)}
-.npill.act{background:rgba(255,255,255,.12);color:#fff}
-.npill:hover:not(.act){color:rgba(255,255,255,.8)}
-.fb-dot{width:7px;height:7px;border-radius:50%;background:#444;margin-left:14px;transition:background .3s;flex-shrink:0}
-.fb-dot.on{background:var(--teal)}
-.fb-dot.err{background:var(--red)}
-
-/* ------- */
-.view{display:none;padding:1.25rem 1.5rem;max-width:1400px;margin:0 auto}
+/* ── VIEWS ───────────────────────────────────────── */
+.view{display:none;min-height:calc(100vh - 52px)}
 .view.active{display:block}
 
-/* ------- */
-.toolbar{display:flex;align-items:center;gap:10px;margin-bottom:1.25rem;flex-wrap:wrap}
-.week-nav{display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:4px 8px;box-shadow:var(--sh)}
-.wnav-btn{background:none;border:none;cursor:pointer;color:var(--ink2);font-size:16px;padding:2px 8px;border-radius:5px;transition:background .1s}
-.wnav-btn:hover{background:var(--s2)}
-.week-label{font-family:var(--mono);font-size:12px;font-weight:600;color:var(--ink);min-width:180px;text-align:center}
-.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:var(--r);border:none;font-family:var(--sans);font-size:13px;font-weight:600;cursor:pointer;transition:all .15s}
-.btn-primary{background:var(--teal);color:#fff}
-.btn-primary:hover{background:var(--teal-d)}
-.btn-ghost{background:var(--surface);color:var(--ink2);border:1px solid var(--border)}
-.btn-ghost:hover{background:var(--s2)}
-.btn-sm{padding:5px 10px;font-size:12px}
-.ml-auto{margin-left:auto}
+/* ── DASHBOARD ───────────────────────────────────── */
+.dash{max-width:1200px;margin:0 auto;padding:1.5rem}
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-bottom:1.5rem}
+.kpi{background:var(--surface);border-radius:var(--radius);padding:1.1rem 1.25rem;box-shadow:var(--shadow);border:1px solid var(--border)}
+.kpi-val{font-size:2.2rem;font-weight:800;line-height:1;margin-bottom:4px}
+.kpi-lbl{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--ink3)}
+.kpi-val.green{color:var(--green)}
+.kpi-val.red{color:var(--red)}
+.kpi-val.amber{color:var(--amber)}
+.kpi-val.blue{color:var(--blue)}
 
-/* ------- */
-.week-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:8px}
-.day-col{background:var(--surface);border-radius:var(--r);border:1px solid var(--border);overflow:hidden;min-height:400px;display:flex;flex-direction:column;box-shadow:var(--sh)}
-.day-col.today{border-color:var(--teal);box-shadow:0 0 0 2px var(--teal-l),var(--sh)}
-.day-header{padding:8px 10px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
-.day-name{font-family:var(--mono);font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.1em;color:var(--ink3)}
-.day-date{font-family:var(--mono);font-size:16px;font-weight:600;color:var(--ink)}
-.day-col.today .day-date{color:var(--teal)}
-.day-count{font-size:10px;font-weight:600;color:var(--ink3);background:var(--s2);padding:2px 6px;border-radius:10px}
-.day-body{padding:6px;flex:1;display:flex;flex-direction:column;gap:4px}
-.add-btn{width:100%;padding:6px;border:1.5px dashed var(--border);border-radius:6px;background:none;color:var(--ink3);font-size:12px;cursor:pointer;transition:all .15s;font-family:var(--sans);margin-top:auto}
-.add-btn:hover{border-color:var(--teal);color:var(--teal);background:var(--teal-l)}
+.dash-grid{display:grid;grid-template-columns:1fr 1fr;gap:1.25rem}
+.card{background:var(--surface);border-radius:var(--radius);box-shadow:var(--shadow);border:1px solid var(--border);overflow:hidden}
+.card-header{padding:.9rem 1.25rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.card-title{font-size:13px;font-weight:700;color:var(--ink);display:flex;align-items:center;gap:7px}
+.card-body{padding:1.1rem 1.25rem}
 
-/* ------- */
-.vcard{border-radius:6px;padding:8px 10px;border:1px solid var(--border);background:var(--surface);cursor:pointer;transition:all .15s;position:relative}
-.vcard:hover{border-color:var(--teal);box-shadow:var(--sh)}
-.vcard.done{background:var(--teal-l);border-color:#a7e5cc}
-.vcard.partial{background:var(--amber-l);border-color:#fcd34d}
-.vcard.none{background:var(--red-l);border-color:#f0b8b3}
-.vc-top{display:flex;align-items:flex-start;gap:6px;margin-bottom:5px}
-.vc-sem{width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-top:3px}
-.sem-done{background:var(--teal)}
-.sem-partial{background:var(--amber)}
-.sem-none{background:var(--red)}
-.vc-client{font-size:12px;font-weight:700;color:var(--ink);flex:1;line-height:1.3}
-.vc-carrier{font-size:10px;color:var(--ink2);margin-bottom:4px}
-.vc-checks{display:flex;gap:4px;flex-wrap:wrap}
-.chk-pill{font-size:9px;font-weight:700;padding:2px 6px;border-radius:10px;letter-spacing:.03em;transition:all .15s}
-.chk-done{background:#d1fae5;color:#065f46}
-.chk-todo{background:#f3f4f6;color:#9ca3af}
-.vc-del{position:absolute;top:4px;right:4px;background:none;border:none;color:transparent;font-size:13px;cursor:pointer;padding:2px;border-radius:4px;transition:all .1s}
-.vcard:hover .vc-del{color:#ddd}
-.vc-del:hover{color:var(--red)!important;background:var(--red-l)}
+/* Piazzale live */
+.piazzale-grid{display:flex;flex-wrap:wrap;gap:8px}
+.cassone-chip{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:20px;font-size:12px;font-weight:600;border:1.5px solid;cursor:default;transition:all .15s}
+.chip-piazzale{background:var(--green-l);border-color:#a7e5cc;color:var(--green-d)}
+.chip-fuori{background:var(--red-l);border-color:#f0b8b3;color:var(--red)}
+.chip-empty{color:var(--ink3);font-style:italic;font-size:12px;padding:8px 0}
 
-/* ------- */
-.overlay{position:fixed;inset:0;background:rgba(15,25,35,.55);z-index:500;display:none;align-items:flex-start;justify-content:center;padding:2rem 1rem;overflow-y:auto}
-.overlay.open{display:flex}
-.modal{background:var(--surface);border-radius:12px;box-shadow:var(--sh2);width:min(560px,100%);margin:auto}
-.modal-header{padding:1.1rem 1.5rem;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
-.modal-icon{width:36px;height:36px;border-radius:8px;background:var(--teal-l);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
-.modal-title{font-size:15px;font-weight:700;flex:1}
-.modal-close{background:none;border:none;font-size:22px;cursor:pointer;color:var(--ink3);line-height:1}
-.modal-body{padding:1.25rem 1.5rem}
-.form-row{margin-bottom:1rem}
-.form-lbl{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ink3);display:block;margin-bottom:5px}
-.form-lbl span{color:var(--teal);margin-left:2px}
-.form-ctrl{width:100%;font-family:var(--sans);font-size:13px;padding:9px 12px;border:1.5px solid var(--border);border-radius:var(--r);color:var(--ink);background:var(--s2);outline:none;transition:border-color .15s}
-.form-ctrl:focus{border-color:var(--teal);background:#fff}
-.form-row-2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.checklist-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px}
-.chk-item{display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:var(--r);border:1.5px solid var(--border);background:var(--s2);cursor:pointer;transition:all .15s}
-.chk-item:hover{border-color:var(--teal)}
-.chk-item.checked{background:var(--teal-l);border-color:#a7e5cc}
-.chk-item input[type=checkbox]{width:16px;height:16px;accent-color:var(--teal);cursor:pointer;flex-shrink:0}
-.chk-label{font-size:12px;font-weight:500;color:var(--ink);line-height:1.3}
-.modal-footer{padding:.9rem 1.5rem;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end;background:var(--s2);border-radius:0 0 12px 12px}
+/* Movimenti recenti */
+.mov-list{display:flex;flex-direction:column;gap:6px;max-height:340px;overflow-y:auto}
+.mov-row{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:var(--radius-sm);background:var(--surface2);font-size:12px}
+.mov-badge{padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;white-space:nowrap}
+.badge-out{background:var(--red-l);color:var(--red)}
+.badge-in{background:var(--green-l);color:var(--green-d)}
+.mov-cassone{font-weight:700;color:var(--ink)}
+.mov-info{color:var(--ink2);flex:1}
+.mov-time{color:var(--ink3);font-size:11px;white-space:nowrap}
 
-/* ------- */
-.lista-filters{display:flex;gap:8px;margin-bottom:1rem;flex-wrap:wrap;align-items:center}
-.lista-filters input,.lista-filters select{font-family:var(--sans);font-size:13px;padding:7px 12px;border:1.5px solid var(--border);border-radius:var(--r);background:var(--surface);color:var(--ink);outline:none}
-.lista-filters input:focus,.lista-filters select:focus{border-color:var(--teal)}
-.vtable{width:100%;border-collapse:collapse;font-size:13px;background:var(--surface);border-radius:var(--r);overflow:hidden;box-shadow:var(--sh)}
-.vtable thead th{background:var(--ink);color:#fff;padding:9px 12px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;white-space:nowrap}
-.vtable tbody tr{border-bottom:1px solid var(--border);transition:background .1s}
-.vtable tbody tr:hover{background:var(--s2)}
-.vtable td{padding:10px 12px;vertical-align:middle}
-.vcard.effettuato{background:#f0f0f0;border-color:#ccc;opacity:.75}
-.sem-effettuato{background:#999}
-.mvc-effettuato{background:#e8e8e8;color:#888}
-.fill-effettuato{background:#999}
-.progress-fill{height:100%;border-radius:3px;transition:width .3s}
-.fill-done{background:var(--teal)}
-.fill-partial{background:var(--amber)}
-.fill-none{background:var(--red)}
+/* Alerts DDT */
+.alert-list{display:flex;flex-direction:column;gap:8px}
+.alert-row{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:var(--radius-sm);background:var(--amber-l);border:1px solid #fcd34d;font-size:12px}
+.alert-row.alert-in{background:var(--green-l);border-color:#a7e5cc}
+.alert-icon{font-size:16px;flex-shrink:0}
+.alert-text{flex:1;font-weight:500;color:var(--ink)}
+.btn-ddt{padding:5px 12px;border-radius:6px;border:none;font-size:11px;font-weight:700;cursor:pointer;transition:all .15s;font-family:var(--font)}
+.btn-ddt-out{background:var(--amber);color:#fff}
+.btn-ddt-in{background:var(--green);color:#fff}
+.btn-ddt:hover{opacity:.85}
 
-/* ------- */
-.setup-wrap{max-width:500px;margin:2rem auto}
-.setup-card{background:var(--surface);border-radius:12px;padding:2rem;box-shadow:var(--sh2);border:1px solid var(--border)}
-.setup-card h2{font-size:18px;font-weight:700;margin-bottom:.5rem}
+/* ── BOLLETTAZIONE ───────────────────────────────── */
+.boll{max-width:1100px;margin:0 auto;padding:1.5rem}
+.boll-filters{display:flex;gap:10px;margin-bottom:1.25rem;flex-wrap:wrap;align-items:center}
+.boll-filters input,.boll-filters select{font-family:var(--font);font-size:13px;padding:8px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--ink);outline:none}
+.boll-filters input:focus,.boll-filters select:focus{border-color:var(--green)}
+.btn{padding:8px 16px;border-radius:var(--radius-sm);border:none;font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;display:inline-flex;align-items:center;gap:6px}
+.btn-primary{background:var(--green);color:#fff}
+.btn-primary:hover{background:var(--green-d)}
+.btn-ghost{background:var(--surface2);color:var(--ink2);border:1.5px solid var(--border)}
+.btn-ghost:hover{background:var(--border)}
+.btn-danger{background:var(--red-l);color:var(--red);border:1px solid #f0b8b3}
+.btn-sm{padding:5px 10px;font-size:11px}
+
+.mov-table{width:100%;border-collapse:collapse;font-size:13px}
+.mov-table thead th{background:var(--ink);color:#fff;padding:9px 12px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;white-space:nowrap}
+.mov-table tbody tr{border-bottom:1px solid var(--border);transition:background .1s}
+.mov-table tbody tr:hover{background:var(--surface2)}
+.mov-table td{padding:9px 12px;vertical-align:middle}
+.status-pill{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:700}
+.pill-out{background:var(--red-l);color:var(--red)}
+.pill-in{background:var(--green-l);color:var(--green-d)}
+.status-pill[onclick]{transition:opacity .15s;border:1.5px dashed currentColor}
+.status-pill[onclick]:hover{opacity:.75}
+.pill-pend{background:var(--amber-l);color:var(--amber)}
+.ddt-tag{font-size:10px;font-weight:700;padding:2px 7px;border-radius:5px;background:#e8f0fc;color:var(--blue);border:1px solid #c5d9f7;display:inline-block}
+.ddt-tag.pend{background:var(--amber-l);color:var(--amber);border-color:#fcd34d}
+
+/* ── TRASPORTATORE (mobile) ──────────────────────── */
+.trasp{max-width:420px;margin:0 auto;padding:1rem}
+.trasp-hero{background:linear-gradient(135deg,var(--green-d),var(--green));border-radius:var(--radius);padding:1.5rem;color:#fff;text-align:center;margin-bottom:1.25rem;box-shadow:var(--shadow)}
+.trasp-hero h2{font-size:1.15rem;font-weight:800;margin-bottom:4px}
+.trasp-hero p{font-size:12px;opacity:.75}
+
+.scan-area{background:var(--surface);border-radius:var(--radius);padding:1.25rem;box-shadow:var(--shadow);border:1px solid var(--border);margin-bottom:1rem;position:relative}
+.scan-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ink3);margin-bottom:8px}
+.scan-input{width:100%;font-family:var(--font);font-size:18px;font-weight:700;padding:14px 16px;border:2px solid var(--border);border-radius:var(--radius-sm);color:var(--ink);background:var(--surface2);outline:none;transition:border-color .15s;text-align:center;letter-spacing:.1em}
+.scan-input:focus{border-color:var(--green);background:#fff}
+.scan-hint{font-size:11px;color:var(--ink3);text-align:center;margin-top:6px}
+.scan-drop{display:none;position:absolute;left:0;right:0;background:var(--surface);border:1.5px solid var(--green);border-radius:var(--radius-sm);box-shadow:var(--shadow-lg);z-index:200;max-height:260px;overflow-y:auto;margin-top:2px}
+.scan-drop-item{padding:11px 14px;cursor:pointer;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border);transition:background .1s}
+.scan-drop-item:last-child{border-bottom:none}
+.scan-drop-item:hover,.scan-drop-item.sdactive{background:var(--green-l)}
+.scan-drop-code{font-size:15px;font-weight:800;color:var(--green-d);letter-spacing:.06em;min-width:72px}
+.scan-drop-tipo{font-size:11px;color:var(--ink2);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.scan-drop-stato{font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;flex-shrink:0}
+.stato-piazzale{background:var(--green-l);color:var(--green-d)}
+.stato-fuori{background:var(--red-l);color:var(--red)}
+
+.trasp-form{background:var(--surface);border-radius:var(--radius);padding:1.25rem;box-shadow:var(--shadow);border:1px solid var(--border);margin-bottom:1rem;display:none}
+.trasp-form.visible{display:block}
+.form-row{margin-bottom:.9rem}
+.form-lbl{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ink3);margin-bottom:5px;display:block}
+.form-ctrl{width:100%;font-family:var(--font);font-size:14px;padding:10px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);color:var(--ink);background:var(--surface2);outline:none;transition:border-color .15s}
+.form-ctrl:focus{border-color:var(--green);background:#fff}
+
+.cassone-found{background:var(--green-l);border:2px solid #a7e5cc;border-radius:var(--radius-sm);padding:10px 14px;display:none;margin-bottom:.9rem}
+.cassone-found.visible{display:block}
+.cassone-found-id{font-size:22px;font-weight:800;color:var(--green-d);letter-spacing:.08em}
+.cassone-found-tipo{font-size:12px;color:var(--green);font-weight:600}
+
+.action-btns{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.btn-uscita{background:var(--red);color:#fff;padding:16px;font-size:15px;font-weight:800;border-radius:var(--radius-sm);border:none;cursor:pointer;font-family:var(--font);transition:all .15s;display:flex;align-items:center;justify-content:center;gap:8px}
+.btn-rientro{background:var(--green);color:#fff;padding:16px;font-size:15px;font-weight:800;border-radius:var(--radius-sm);border:none;cursor:pointer;font-family:var(--font);transition:all .15s;display:flex;align-items:center;justify-content:center;gap:8px}
+.btn-uscita:hover{background:#a93226}
+.btn-rientro:hover{background:var(--green-d)}
+.btn-uscita:disabled,.btn-rientro:disabled{opacity:.4;cursor:not-allowed}
+
+.trasp-recenti{background:var(--surface);border-radius:var(--radius);padding:1.1rem;box-shadow:var(--shadow);border:1px solid var(--border)}
+.trasp-recenti h3{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ink3);margin-bottom:.75rem}
+.trasp-rec-item{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border);font-size:12px}
+.trasp-rec-item:last-child{border-bottom:none}
+
+/* ── DDT MODAL ───────────────────────────────────── */
+.modal-overlay{position:fixed;inset:0;background:rgba(26,31,46,.55);z-index:1000;display:none;align-items:center;justify-content:center;padding:1rem}
+.modal-overlay.open{display:flex}
+.modal{background:var(--surface);border-radius:var(--radius);box-shadow:var(--shadow-lg);width:min(620px,100%);max-height:90vh;overflow-y:auto}
+.modal-header{padding:1.1rem 1.5rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.modal-title{font-size:15px;font-weight:700}
+.modal-close{background:none;border:none;font-size:22px;cursor:pointer;color:var(--ink3);line-height:1;padding:0 4px}
+.modal-body{padding:1.5rem}
+.ddt-preview{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:1.25rem;font-size:13px;line-height:1.8}
+.ddt-preview h3{font-size:14px;font-weight:800;text-align:center;margin-bottom:.5rem;text-transform:uppercase;letter-spacing:.08em}
+.ddt-preview .ddt-meta{display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin:1rem 0;border-top:1px solid var(--border);border-bottom:1px solid var(--border);padding:.75rem 0}
+.ddt-preview .ddt-meta-item label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ink3);display:block}
+.ddt-preview .ddt-meta-item span{font-weight:600;color:var(--ink)}
+.ddt-table{width:100%;border-collapse:collapse;margin-top:.75rem;font-size:12px}
+.ddt-table th{background:var(--ink);color:#fff;padding:6px 10px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em}
+.ddt-table td{padding:7px 10px;border-bottom:1px solid var(--border)}
+.modal-footer{padding:1rem 1.5rem;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end}
+
+/* ── SETUP ───────────────────────────────────────── */
+.setup{max-width:520px;margin:3rem auto;padding:1.5rem}
+.setup-card{background:var(--surface);border-radius:var(--radius);padding:2rem;box-shadow:var(--shadow-lg);border:1px solid var(--border)}
+.setup-card h2{font-size:18px;font-weight:800;margin-bottom:.5rem}
 .setup-card p{font-size:13px;color:var(--ink2);margin-bottom:1.5rem;line-height:1.6}
+.setup-form-row{margin-bottom:1rem}
+.setup-form-row label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ink3);display:block;margin-bottom:5px}
+.setup-form-row input{width:100%;font-family:var(--font);font-size:13px;padding:9px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);color:var(--ink);outline:none}
+.setup-form-row input:focus{border-color:var(--green)}
+.setup-hint{font-size:11px;color:var(--ink3);margin-top:4px}
 
-/* ------- */
-.toast{position:fixed;bottom:1.5rem;right:1.5rem;background:var(--ink);color:#fff;padding:10px 18px;border-radius:var(--r);font-size:13px;font-weight:600;box-shadow:var(--sh2);transform:translateY(60px);opacity:0;transition:all .3s cubic-bezier(.34,1.56,.64,1);z-index:999}
+/* ── TOAST ───────────────────────────────────────── */
+.toast{position:fixed;bottom:1.5rem;right:1.5rem;z-index:9999;background:var(--ink);color:#fff;padding:10px 18px;border-radius:var(--radius-sm);font-size:13px;font-weight:600;box-shadow:var(--shadow-lg);transform:translateY(60px);opacity:0;transition:all .3s cubic-bezier(.34,1.56,.64,1)}
 .toast.show{transform:translateY(0);opacity:1}
-.toast.ok{background:var(--teal)}
-.toast.err{background:var(--red)}
+.toast.toast-ok{background:var(--green)}
+.toast.toast-err{background:var(--red)}
 
-/* ── SIDEBAR ─────────────────────────────────────────── */
-.app-shell{display:flex;height:100vh;overflow:hidden}
-.sidebar{width:64px;background:#fff;display:flex;flex-direction:column;align-items:center;padding:8px 0;gap:4px;flex-shrink:0;z-index:100;box-shadow:2px 0 12px rgba(0,0,0,.08);border-right:1px solid #e5e9f0}
-.sidebar-logo{width:40px;height:40px;background:var(--teal);border-radius:8px;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:11px;font-weight:700;color:#fff;margin-bottom:8px;flex-shrink:0}
-.snav{display:flex;flex-direction:column;align-items:center;gap:2px;width:100%;flex:1}
-.sbtn{width:52px;height:52px;border-radius:10px;border:none;background:none;color:#94a3b8;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;transition:all .15s;position:relative;font-family:var(--sans)}
-.sbtn:hover{background:#f1f5f9;color:#475569}
-.sbtn.act{background:var(--teal-l);color:var(--teal-d);box-shadow:none}
-.sbtn-ico{font-size:18px;line-height:1}
-.sbtn-lbl{font-size:8px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;line-height:1}
-.sbtn-sep{width:36px;height:1px;background:#e5e9f0;margin:4px 0}
-.sidebar-bottom{margin-top:auto;padding-bottom:4px}
-.fb-dot{width:8px;height:8px;border-radius:50%;background:#cbd5e1;margin:8px auto 0;transition:background .3s}
-.fb-dot.on{background:var(--teal)}
-.fb-dot.err{background:var(--red)}
-
-/* ── CONTENT AREA ────────────────────────────────────── */
-.content{flex:1;overflow-y:auto;position:relative}
-.view{display:none;padding:1.25rem 1.5rem;max-width:1400px;margin:0 auto}
-.view.active{display:block}
-.view.full{padding:0;max-width:100%;height:100%}
-.month-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
-.month-dow{text-align:center;font-family:var(--mono);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--ink3);padding:6px 0;border-bottom:1px solid var(--border);margin-bottom:4px}
-.month-cell{min-height:100px;border-radius:6px;border:1px solid var(--border);background:var(--surface);padding:4px;cursor:pointer;transition:all .15s;position:relative}
-.month-cell:hover{border-color:var(--teal);background:var(--teal-l)}
-.month-cell.today{border-color:var(--teal);border-width:2px}
-.month-cell.other-month{background:var(--s2);opacity:.55}
-.month-cell.today .month-day-num{background:var(--teal);color:#fff;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center}
-.month-day-num{font-family:var(--mono);font-size:12px;font-weight:700;color:var(--ink);margin-bottom:4px;display:inline-block;width:22px;height:22px;line-height:22px;text-align:center}
-.month-vcard{font-size:10px;font-weight:600;padding:2px 5px;border-radius:4px;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:3px}
-.mvc-done{background:#d1fae5;color:#065f46}
-.mvc-partial{background:#fef3c7;color:#92400e}
-.mvc-none{background:#fdf0ee;color:#9b1c1c}
-.month-more{font-size:9px;color:var(--ink3);font-weight:600;padding:1px 4px}
-
-</head>
-<body>
-
+/* ── MODALITÀ AUTISTA ─────────────────────────────── */
+body.modo-autista .nav-tabs { display: none }
+body.modo-autista .nav-brand { font-size: 16px; }
+.autista-header {
+  display: none;
+  background: linear-gradient(135deg, var(--green-d), var(--green));
+  color: #fff;
+  padding: 1.5rem 1rem 1rem;
+  text-align: center;
+}
+body.modo-autista .autista-header { display: block }
+.autista-header h1 { font-size: 1.4rem; font-weight: 800; margin-bottom: 4px }
+.autista-header p  { font-size: 13px; opacity: .8 }
+.autista-back {
+  display: none;
+  position: fixed;
+  bottom: 1.25rem;
+  right: 1.25rem;
+  background: var(--ink);
+  color: #fff;
+  border: none;
+  border-radius: 50px;
+  padding: 10px 18px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: var(--shadow-lg);
+  z-index: 50;
+  font-family: var(--font);
+}
+@media(max-width:768px){
+  .kpi-row{grid-template-columns:1fr 1fr}
+  .dash-grid{grid-template-columns:1fr}
+  .nav-tab{padding:0 12px;font-size:12px}
+}
+@media(max-width:480px){
+  .kpi-row{grid-template-columns:1fr 1fr}
+  .nav-brand{font-size:13px}
+}
 </style>
 </head>
 <body>
-<div class="app-shell">
 
-<!-- SIDEBAR -->
-<aside class="sidebar">
-  <div class="sidebar-logo">CR</div>
-  <nav class="snav">
-    <button class="sbtn act" onclick="switchView('mappa')" id="snav-mappa" title="Mappa">
-      <span class="sbtn-ico">🗺</span>
-      <span class="sbtn-lbl">Mappa</span>
-    </button>
-    <div class="sbtn-sep"></div>
-    <button class="sbtn" onclick="switchView('listino')" id="snav-listino" title="Listino KEOMA">
-      <span class="sbtn-ico">📊</span>
-      <span class="sbtn-lbl">Listino</span>
-    </button>
-    <button class="sbtn" onclick="switchView('ordine')" id="snav-ordine" title="Ordine di Servizio">
-      <span class="sbtn-ico">📋</span>
-      <span class="sbtn-lbl">Ordine</span>
-    </button>
-    <div class="sbtn-sep"></div>
-    <button class="sbtn" onclick="switchView('mese')" id="snav-mese" title="Mese">
-      <span class="sbtn-ico">📅</span>
-      <span class="sbtn-lbl">Mese</span>
-    </button>
-    <button class="sbtn" onclick="switchView('settimana')" id="snav-settimana" title="Settimana">
-      <span class="sbtn-ico">📆</span>
-      <span class="sbtn-lbl">Sett.</span>
-    </button>
-    <button class="sbtn" onclick="switchView('lista')" id="snav-lista" title="Lista">
-      <span class="sbtn-ico">📋</span>
-      <span class="sbtn-lbl">Lista</span>
-    </button>
-    <div class="sbtn-sep"></div>
-    <button class="sbtn" onclick="switchView('setup')" id="snav-setup" title="Config">
-      <span class="sbtn-ico">⚙️</span>
-      <span class="sbtn-lbl">Config</span>
-    </button>
-  </nav>
-  <div class="sidebar-bottom">
-  </div>
-</aside>
-
-<!-- CONTENT -->
-<div class="content" id="app-content">
-<div style="line-height:0;flex-shrink:0">
-<svg width="100%" viewBox="0 0 680 77" role="img" style="display:block">
-<title>Centrale Operativa - Centro Risorse S.p.A.</title>
-<rect x="0" y="0" width="680" height="77" fill="#e8ecf0"/>
-<rect x="0" y="0" width="680" height="2.6" fill="#0b7c6e"/>
-<text x="340" y="34.7" text-anchor="middle" font-family="system-ui,sans-serif" font-size="23.1" font-weight="900" letter-spacing="8" fill="#ffffff" stroke="#38bdf8" stroke-width="1.9" paint-order="stroke fill">CENTRALE OPERATIVA</text>
-<text x="340" y="46.2" text-anchor="middle" font-family="system-ui,sans-serif" font-size="7.1" font-weight="500" letter-spacing="4" fill="#4a5568">CENTRO RISORSE S.P.A.</text>
-<rect x="0" y="51.3" width="680" height="25.7" fill="#d0d5de"/>
-<rect x="20"  y="62.9" width="40" height="1.9" fill="#fff" opacity="0.7"/>
-<rect x="80"  y="62.9" width="40" height="1.9" fill="#fff" opacity="0.7"/>
-<rect x="140" y="62.9" width="40" height="1.9" fill="#fff" opacity="0.7"/>
-<rect x="200" y="62.9" width="40" height="1.9" fill="#fff" opacity="0.7"/>
-<rect x="260" y="62.9" width="40" height="1.9" fill="#fff" opacity="0.7"/>
-<rect x="320" y="62.9" width="40" height="1.9" fill="#fff" opacity="0.7"/>
-<rect x="380" y="62.9" width="40" height="1.9" fill="#fff" opacity="0.7"/>
-<rect x="440" y="62.9" width="40" height="1.9" fill="#fff" opacity="0.7"/>
-<rect x="448" y="52.6" width="115" height="17.3" rx="3" fill="#1a4f8a"/>
-<rect x="449" y="53.3" width="113" height="3.2" fill="#2563a8"/>
-<line x1="483" y1="52.6" x2="483" y2="69.9" stroke="#0f3060" stroke-width="0.8"/>
-<line x1="518" y1="52.6" x2="518" y2="69.9" stroke="#0f3060" stroke-width="0.8"/>
-<line x1="553" y1="52.6" x2="553" y2="69.9" stroke="#0f3060" stroke-width="0.8"/>
-<text x="503" y="64.2" text-anchor="middle" font-family="system-ui" font-size="4.8" font-weight="700" fill="#ffffff" letter-spacing="1">CENTRO RISORSE</text>
-<rect x="561" y="61" width="8" height="3.2" rx="1" fill="#8896aa"/>
-<rect x="567" y="53.9" width="46" height="16" rx="3" fill="#0b7c6e"/>
-<rect x="571" y="51.3" width="38" height="3.9" rx="2" fill="#0b7c6e"/>
-<rect x="591" y="55.2" width="19" height="9" rx="2" fill="#c8e6f5" opacity="0.9"/>
-<rect x="609" y="62.9" width="6" height="2.6" rx="1" fill="#fff9c4"/>
-<rect x="609" y="55.8" width="4" height="3.9" rx="1" fill="#086055"/>
-<rect x="569" y="57.1" width="19" height="10.3" rx="1" fill="#086055"/>
-<rect x="572" y="59" width="8" height="5.8" rx="1" fill="#0a6e62" opacity="0.5"/>
-<rect x="585" y="62.2" width="2" height="3.2" rx="1" fill="#0b7c6e"/>
-<circle cx="470" cy="71.2" r="4.5" fill="#2d3748" stroke="#4a5568" stroke-width="1"/>
-<circle cx="470" cy="71.2" r="1.9" fill="#4a5568"/>
-<circle cx="536" cy="71.2" r="4.5" fill="#2d3748" stroke="#4a5568" stroke-width="1"/>
-<circle cx="536" cy="71.2" r="1.9" fill="#4a5568"/>
-<circle cx="578" cy="71.2" r="4.5" fill="#2d3748" stroke="#4a5568" stroke-width="1"/>
-<circle cx="578" cy="71.2" r="1.9" fill="#4a5568"/>
-<circle cx="601" cy="71.2" r="4.5" fill="#2d3748" stroke="#4a5568" stroke-width="1"/>
-<circle cx="601" cy="71.2" r="1.9" fill="#4a5568"/>
-<rect x="0" y="74.4" width="680" height="2.6" fill="#0b7c6e"/>
-<circle cx="660" cy="7.7" r="3.2" id="fb-dot" fill="#cbd5e1"/>
-</svg>
+<!-- MODALITÀ AUTISTA — header fisso visibile solo in ?autista -->
+<div class="autista-header">
+  <h1>🚛 Movimento Cassone</h1>
+  <p>Centro Risorse S.p.A. — Registra uscita o rientro</p>
 </div>
 
-<!-- ══ MESE ════════════════════════════════════════════ -->
-<div class="view" id="view-mese">
-  <div class="toolbar">
-    <div class="week-nav">
-      <button class="wnav-btn" onclick="shiftMonth(-1)">‹</button>
-      <span class="week-label" id="month-label">—</span>
-      <button class="wnav-btn" onclick="shiftMonth(1)">›</button>
+<!-- NAVBAR -->
+<nav class="nav">
+  <div class="nav-brand">🚛 <span>TRACKER</span> Cassoni</div>
+  <div class="nav-tabs">
+    <button class="nav-tab active" onclick="switchView('dashboard')">📊 Dashboard</button>
+    <button class="nav-tab" onclick="switchView('bollettazione')">📋 Bollettazione</button>
+    <button class="nav-tab" onclick="switchView('manutenzione')">🔧 Manutenzione</button>
+    <button class="nav-tab" onclick="switchView('trasportatore')">📱 Trasportatore</button>
+    <button class="nav-tab" id="nav-tab-setup" onclick="richiestaPin()" style="display:none">⚙️ Config</button>
+  </div>
+  <div class="firebase-dot" id="fb-dot" title="Firebase: non connesso"></div>
+</nav>
+
+<!-- ════════ DASHBOARD ════════ -->
+<div class="view active" id="view-dashboard">
+<div class="dash">
+  <div class="kpi-row">
+    <div class="kpi"><div class="kpi-val green" id="kpi-piazzale">—</div><div class="kpi-lbl">In piazzale</div></div>
+    <div class="kpi"><div class="kpi-val red" id="kpi-fuori">—</div><div class="kpi-lbl">Fuori / in giro</div></div>
+    <div class="kpi"><div class="kpi-val amber" id="kpi-ddt-pend">—</div><div class="kpi-lbl">DDT da emettere</div></div>
+    <div class="kpi"><div class="kpi-val blue" id="kpi-oggi">—</div><div class="kpi-lbl">Movimenti oggi</div></div>
+  </div>
+  <div class="dash-grid">
+    <!-- RICERCA RAPIDA CASSONE -->
+    <div class="card" style="grid-column:1/-1">
+      <div class="card-header">
+        <div class="card-title">🔍 Verifica stato cassone</div>
+      </div>
+      <div class="card-body" style="padding-bottom:.75rem">
+        <div style="display:flex;gap:8px">
+          <input id="cerca-cassone-input" type="text" placeholder="Digita il codice cassone (es. ER002)…"
+            style="flex:1;font-family:var(--font);font-size:14px;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--radius-sm);outline:none;transition:border-color .15s"
+            oninput="cercaCassone(this.value)" autocomplete="off" autocapitalize="characters"
+            onfocus="this.style.borderColor='var(--green)'" onblur="this.style.borderColor='var(--border)'">
+          <button class="btn btn-ghost btn-sm" onclick="document.getElementById('cerca-cassone-input').value='';document.getElementById('cerca-cassone-result').innerHTML=''">✕</button>
+        </div>
+        <div id="cerca-cassone-result" style="margin-top:8px"></div>
+      </div>
     </div>
-    <button class="btn btn-ghost btn-sm" onclick="goTodayMonth()">Oggi</button>
-    <button class="btn btn-primary ml-auto" onclick="openModal()">+ Nuovo viaggio</button>
-  </div>
-  <div id="month-dow-row" class="month-grid" style="margin-bottom:0">
-    <div class="month-dow">Lun</div><div class="month-dow">Mar</div>
-    <div class="month-dow">Mer</div><div class="month-dow">Gio</div>
-    <div class="month-dow">Ven</div><div class="month-dow">Sab</div>
-    <div class="month-dow">Dom</div>
-  </div>
-  <div class="month-grid" id="month-grid"></div>
-</div>
 
-<!-- ══ SETTIMANA ══════════════════════════════════════ -->
-<div class="view" id="view-settimana">
-  <div class="toolbar">
-    <div class="week-nav">
-      <button class="wnav-btn" onclick="shiftWeek(-1)">‹</button>
-      <span class="week-label" id="week-label">—</span>
-      <button class="wnav-btn" onclick="shiftWeek(1)">›</button>
+    <!-- PIAZZALE RAGGRUPPATO PER TIPO -->
+    <div class="card" style="grid-column:1/-1">
+      <div class="card-header">
+        <div class="card-title">🏭 Piazzale — situazione live per tipologia</div>
+        <span id="last-update" style="font-size:11px;color:var(--ink3)"></span>
+      </div>
+      <div class="card-body" id="piazzale-grouped">
+        <span class="chip-empty">Nessun cassone registrato</span>
+      </div>
     </div>
-    <button class="btn btn-ghost btn-sm" onclick="goToday()">Oggi</button>
-    <button class="btn btn-primary ml-auto" onclick="openModal()">+ Nuovo viaggio</button>
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">⚠️ DDT da emettere</div>
+      </div>
+      <div class="card-body">
+        <div class="alert-list" id="ddt-alerts"><span style="font-size:12px;color:var(--ink3)">Nessun DDT in sospeso</span></div>
+      </div>
+    </div>
+    <div class="card" style="grid-column:1/-1">
+      <div class="card-header">
+        <div class="card-title">🔄 Ultimi movimenti</div>
+        <button class="btn btn-ghost btn-sm" onclick="switchView('bollettazione')">Vedi tutti →</button>
+      </div>
+      <div class="card-body">
+        <div class="mov-list" id="dash-movimenti"><span style="font-size:12px;color:var(--ink3)">Nessun movimento registrato</span></div>
+      </div>
+    </div>
   </div>
-  <div class="week-grid" id="week-grid"></div>
+</div>
 </div>
 
-<!-- ══ LISTA ══════════════════════════════════════════ -->
-<div class="view" id="view-lista">
-  <div class="lista-filters">
-    <input type="text" id="f-cerca" placeholder="🔍 Cliente, trasportatore..." oninput="renderLista()" style="flex:1;min-width:180px">
-    <select id="f-stato" onchange="renderLista()">
-      <option value="">Tutti gli stati</option>
-      <option value="effettuato">✓ Effettuati</option>
-      <option value="done">✅ Completati</option>
-      <option value="partial">🟡 Parziali</option>
-      <option value="none">🔴 Da iniziare</option>
+<!-- ════════ BOLLETTAZIONE ════════ -->
+<div class="view" id="view-bollettazione">
+<div class="boll">
+  <div class="boll-filters">
+    <input type="text" id="filt-cerca" placeholder="🔍 Cassone, cliente..." oninput="renderBollettazione()" style="flex:1;min-width:180px">
+    <select id="filt-tipo" onchange="renderBollettazione()">
+      <option value="">Tutti i movimenti</option>
+      <option value="USCITA">Solo uscite</option>
+      <option value="RIENTRO">Solo rientri</option>
     </select>
-    <input type="date" id="f-dal" onchange="renderLista()">
-    <input type="date" id="f-al"  onchange="renderLista()">
-    <button class="btn btn-ghost btn-sm" onclick="resetFiltri()">✕ Reset</button>
-    <button class="btn btn-ghost btn-sm" onclick="exportCSV()">⬇ CSV</button>
-    <button class="btn btn-primary btn-sm ml-auto" onclick="openModal()">+ Nuovo viaggio</button>
+    <select id="filt-ddt" onchange="renderBollettazione()">
+      <option value="">Tutti i DDT</option>
+      <option value="pend">DDT da emettere</option>
+      <option value="emesso">DDT emesso</option>
+    </select>
+    <input type="date" id="filt-data" onchange="renderBollettazione()">
+    <button class="btn btn-ghost btn-sm" onclick="document.getElementById('filt-cerca').value='';document.getElementById('filt-tipo').value='';document.getElementById('filt-ddt').value='';document.getElementById('filt-data').value='';renderBollettazione()">✕ Reset</button>
+    <button class="btn btn-primary btn-sm" onclick="exportCSV()">⬇ CSV</button>
   </div>
-  <table class="vtable">
-    <thead><tr>
-      <th>Data</th><th>Cliente</th><th>Trasportatore</th><th>Origine → Dest.</th>
-      <th>Avanzamento</th><th>Stato</th><th></th>
-    </tr></thead>
-    <tbody id="lista-tbody"></tbody>
+  <div class="card">
+    <table class="mov-table">
+      <thead><tr>
+        <th>Data / Ora</th><th>Cassone</th><th>Tipo</th><th>Movimento</th>
+        <th>Cliente</th><th>Autista</th><th>DDT</th><th></th>
+      </tr></thead>
+      <tbody id="boll-tbody"></tbody>
+    </table>
+  </div>
+</div>
+</div>
+
+<!-- ════════ TRASPORTATORE ════════ -->
+<!-- ════════ MANUTENZIONE ════════ -->
+<div class="view" id="view-manutenzione">
+<div class="boll-toolbar" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+  <h2 style="margin:0;font-size:16px;font-weight:700">🔧 Cassoni segnalati per manutenzione</h2>
+  <div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">
+    <select id="man-filtro-flag" onchange="renderManutenzione()" style="font-family:var(--font);font-size:13px;padding:6px 10px;border:1.5px solid var(--border);border-radius:var(--r);background:var(--surface);color:var(--ink);outline:none">
+      <option value="">Tutti i flag</option>
+      <option value="Manca tag">🏷️ Manca tag</option>
+      <option value="Presenta rotture">🔧 Presenta rotture</option>
+      <option value="Telo danneggiato">🪟 Telo danneggiato</option>
+      <option value="Altro">⚠️ Altro</option>
+    </select>
+    <select id="man-filtro-stato" onchange="renderManutenzione()" style="font-family:var(--font);font-size:13px;padding:6px 10px;border:1.5px solid var(--border);border-radius:var(--r);background:var(--surface);color:var(--ink);outline:none">
+      <option value="">Tutti gli stati</option>
+      <option value="piazzale">In piazzale</option>
+      <option value="fuori">Fuori</option>
+    </select>
+  </div>
+</div>
+<div id="man-count" style="font-size:13px;color:var(--ink3);margin:8px 0 4px"></div>
+<div style="overflow-x:auto">
+  <table class="boll-table">
+    <thead>
+      <tr>
+        <th>Data segnalazione</th>
+        <th>Cassone</th>
+        <th>Tipo cassone</th>
+        <th>Stato</th>
+        <th>Cliente</th>
+        <th>Segnalazioni</th>
+        <th>Note</th>
+      </tr>
+    </thead>
+    <tbody id="man-tbody"></tbody>
   </table>
 </div>
+</div>
 
-<!-- ══ MAPPA ════════════════════════════════════════════ -->
-<div class="view active" id="view-mappa">
-  <!-- VIAGGI DI OGGI -->
-  <div class="oggi-panel">
-    <div class="oggi-header">
-      🗓 Viaggi in programma oggi
-      <span class="oggi-data" id="oggi-data-label">—</span>
-    </div>
-    <div id="oggi-list-wrap"></div>
+<div class="view" id="view-trasportatore">
+<div class="trasp">
+  <div class="trasp-hero">
+    <h2>Registra movimento cassone</h2>
+    <p>Scansiona il QR code o inserisci il codice manualmente</p>
   </div>
 
-  <!-- VIAGGI DA DOMANI -->
-  <div class="prossimi-panel">
-    <div class="prossimi-header">
-      📅 Viaggi in programma da domani
-      <div class="prossimi-nav">
-        <button onclick="shiftProssimi(-1)">‹</button>
-        <span id="prossimi-label">—</span>
-        <button onclick="shiftProssimi(1)">›</button>
-        <button onclick="resetProssimi()" style="font-size:10px;padding:2px 7px">Questa sett.</button>
+  <div class="scan-area">
+    <div class="scan-label">Codice cassone</div>
+    <div style="display:flex;gap:8px;align-items:stretch">
+      <input class="scan-input" id="scan-input" type="text" placeholder="es. ER002" autocomplete="off" autocapitalize="characters" oninput="onScanInput(this.value)" onkeydown="onScanKeydown(event)" style="flex:1;text-align:left;font-size:15px">
+      <button onclick="apriCamera()" style="background:var(--green);color:#fff;border:none;border-radius:var(--radius-sm);padding:0 16px;font-size:22px;cursor:pointer;flex-shrink:0;transition:background .15s" title="Scansiona QR con fotocamera">📷</button>
+    </div>
+    <div class="scan-drop" id="scan-drop"></div>
+    <div class="scan-hint">Digita il codice o usa 📷 per scansionare il QR</div>
+  </div>
+
+  <!-- QR SCANNER MODAL -->
+  <div id="qr-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:2000;flex-direction:column;align-items:center;justify-content:center">
+    <div style="width:min(360px,94vw);background:#111;border-radius:var(--radius);overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,.5)">
+      <div style="padding:12px 16px;background:var(--green-d);color:#fff;display:flex;align-items:center;justify-content:space-between">
+        <span style="font-weight:700;font-size:14px">📷 Scansiona QR cassone</span>
+        <button onclick="chiudiCamera()" style="background:none;border:none;color:#fff;font-size:22px;cursor:pointer;line-height:1">×</button>
+      </div>
+      <div style="position:relative;background:#000;min-height:280px">
+        <video id="qr-video" style="width:100%;display:block;max-height:340px;object-fit:cover" playsinline muted></video>
+        <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none">
+          <div style="width:200px;height:200px;border:3px solid #0a7c4e;border-radius:10px;box-shadow:0 0 0 2000px rgba(0,0,0,.5)"></div>
+        </div>
+        <div id="qr-status" style="position:absolute;bottom:10px;left:0;right:0;text-align:center;color:#fff;font-size:12px;font-weight:700;text-shadow:0 1px 4px #000;pointer-events:none">Avvio fotocamera…</div>
+      </div>
+      <div style="padding:12px 16px;display:flex;gap:8px">
+        <button onclick="switchCamera()" style="flex:1;padding:10px;background:#333;color:#fff;border:none;border-radius:var(--radius-sm);font-size:12px;font-weight:700;cursor:pointer">🔄 Cambia cam</button>
+        <button onclick="chiudiCamera()" style="flex:1;padding:10px;background:#c0392b;color:#fff;border:none;border-radius:var(--radius-sm);font-size:12px;font-weight:700;cursor:pointer">✕ Chiudi</button>
       </div>
     </div>
-    <div id="prossimi-list-wrap"></div>
   </div>
 
-  <div class="map-toolbar">
-    <div class="map-legend">
-      <span><span class="leg-dot leg-done"></span>Completo</span>
-      <span><span class="leg-dot leg-partial"></span>In corso</span>
-      <span><span class="leg-dot leg-none"></span>Da iniziare</span>
+  <div class="cassone-found" id="cassone-found">
+    <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--green);margin-bottom:2px">Cassone rilevato</div>
+    <div class="cassone-found-id" id="found-id">—</div>
+    <div class="cassone-found-tipo" id="found-tipo">—</div>
+    <div id="found-status" style="font-size:11px;margin-top:4px;font-weight:600"></div>
+  </div>
+
+  <div class="trasp-form" id="trasp-form">
+    <div class="form-row">
+      <label class="form-lbl">Cliente / Destinazione</label>
+      <input class="form-ctrl" id="t-cliente" placeholder="Ragione sociale o cantiere" list="clienti-list">
+      <datalist id="clienti-list"></datalist>
     </div>
-    <button class="btn btn-ghost btn-sm ml-auto" onclick="pulisciMappa()">✕ Pulisci mappa</button>
+    <div class="form-row">
+      <label class="form-lbl">Il tuo nome (autista)</label>
+      <input class="form-ctrl" id="t-autista" placeholder="Nome e cognome">
+    </div>
+    <div class="form-row">
+      <label class="form-lbl">Note manutenzione</label>
+      <input class="form-ctrl" id="t-note" placeholder="Es. targa mezzo, riferimento ordine...">
+    </div>
+    <div class="form-row">
+      <label class="form-lbl">Segnalazioni</label>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-top:4px">
+        <label style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--s2,#f7f9fc);border-radius:7px;border:1.5px solid var(--border,#dde3ef);cursor:pointer;font-size:13px;font-weight:500">
+          <input type="checkbox" id="flag-tag" onchange="aggiornaSegnalazioni()" style="width:16px;height:16px;accent-color:#c0392b;cursor:pointer">
+          🏷️ Manca tag
+        </label>
+        <label style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--s2,#f7f9fc);border-radius:7px;border:1.5px solid var(--border,#dde3ef);cursor:pointer;font-size:13px;font-weight:500">
+          <input type="checkbox" id="flag-rotture" onchange="aggiornaSegnalazioni()" style="width:16px;height:16px;accent-color:#c0392b;cursor:pointer">
+          🔧 Presenta rotture
+        </label>
+        <label style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--s2,#f7f9fc);border-radius:7px;border:1.5px solid var(--border,#dde3ef);cursor:pointer;font-size:13px;font-weight:500">
+          <input type="checkbox" id="flag-telo" onchange="aggiornaSegnalazioni()" style="width:16px;height:16px;accent-color:#c0392b;cursor:pointer">
+          🪟 Telo danneggiato
+        </label>
+        <label style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--s2,#f7f9fc);border-radius:7px;border:1.5px solid var(--border,#dde3ef);cursor:pointer;font-size:13px;font-weight:500">
+          <input type="checkbox" id="flag-altro" onchange="aggiornaSegnalazioni()" style="width:16px;height:16px;accent-color:#c0392b;cursor:pointer">
+          ⚠️ Altro
+        </label>
+        <textarea id="flag-altro-testo" placeholder="Descrivi il problema..." rows="2"
+          style="display:none;font-family:var(--sans,sans-serif);font-size:13px;padding:8px 12px;border:1.5px solid var(--border,#dde3ef);border-radius:7px;background:var(--s2,#f7f9fc);color:var(--ink,#0f1923);resize:vertical;outline:none;transition:border-color .15s"
+          onfocus="this.style.borderColor='var(--green,#0a7c4e)'" onblur="this.style.borderColor='var(--border,#dde3ef)'"></textarea>
+      </div>
+    </div>
+    <div class="action-btns">
+      <button class="btn-uscita" id="btn-uscita" onclick="registraMovimento('USCITA')" disabled>
+        🔴 USCITA
+      </button>
+      <button class="btn-rientro" id="btn-rientro" onclick="registraMovimento('RIENTRO')" disabled>
+        🟢 RIENTRO
+      </button>
+    </div>
   </div>
-  <div id="map-container"><div id="map"></div></div>
+
+  <div class="trasp-recenti">
+    <h3>Ultimi tuoi movimenti</h3>
+    <div id="trasp-recenti-list"><span style="font-size:12px;color:var(--ink3)">Nessuno ancora</span></div>
+  </div>
+</div>
 </div>
 
-<!-- ══ SETUP ══════════════════════════════════════════ -->
-<!-- ════════ GESTIONE / LISTINO KEOMA ════════ -->
-<div class="view" id="view-listino" style="padding:0;height:calc(100vh - 54px)">
-  <iframe id="iframe-listino" src="" style="width:100%;height:100%;border:none;display:block" title="Listino KEOMA"></iframe>
-</div>
-
-<!-- ════════ GESTIONE / ORDINE DI SERVIZIO ════════ -->
-<div class="view" id="view-ordine" style="padding:0;height:calc(100vh - 54px)">
-  <iframe id="iframe-ordine" src="" style="width:100%;height:100%;border:none;display:block" title="Ordine di Servizio"></iframe>
-</div>
-
+<!-- ════════ SETUP ════════ -->
 <div class="view" id="view-setup">
-<div class="setup-wrap">
+<div class="setup">
   <div class="setup-card">
     <h2>⚙️ Configurazione Firebase</h2>
-    <p>Usa le stesse credenziali del Tracker Cassoni — i dati vivono sullo stesso progetto Firebase.</p>
-    <div class="form-row"><label class="form-lbl">API Key</label><input class="form-ctrl" id="cfg-apikey" placeholder="AIza..."></div>
-    <div class="form-row"><label class="form-lbl">Auth Domain</label><input class="form-ctrl" id="cfg-domain" placeholder="progetto.firebaseapp.com"></div>
-    <div class="form-row"><label class="form-lbl">Database URL</label><input class="form-ctrl" id="cfg-dburl" placeholder="https://progetto-rtdb.europe-west1.firebasedatabase.app"></div>
-    <div class="form-row"><label class="form-lbl">Project ID</label><input class="form-ctrl" id="cfg-pid" placeholder="nome-progetto"></div>
+    <p>Inserisci le credenziali del tuo Firebase Realtime Database. Le trovi su <strong>console.firebase.google.com</strong> → Impostazioni progetto → App web → Configurazione SDK.</p>
+    <div class="setup-form-row">
+      <label>API Key</label>
+      <input type="text" id="cfg-apikey" placeholder="AIza...">
+    </div>
+    <div class="setup-form-row">
+      <label>Auth Domain</label>
+      <input type="text" id="cfg-authdomain" placeholder="progetto.firebaseapp.com">
+    </div>
+    <div class="setup-form-row">
+      <label>Database URL</label>
+      <input type="text" id="cfg-dburl" placeholder="https://progetto-default-rtdb.europe-west1.firebasedatabase.app">
+      <div class="setup-hint">Deve includere https:// e terminare con .firebaseio.com o .firebasedatabase.app</div>
+    </div>
+    <div class="setup-form-row">
+      <label>Project ID</label>
+      <input type="text" id="cfg-projectid" placeholder="nome-progetto">
+    </div>
     <div style="display:flex;gap:8px;margin-top:1.25rem">
       <button class="btn btn-primary" onclick="salvaConfig()">💾 Salva e connetti</button>
-      <button class="btn btn-ghost" onclick="testConn()">🔌 Testa</button>
+      <button class="btn btn-ghost" onclick="testConnection()">🔌 Testa connessione</button>
     </div>
-    <div id="cfg-status" style="margin-top:.75rem;font-size:12px;color:var(--ink3)"></div>
+    <div id="cfg-status" style="margin-top:1rem;font-size:12px;color:var(--ink3)"></div>
 
     <hr style="margin:1.5rem 0;border:none;border-top:1px solid var(--border)">
-    <h3 style="font-size:13px;font-weight:700;margin-bottom:.5rem">📋 Attività predefinite</h3>
-    <p style="font-size:12px;color:var(--ink2);margin-bottom:.75rem">Queste attività appaiono nella checklist di ogni viaggio.</p>
-    <div id="tasks-editor" style="display:flex;flex-direction:column;gap:6px"></div>
-    <div style="display:flex;gap:8px;margin-top:8px">
-      <input class="form-ctrl" id="new-task-input" placeholder="Nuova attività..." style="flex:1;font-size:13px;padding:7px 10px">
-      <button class="btn btn-primary btn-sm" onclick="aggiungiTask()">+ Aggiungi</button>
+    <h3 style="font-size:13px;font-weight:700;margin-bottom:.75rem">📦 Anagrafica cassoni</h3>
+    <p style="font-size:12px;color:var(--ink2);margin-bottom:.75rem">Aggiungi i cassoni con QR code. Il codice deve corrispondere a quello stampato sul cassone.</p>
+
+    <!-- Import da Excel -->
+    <div style="background:var(--blue-l);border:1.5px dashed #a0bce0;border-radius:var(--radius-sm);padding:10px 14px;margin-bottom:1rem">
+      <div style="font-size:12px;font-weight:700;color:var(--blue);margin-bottom:6px">📥 Importa da Excel (censimento)</div>
+      <div style="font-size:11px;color:var(--ink2);margin-bottom:8px">Seleziona il file Excel con il censimento cassoni. Colonne richieste: <strong>NR.INTERNO = codice</strong>, <strong>Descrizione Cespite</strong>, <strong>NOTE MAX SU COPERCHIO</strong>.</div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <label style="flex:1;padding:8px 12px;background:var(--blue);color:#fff;border-radius:var(--radius-sm);font-size:12px;font-weight:700;cursor:pointer;text-align:center">
+          📂 Scegli file Excel
+          <input type="file" accept=".xlsx,.xls" onchange="importaExcel(event)" style="display:none">
+        </label>
+        <div id="import-status" style="font-size:11px;color:var(--ink3)"></div>
+      </div>
     </div>
-    <button class="btn btn-ghost btn-sm" style="margin-top:8px;width:100%" onclick="salvaTaskConfig()">💾 Salva attività</button>
+    <div style="display:flex;gap:8px;margin-bottom:.75rem">
+      <input class="form-ctrl" id="new-cas-id" placeholder="Codice (es. CS-001)" style="flex:1;font-size:13px;padding:8px 10px">
+      <select class="form-ctrl" id="new-cas-tipo" style="font-size:13px;padding:8px 10px">
+        <option>Scarrabile</option>
+        <option>Vasca</option>
+        <option>Pianale</option>
+        <option>Centinato</option>
+        <option>Altro</option>
+      </select>
+      <button class="btn btn-primary btn-sm" onclick="aggiungiCassone()">+ Aggiungi</button>
+    </div>
+    <div id="cassoni-list-setup" style="max-height:200px;overflow-y:auto"></div>
+
+    <hr style="margin:1.5rem 0;border:none;border-top:1px solid var(--border)">
+    <h3 style="font-size:13px;font-weight:700;margin-bottom:.75rem">⚠️ Reset stato cassoni</h3>
+    <p style="font-size:12px;color:var(--ink2);margin-bottom:.75rem">Imposta tutti i cassoni su "Fuori / in giro" o "In piazzale" in un colpo solo.</p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn btn-danger" onclick="resetStatoCassoni('fuori')">🔴 Tutti FUORI / IN GIRO</button>
+      <button class="btn btn-primary" onclick="resetStatoCassoni('piazzale')">✅ Tutti IN PIAZZALE</button>
+    </div>
+    <div id="reset-stato-status" style="font-size:11px;color:var(--ink3);margin-top:8px"></div>
+
+    <hr style="margin:1.5rem 0;border:none;border-top:1px solid var(--border)">
+    <h3 style="font-size:13px;font-weight:700;margin-bottom:.75rem">🔗 Link rapidi</h3>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <a id="link-admin" href="#" target="_blank" style="flex:1;min-width:140px;padding:10px 12px;background:var(--blue-l);border:1.5px solid #c5d9f7;border-radius:var(--radius-sm);font-size:12px;font-weight:700;color:var(--blue);text-decoration:none;display:flex;align-items:center;gap:8px">
+        🖥️ Versione ufficio / admin
+      </a>
+      <a id="link-autista" href="#" target="_blank" style="flex:1;min-width:140px;padding:10px 12px;background:var(--green-l);border:1.5px solid #a7e5cc;border-radius:var(--radius-sm);font-size:12px;font-weight:700;color:var(--green-d);text-decoration:none;display:flex;align-items:center;gap:8px">
+        🚛 Versione autista
+      </a>
+    </div>
+
+    <hr style="margin:1.5rem 0;border:none;border-top:1px solid var(--border)">
+    <h3 style="font-size:13px;font-weight:700;margin-bottom:.75rem">👥 Clienti frequenti</h3>
+    <!-- Import da Excel -->
+    <div style="background:var(--green-l);border:1.5px dashed #a7e5cc;border-radius:var(--radius-sm);padding:10px 14px;margin-bottom:.75rem">
+      <div style="font-size:12px;font-weight:700;color:var(--green-d);margin-bottom:5px">📥 Importa clienti da Excel</div>
+      <div style="font-size:11px;color:var(--ink2);margin-bottom:7px">Prima colonna = Ragione Sociale. Importa tutta la rubrica in un colpo.</div>
+      <label style="padding:7px 12px;background:var(--green);color:#fff;border-radius:var(--radius-sm);font-size:12px;font-weight:700;cursor:pointer;display:inline-block">
+        📂 Scegli file Excel clienti
+        <input type="file" accept=".xlsx,.xls" onchange="importaClienti(event)" style="display:none">
+      </label>
+      <span id="import-clienti-status" style="font-size:11px;color:var(--ink3);margin-left:8px"></span>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:.75rem">
+      <input class="form-ctrl" id="new-cliente" placeholder="Nome cliente / cantiere" style="flex:1;font-size:13px;padding:8px 10px">
+      <button class="btn btn-primary btn-sm" onclick="aggiungiCliente()">+ Aggiungi</button>
+    </div>
+    <div id="clienti-list-setup" style="max-height:150px;overflow-y:auto"></div>
   </div>
 </div>
 </div>
 
-<!-- ══ MODAL VIAGGIO ══════════════════════════════════ -->
-<div class="overlay" id="modal-overlay" onclick="if(event.target===this)chiudiModal()">
+<!-- ════════ PIN MODAL ════════ -->
+<div class="modal-overlay" id="pin-modal" onclick="if(event.target===this)chiudiPin()">
+  <div class="modal" style="max-width:320px">
+    <div class="modal-header">
+      <span class="modal-title">🔒 Accesso Config</span>
+      <button class="modal-close" onclick="chiudiPin()">×</button>
+    </div>
+    <div class="modal-body" style="text-align:center;padding:1.5rem">
+      <p style="font-size:13px;color:var(--ink2);margin-bottom:1rem">Inserisci il PIN per accedere alla configurazione</p>
+      <input id="pin-input" type="password" inputmode="numeric" maxlength="6"
+        placeholder="● ● ● ●"
+        style="text-align:center;font-size:28px;font-weight:800;letter-spacing:.3em;width:100%;padding:12px;border:2px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font);outline:none"
+        onfocus="this.style.borderColor='var(--green)'"
+        onblur="this.style.borderColor='var(--border)'"
+        onkeydown="if(event.key==='Enter')verificaPin()">
+      <div id="pin-error" style="color:var(--red);font-size:12px;margin-top:8px;min-height:16px"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="chiudiPin()">Annulla</button>
+      <button class="btn btn-primary" onclick="verificaPin()">🔓 Accedi</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════════ DDT MODAL ════════ -->
+<div class="modal-overlay" id="ddt-modal" onclick="if(event.target===this)closeDDT()">
   <div class="modal">
     <div class="modal-header">
-      <div class="modal-icon">🚛</div>
-      <span class="modal-title" id="modal-title">Nuovo viaggio</span>
-      <button class="modal-close" onclick="chiudiModal()">×</button>
+      <span class="modal-title" id="ddt-modal-title">DDT — Documento di Trasporto</span>
+      <button class="modal-close" onclick="closeDDT()">×</button>
     </div>
     <div class="modal-body">
-      <div class="form-row-2">
-        <div class="form-row" style="margin-bottom:0">
-          <label class="form-lbl">Data viaggio <span>*</span></label>
-          <input class="form-ctrl" id="m-data" type="date">
+      <div class="ddt-preview" id="ddt-preview"></div>
+      <div style="margin-top:1rem;display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div>
+          <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--ink3);display:block;margin-bottom:5px">N° DDT (automatico)</label>
+          <input class="form-ctrl" id="ddt-numero" placeholder="01/26" style="font-size:13px;padding:8px 12px;width:100%">
         </div>
-        <div class="form-row" style="margin-bottom:0">
-          <label class="form-lbl">Ora (opzionale)</label>
-          <input class="form-ctrl" id="m-ora" type="time" placeholder="es. 07:30">
+        <div>
+          <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--ink3);display:block;margin-bottom:5px">Trasportatore</label>
+          <input class="form-ctrl" id="ddt-trasportatore" placeholder="Nome trasportatore" style="font-size:13px;padding:8px 12px;width:100%">
         </div>
-      </div>
-      <div class="form-row" style="margin-top:1rem">
-        <label class="form-lbl">Cliente <span>*</span></label>
-        <input class="form-ctrl" id="m-cliente" placeholder="Ragione sociale cliente">
-      </div>
-      <div class="form-row-2">
-        <div class="form-row" style="margin-bottom:0">
-          <label class="form-lbl">Trasportatore</label>
-          <input class="form-ctrl" id="m-trasportatore" placeholder="Vettore / Autista">
-        </div>
-        <div class="form-row" style="margin-bottom:0">
-          <label class="form-lbl">Targa / Mezzo</label>
-          <input class="form-ctrl" id="m-targa" placeholder="es. FW361VJ">
-        </div>
-        <div class="form-row" style="margin-bottom:0">
-          <label class="form-lbl">Tipologia mezzo</label>
-          <select class="form-ctrl" id="m-tipo-mezzo" onchange="onTipoMezzoChange()">
-            <option value="">— Seleziona —</option>
-            <option>MOTRICE</option>
-            <option>MOTRICE RAGNO</option>
-            <option>BILICO CENTINATO</option>
-            <option>AUTOTRENO PIANALI</option>
-            <option>SILOS</option>
-            <option>IDROSPURGO 10 MC</option>
-            <option>IDROSPURGO 25 MC</option>
-            <option value="ALTRO">ALTRO</option>
-          </select>
-          <input class="form-ctrl" id="m-tipo-mezzo-altro" placeholder="Specifica tipologia..." style="display:none;margin-top:6px">
-        </div>
-      </div>
-      <div class="form-row-2" style="margin-top:1rem">
-        <div class="form-row" style="margin-bottom:0">
-          <label class="form-lbl">Origine</label>
-          <input class="form-ctrl" id="m-origine" placeholder="Luogo di partenza">
-        </div>
-        <div class="form-row" style="margin-bottom:0">
-          <label class="form-lbl">Destinazione</label>
-          <input class="form-ctrl" id="m-dest" placeholder="Luogo di arrivo">
-        </div>
-      </div>
-      <div class="form-row" style="margin-top:1rem">
-        <label class="form-lbl">Note</label>
-        <textarea class="form-ctrl" id="m-note" rows="2" placeholder="Riferimenti, istruzioni speciali..."></textarea>
-      </div>
-      <div class="form-row" style="margin-top:1rem">
-        <label class="form-lbl">Checklist attività</label>
-        <div class="checklist-grid" id="modal-checklist"></div>
       </div>
     </div>
     <div class="modal-footer">
-      <button class="btn btn-ghost" onclick="chiudiModal()">Annulla</button>
-      <button class="btn btn-ghost" style="color:var(--blue,#1a4f8a);border-color:var(--blue,#1a4f8a)" onclick="apriOrdineServizio()" title="Crea ordine di servizio con i dati di questo viaggio">📋 Ordine di servizio</button>
-      <button class="btn btn-primary" onclick="salvaViaggio()">✓ Salva viaggio</button>
+      <button class="btn btn-ghost" onclick="closeDDT()">Annulla</button>
+      <button class="btn btn-ghost" onclick="stampaDDT()">🖨️ Stampa</button>
+      <button class="btn btn-primary" onclick="confermaDDT()">✓ Conferma emissione DDT</button>
     </div>
   </div>
 </div>
 
-</div><!-- /content -->
-</div><!-- /app-shell -->
-
 <div class="toast" id="toast"></div>
 
-<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-<script>
-// Firebase compat SDK — funziona in iframe e senza type="module"
-var _firebaseRef, _firebaseUpdate, _firebaseSet, _firebasePush,
-    _firebaseOnValue, _firebaseRemove;
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+<script type="module">
+// ══════════════════════════════════════════════════
+//  FIREBASE INIT
+// ══════════════════════════════════════════════════
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getDatabase, ref, set, push, onValue, get, update, remove }
+  from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
 
-function initializeApp(cfg) { return firebase.initializeApp(cfg, 'viaggi-'+Date.now()); }
-function getDatabase(app)   { return app.database(); }
-function ref(db, path)      { return db.ref(path); }
-function set(r, val)        { return r.set(val); }
-function push(r, val)       { return r.push(val); }
-function update(r, val)     { return r.update(val); }
-function remove(r)          { return r.remove(); }
-function onValue(r, cb)     { r.on('value', snap => cb(snap)); }
-
-// ── STATE ──────────────────────────────────────────────
 let db = null;
-let STATE = { viaggi: {}, tasks: [] };
-let _editId  = null;
-let _weekOffset = 0;
-let _monthOffset = 0;
+let _unsubMovimenti = null;
+let _unsubCassoni   = null;
 
-const MESI_IT = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
-
-const DEFAULT_TASKS = [
-  'Mail richiesta al trasportatore',
-  'Ordine di servizio creato',
-  'FAC SIMILE formulario inviato',
-  'Cliente avvisato del ritiro'
-];
-
-// ── UTILS ──────────────────────────────────────────────
-function toast(msg, type='') {
-  const el = document.getElementById('toast');
-  el.textContent = msg; el.className = 'toast show' + (type?' '+type:'');
-  clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove('show'), 2800);
-}
-
-function fmtDate(iso) {
-  if (!iso) return '—';
-  const [y,m,g] = iso.split('-');
-  return `${g}/${m}/${y}`;
-}
-
-function getMondayOf(offset=0) {
-  const d = new Date();
-  d.setHours(0,0,0,0);
-  const day = d.getDay() || 7;
-  d.setDate(d.getDate() - day + 1 + offset*7);
-  return d;
-}
-
-function addDays(d, n) {
-  const r = new Date(d);
-  r.setDate(r.getDate()+n);
-  return r;
-}
-
-function toISO(d) {
-  const y = d.getFullYear();
-  const m = String(d.getMonth()+1).padStart(2,'0');
-  const g = String(d.getDate()).padStart(2,'0');
-  return `${y}-${m}-${g}`;
-}
-
-function isEffettuato(viaggio) {
-  if (!viaggio.data) return false;
-  const now  = new Date();
-  const [y, m, g] = viaggio.data.split('-').map(Number);
-  const soglia = new Date(y, m - 1, g, 16, 0, 0);
-  const result = now >= soglia;
-  return result;
-}
-
-function semaforo(viaggio) {
-  const eff = isEffettuato(viaggio);
-  if (eff) return 'effettuato';
-  const tasks = STATE.tasks.length ? STATE.tasks : DEFAULT_TASKS;
-  const done = tasks.filter(t => viaggio.checks && viaggio.checks[slugify(t)]).length;
-  if (done === 0) return 'none';
-  if (done === tasks.length) return 'done';
-  return 'partial';
-}
-
-function semLabel(s) {
-  if (s === 'effettuato') return '✓ Effettuato';
-  return s === 'done' ? '✅ Completo' : s === 'partial' ? '🟡 In corso' : '🔴 Da iniziare';
-}
-
-function slugify(s) {
-  return s.toLowerCase().replace(/[^a-z0-9]/g,'_').replace(/_+/g,'_');
-}
-
-function progress(viaggio) {
-  const tasks = STATE.tasks.length ? STATE.tasks : DEFAULT_TASKS;
-  const done = tasks.filter(t => viaggio.checks && viaggio.checks[slugify(t)]).length;
-  return Math.round(done / tasks.length * 100);
-}
-
-function onTipoMezzoChange() {
-  const sel   = document.getElementById('m-tipo-mezzo');
-  const altro = document.getElementById('m-tipo-mezzo-altro');
-  if (sel.value === 'ALTRO') {
-    altro.style.display = 'block';
-    altro.focus();
-  } else {
-    altro.style.display = 'none';
-    altro.value = '';
-  }
-}
-window.onTipoMezzoChange = onTipoMezzoChange;
-
-function renderMese() {
-  const now   = new Date();
-  const base  = new Date(now.getFullYear(), now.getMonth() + _monthOffset, 1);
-  const year  = base.getFullYear();
-  const month = base.getMonth();
-
-  document.getElementById('month-label').textContent = `${MESI_IT[month]} ${year}`;
-
-  const today   = toISO(now);
-  const firstDay = new Date(year, month, 1);
-  const lastDay  = new Date(year, month + 1, 0);
-
-  // Lunedi = 0 ... Domenica = 6
-  let startDow = firstDay.getDay() - 1;
-  if (startDow < 0) startDow = 6;
-
-  const grid = document.getElementById('month-grid');
-  grid.innerHTML = '';
-
-  // Celle del mese precedente
-  for (let i = 0; i < startDow; i++) {
-    const d   = new Date(year, month, 1 - (startDow - i));
-    const iso = toISO(d);
-    grid.appendChild(makeMonthCell(iso, d.getDate(), true));
-  }
-
-  // Celle del mese corrente
-  for (let d = 1; d <= lastDay.getDate(); d++) {
-    const date = new Date(year, month, d);
-    const iso  = toISO(date);
-    grid.appendChild(makeMonthCell(iso, d, false, iso === today));
-  }
-
-  // Celle del mese successivo per completare la griglia
-  const totalCells = startDow + lastDay.getDate();
-  const remainder  = totalCells % 7 === 0 ? 0 : 7 - (totalCells % 7);
-  for (let i = 1; i <= remainder; i++) {
-    const d   = new Date(year, month + 1, i);
-    const iso = toISO(d);
-    grid.appendChild(makeMonthCell(iso, d.getDate(), true));
-  }
-}
-
-function makeMonthCell(iso, dayNum, otherMonth, isToday) {
-  const cell     = document.createElement('div');
-  cell.className = 'month-cell' + (otherMonth?' other-month':'') + (isToday?' today':'');
-  cell.onclick   = () => openModal(iso);
-
-  const numEl  = document.createElement('div');
-  numEl.className = 'month-day-num';
-  numEl.textContent = dayNum;
-  cell.appendChild(numEl);
-
-  const viaggi = Object.entries(STATE.viaggi)
-    .filter(([,v]) => v.data === iso)
-    .sort((a,b) => (a[1].ora||'') < (b[1].ora||'') ? -1 : 1);
-
-  const MAX_SHOW = 3;
-  viaggi.slice(0, MAX_SHOW).forEach(([id, v]) => {
-    const sem = semaforo(v);
-    const cls = sem === 'done' ? 'mvc-done' : sem === 'partial' ? 'mvc-partial' : sem === 'effettuato' ? 'mvc-effettuato' : 'mvc-none';
-    const dot = sem === 'done' ? '✅' : sem === 'partial' ? '🟡' : sem === 'effettuato' ? '✓' : '🔴';
-    const el  = document.createElement('div');
-    el.className = `month-vcard ${cls}`;
-    el.innerHTML = `<span>${dot}</span><span style="overflow:hidden;text-overflow:ellipsis${sem==='effettuato'?';text-decoration:line-through':''}">${v.ora?v.ora+' ':''}${v.cliente||'—'}${v.trasportatore?' · 🚛'+v.trasportatore:''}${v.tipoMezzo?' · '+v.tipoMezzo:''}</span>`;
-    el.onclick = (e) => { e.stopPropagation(); openModal(null, id); };
-    cell.appendChild(el);
-  });
-
-  if (viaggi.length > MAX_SHOW) {
-    const more = document.createElement('div');
-    more.className = 'month-more';
-    more.textContent = `+${viaggi.length - MAX_SHOW} altri`;
-    cell.appendChild(more);
-  }
-
-  return cell;
-}
-
-window.shiftMonth  = function(n) { _monthOffset += n; renderMese(); };
-window.goTodayMonth = function() { _monthOffset = 0; renderMese(); };
-
-// ── RENDER SETTIMANA ───────────────────────────────────
-const GIORNI = ['Lun','Mar','Mer','Gio','Ven','Sab','Dom'];
-
-function renderSettimana() {
-  const lun = getMondayOf(_weekOffset);
-  const dom = addDays(lun, 6);
-  document.getElementById('week-label').textContent =
-    `${fmtDate(toISO(lun))}  —  ${fmtDate(toISO(dom))}`;
-
-  const today = toISO(new Date());
-  const grid  = document.getElementById('week-grid');
-  grid.innerHTML = '';
-
-  for (let i=0; i<7; i++) {
-    const d    = addDays(lun, i);
-    const iso  = toISO(d);
-    const isToday = iso === today;
-    const viaggi = Object.entries(STATE.viaggi)
-      .filter(([,v]) => v.data === iso)
-      .sort((a,b) => (a[1].ora||'') < (b[1].ora||'') ? -1 : 1);
-
-    const col = document.createElement('div');
-    col.className = 'day-col' + (isToday?' today':'');
-    col.innerHTML = `
-      <div class="day-header">
-        <div>
-          <div class="day-name">${GIORNI[i]}</div>
-          <div class="day-date">${d.getDate().toString().padStart(2,'0')}/${(d.getMonth()+1).toString().padStart(2,'0')}</div>
-        </div>
-        <span class="day-count">${viaggi.length}</span>
-      </div>
-      <div class="day-body" id="day-${iso}">
-        ${viaggi.map(([id,v]) => vcardHTML(id,v)).join('')}
-        <button class="add-btn" onclick="openModal('${iso}')">+ Aggiungi</button>
-      </div>`;
-    grid.appendChild(col);
-  }
-}
-
-function vcardHTML(id, v) {
-  const sem   = semaforo(v);
-  const tasks = STATE.tasks.length ? STATE.tasks : DEFAULT_TASKS;
-  const pills = tasks.map(t => {
-    const done = v.checks && v.checks[slugify(t)];
-    const short = t.split(' ').slice(0,2).join(' ');
-    return `<span class="chk-pill ${done?'chk-done':'chk-todo'}">${short}</span>`;
-  }).join('');
-  return `<div class="vcard ${sem}" onclick="openModal(null,'${id}')">
-    <button class="vc-del" onclick="event.stopPropagation();eliminaViaggio('${id}')" title="Elimina">×</button>
-    <div class="vc-top">
-      <div class="vc-sem sem-${sem}"></div>
-      <div class="vc-client">${v.ora?'<span style="font-family:var(--mono);font-size:10px;color:var(--ink3);margin-right:4px">'+v.ora+'</span>':''}${v.cliente||'—'}</div>
-    </div>
-    ${v.trasportatore?`<div class="vc-carrier">🚛 ${v.trasportatore}${v.targa?' · '+v.targa:''}${v.tipoMezzo?' · <em>'+v.tipoMezzo+'</em>':''}</div>`:
-      v.tipoMezzo?`<div class="vc-carrier">🚛 ${v.tipoMezzo}</div>`:''}
-    ${v.origine||v.dest?`<div class="vc-carrier" style="font-size:9px">📍 ${v.origine||'—'} → ${v.dest||'—'}</div>`:''}
-    <div class="vc-checks">${pills}</div>
-  </div>`;
-}
-
-// ── RENDER LISTA ───────────────────────────────────────
-window.renderLista = function() {
-  const cerca = document.getElementById('f-cerca').value.toLowerCase();
-  const stato = document.getElementById('f-stato').value;
-  const dal   = document.getElementById('f-dal').value;
-  const al    = document.getElementById('f-al').value;
-
-  let rows = Object.entries(STATE.viaggi)
-    .sort((a,b) => (a[1].data+(a[1].ora||'')) < (b[1].data+(b[1].ora||'')) ? -1 : 1);
-
-  if (cerca) rows = rows.filter(([,v]) =>
-    (v.cliente||'').toLowerCase().includes(cerca) ||
-    (v.trasportatore||'').toLowerCase().includes(cerca) ||
-    (v.origine||'').toLowerCase().includes(cerca) ||
-    (v.dest||'').toLowerCase().includes(cerca));
-  if (stato) rows = rows.filter(([,v]) => semaforo(v) === stato);
-  if (dal)   rows = rows.filter(([,v]) => (v.data||'') >= dal);
-  if (al)    rows = rows.filter(([,v]) => (v.data||'') <= al);
-
-  const tbody = document.getElementById('lista-tbody');
-  if (!tbody) return;
-  if (!rows.length) {
-    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--ink3);padding:2rem;font-size:13px">Nessun viaggio trovato</td></tr>';
-    return;
-  }
-  tbody.innerHTML = rows.map(([id,v]) => {
-    const sem  = semaforo(v);
-    const eff  = sem === 'effettuato';
-    const pct  = progress(v);
-    const fillCls = eff?'fill-effettuato':sem==='done'?'fill-done':sem==='partial'?'fill-partial':'fill-none';
-    const rowStyle = eff ? 'opacity:.7;background:#f8f8f8' : '';
-    return `<tr style="${rowStyle}">
-      <td style="font-family:var(--mono);font-size:12px;white-space:nowrap">${fmtDate(v.data)}${v.ora?' <span style="color:var(--ink3)">'+v.ora+'</span>':''}</td>
-      <td style="font-weight:600${eff?';text-decoration:line-through;color:var(--ink3)':''}">${v.cliente||'—'}</td>
-      <td style="color:var(--ink2)">${v.trasportatore||'—'}${v.targa?' <span style="font-size:10px;color:var(--ink3)">'+v.targa+'</span>':''}${v.tipoMezzo?' <span style="font-size:10px;background:var(--blue-l,#e8f0fc);color:var(--blue,#1a4f8a);padding:1px 5px;border-radius:4px">'+v.tipoMezzo+'</span>':''}</td>
-      <td style="font-size:12px;color:var(--ink2)">${v.origine||'—'} → ${v.dest||'—'}</td>
-      <td>
-        ${eff
-          ? `<span style="font-size:11px;font-weight:700;color:#888;background:#eee;padding:3px 8px;border-radius:10px">✓ Effettuato</span>`
-          : `<div class="progress-bar"><div class="progress-fill ${fillCls}" style="width:${pct}%"></div></div>
-             <div style="font-size:10px;color:var(--ink3);margin-top:2px">${pct}%</div>`
-        }
-      </td>
-      <td><span style="font-size:11px;font-weight:600${eff?';color:#999':''}">${semLabel(sem)}</span></td>
-      <td style="white-space:nowrap">
-        ${eff
-          ? `<button class="btn btn-ghost btn-sm" onclick="mostraSuMappa('${id}')" title="Mostra su mappa">🗺</button>`
-          : `<button class="btn btn-ghost btn-sm" onclick="openModal(null,'${id}')">✏️</button>`
-        }
-        <button class="btn btn-ghost btn-sm" onclick="mostraSuMappa('${id}')" title="Mostra su mappa" style="${eff?'display:none':''}">🗺</button>
-        <button class="btn btn-ghost btn-sm" onclick="eliminaViaggio('${id}')" style="color:var(--red)">🗑</button>
-      </td>
-    </tr>`;
-  }).join('');
-}
-// alias interno
-function renderLista() { window.renderLista(); }
-
-// ── MODAL ──────────────────────────────────────────────
-window.openModal = function(data, id) {
-  _editId = id || null;
-  const v  = id ? STATE.viaggi[id] : null;
-  const tasks = STATE.tasks.length ? STATE.tasks : DEFAULT_TASKS;
-
-  document.getElementById('modal-title').textContent = v ? 'Modifica viaggio' : 'Nuovo viaggio';
-  document.getElementById('m-data').value         = v?.data  || data || toISO(new Date());
-  document.getElementById('m-ora').value          = v?.ora   || '';
-  document.getElementById('m-cliente').value      = v?.cliente || '';
-  document.getElementById('m-trasportatore').value= v?.trasportatore || '';
-  document.getElementById('m-targa').value        = v?.targa || '';
-  const predefiniti = ['','MOTRICE','MOTRICE RAGNO','BILICO CENTINATO','AUTOTRENO PIANALI','SILOS','IDROSPURGO 10 MC','IDROSPURGO 25 MC','ALTRO'];
-  const tipoSalvato = v?.tipoMezzo || '';
-  if (predefiniti.includes(tipoSalvato)) {
-    document.getElementById('m-tipo-mezzo').value = tipoSalvato;
-    document.getElementById('m-tipo-mezzo-altro').style.display = 'none';
-    document.getElementById('m-tipo-mezzo-altro').value = '';
-  } else {
-    document.getElementById('m-tipo-mezzo').value = 'ALTRO';
-    document.getElementById('m-tipo-mezzo-altro').style.display = 'block';
-    document.getElementById('m-tipo-mezzo-altro').value = tipoSalvato;
-  }
-  document.getElementById('m-origine').value      = v?.origine || '';
-  document.getElementById('m-dest').value         = v?.dest || '';
-  document.getElementById('m-note').value         = v?.note || '';
-
-  // Checklist
-  const cl = document.getElementById('modal-checklist');
-  cl.innerHTML = tasks.map(t => {
-    const key = slugify(t);
-    const done = v?.checks?.[key] || false;
-    return `<label class="chk-item ${done?'checked':''}" id="cli-${key}">
-      <input type="checkbox" ${done?'checked':''} onchange="toggleCheck('${key}',this)">
-      <span class="chk-label">${t}</span>
-    </label>`;
-  }).join('');
-
-  document.getElementById('modal-overlay').classList.add('open');
-  setTimeout(() => document.getElementById('m-data').focus(), 100);
+// ── State ──────────────────────────────────────────
+let STATE = {
+  cassoni:    {},   // { id: { tipo, statoAttuale:'piazzale'|'fuori', lastMov, cliente } }
+  movimenti:  {},   // { id: { cassoneId, tipo:'USCITA'|'RIENTRO', ts, cliente, autista, note, ddtNumero, ddtTs } }
+  clienti:    [],
 };
 
-window.toggleCheck = function(key, el) {
-  const lbl = el.closest('label');
-  lbl.classList.toggle('checked', el.checked);
-};
-
-window.chiudiModal = function() {
-  document.getElementById('modal-overlay').classList.remove('open');
-  _editId = null;
-};
-
-window.salvaViaggio = async function() {
-  if (!db) { toast('Firebase non connesso', 'err'); return; }
-  const data     = document.getElementById('m-data').value;
-  const cliente  = document.getElementById('m-cliente').value.trim();
-  if (!data)    { toast('Inserisci la data', 'err'); return; }
-  if (!cliente) { toast('Inserisci il cliente', 'err'); return; }
-
-  // Leggi stato checklist
-  const tasks = STATE.tasks.length ? STATE.tasks : DEFAULT_TASKS;
-  const checks = {};
-  tasks.forEach(t => {
-    const key = slugify(t);
-    const el  = document.querySelector(`#cli-${key} input`);
-    if (el) checks[key] = el.checked;
-  });
-
-  const obj = {
-    data, ora: document.getElementById('m-ora').value,
-    cliente, trasportatore: document.getElementById('m-trasportatore').value.trim(),
-    targa: document.getElementById('m-targa').value.trim(),
-    tipoMezzo: (function(){
-      const sel = document.getElementById('m-tipo-mezzo').value;
-      if (sel === 'ALTRO') {
-        return document.getElementById('m-tipo-mezzo-altro').value.trim() || 'ALTRO';
-      }
-      return sel;
-    })(),
-    origine: document.getElementById('m-origine').value.trim(),
-    dest: document.getElementById('m-dest').value.trim(),
-    note: document.getElementById('m-note').value.trim(),
-    checks, updatedAt: new Date().toISOString()
-  };
-
-  if (_editId) {
-    await update(ref(db, `viaggi_programmazione/${_editId}`), obj);
-    toast('✓ Viaggio aggiornato', 'ok');
-  } else {
-    await push(ref(db, 'viaggi_programmazione'), obj);
-    toast('✓ Viaggio aggiunto', 'ok');
-  }
-  chiudiModal();
-};
-
-window.eliminaViaggio = async function(id) {
-  if (!confirm('Eliminare questo viaggio?')) return;
-  await remove(ref(db, `viaggi_programmazione/${id}`));
-  toast('Viaggio eliminato');
-};
-
-// ── TASK CONFIG ────────────────────────────────────────
-function renderTaskEditor() {
-  const tasks = STATE.tasks.length ? STATE.tasks : DEFAULT_TASKS;
-  document.getElementById('tasks-editor').innerHTML = tasks.map((t,i) =>
-    `<div style="display:flex;align-items:center;gap:6px;padding:6px 10px;background:var(--s2);border-radius:6px;border:1px solid var(--border)">
-      <span style="flex:1;font-size:13px">${t}</span>
-      <button onclick="rimuoviTask(${i})" style="background:none;border:none;color:var(--ink3);cursor:pointer;font-size:14px" title="Rimuovi">×</button>
-    </div>`
-  ).join('');
+// ── Config ─────────────────────────────────────────
+function loadConfig() {
+  try { return JSON.parse(localStorage.getItem('tracker_cfg_v1') || 'null'); } catch { return null; }
+}
+function saveConfig(cfg) {
+  localStorage.setItem('tracker_cfg_v1', JSON.stringify(cfg));
 }
 
-window.aggiungiTask = function() {
-  const inp = document.getElementById('new-task-input');
-  const val = inp.value.trim();
-  if (!val) return;
-  const tasks = STATE.tasks.length ? [...STATE.tasks] : [...DEFAULT_TASKS];
-  tasks.push(val);
-  STATE.tasks = tasks;
-  inp.value = '';
-  renderTaskEditor();
-};
-
-window.rimuoviTask = function(i) {
-  const tasks = STATE.tasks.length ? [...STATE.tasks] : [...DEFAULT_TASKS];
-  tasks.splice(i,1);
-  STATE.tasks = tasks;
-  renderTaskEditor();
-};
-
-window.salvaTaskConfig = async function() {
-  if (!db) { toast('Firebase non connesso', 'err'); return; }
-  await set(ref(db, 'viaggi_tasks'), STATE.tasks.length ? STATE.tasks : DEFAULT_TASKS);
-  toast('✓ Attività salvate', 'ok');
-};
-
-// ── SETTIMANA NAV ──────────────────────────────────────
-window.shiftWeek = function(n) { _weekOffset += n; renderSettimana(); };
-window.goToday   = function()  { _weekOffset = 0;  renderSettimana(); };
-
-// ── FILTRI LISTA ───────────────────────────────────────
-window.resetFiltri = function() {
-  ['f-cerca','f-dal','f-al'].forEach(id => document.getElementById(id).value='');
-  document.getElementById('f-stato').value='';
-  renderLista();
-};
-
-// ── CSV ────────────────────────────────────────────────
-window.exportCSV = function() {
-  const tasks = STATE.tasks.length ? STATE.tasks : DEFAULT_TASKS;
-  const rows  = [['Data','Ora','Cliente','Trasportatore','Targa','Tipologia mezzo','Origine','Destinazione','Note',...tasks,'% Completamento']];
-  Object.values(STATE.viaggi)
-    .sort((a,b) => a.data < b.data ? -1 : 1)
-    .forEach(v => {
-      const checks = tasks.map(t => (v.checks?.[slugify(t)] ? 'SI' : 'NO'));
-      rows.push([v.data,v.ora||'',v.cliente||'',v.trasportatore||'',v.targa||'',v.tipoMezzo||'',v.origine||'',v.dest||'',v.note||'',...checks,progress(v)+'%']);
-    });
-  const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(';')).join('\n');
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8;'}));
-  a.download = 'viaggi_' + toISO(new Date()) + '.csv';
-  a.click();
-};
-
-// ── RENDER ALL ─────────────────────────────────────────
-function renderAll() {
-  renderMese();
-  renderSettimana();
-  renderLista();
-  renderTaskEditor();
-  schedulaPromemoria();
-  // Aggiorna pannello oggi se la mappa è visibile
-  if (document.getElementById('view-mappa').classList.contains('active')) {
-    renderOggiPanel();
-    renderProssimiPanel();
-  }
-}
-
-// ── PROMEMORIA FAC SIMILE ──────────────────────────────
-const FAC_KEY = slugify('FAC SIMILE formulario inviato');
-const _promemoriaPendenti = {}; // { viaggioId: timeoutId }
-
-async function richiediPermessoNotifiche() {
-  if (!('Notification' in window)) return false;
-  if (Notification.permission === 'granted') return true;
-  if (Notification.permission === 'denied') return false;
-  const perm = await Notification.requestPermission();
-  return perm === 'granted';
-}
-
-function schedulaPromemoria() {
-  if (!('Notification' in window)) return;
-  const ora = new Date();
-
-  Object.entries(STATE.viaggi).forEach(([id, v]) => {
-    // Salta se già flaggato o se il viaggio è passato
-    const facFatto = v.checks && v.checks[FAC_KEY];
-    if (facFatto) {
-      // Cancella eventuale timer pendente
-      if (_promemoriaPendenti[id]) {
-        clearTimeout(_promemoriaPendenti[id]);
-        delete _promemoriaPendenti[id];
-      }
-      return;
-    }
-
-    if (!v.data) return;
-    const [y, m, g] = v.data.split('-').map(Number);
-
-    // Calcola 08:30 del giorno PRIMA del viaggio
-    const promemoria = new Date(y, m - 1, g - 1, 8, 30, 0);
-
-    // Se il promemoria è già passato o mancano più di 48h, skip
-    const msAlPromemoria = promemoria - ora;
-    if (msAlPromemoria < 0) return;           // già passato
-    if (msAlPromemoria > 48 * 3600 * 1000) return; // troppo lontano
-
-    // Evita di rischedulare se già esiste
-    if (_promemoriaPendenti[id]) return;
-
-    _promemoriaPendenti[id] = setTimeout(async () => {
-      delete _promemoriaPendenti[id];
-      // Controlla di nuovo al momento del trigger
-      const vAttuale = STATE.viaggi[id];
-      if (!vAttuale) return;
-      if (vAttuale.checks && vAttuale.checks[FAC_KEY]) return;
-
-      const ok = await richiediPermessoNotifiche();
-      if (!ok) { toast('⚠️ Abilita le notifiche del browser per i promemoria'); return; }
-
-      new Notification('📋 FAC SIMILE non inviato', {
-        body: `Viaggio domani (${fmtDate(vAttuale.data)}) per ${vAttuale.cliente||'—'}\nRicordati di inviare il FAC SIMILE del formulario!`,
-        icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="12" fill="%23b45309"/><text y="44" x="32" text-anchor="middle" font-size="36">📋</text></svg>',
-        tag: `fac-simile-${id}`,
-        requireInteraction: true
-      });
-
-      // Mostra anche toast in app
-      toast(`⏰ Promemoria: FAC SIMILE non inviato per ${vAttuale.cliente||'—'} (domani)`);
-    }, msAlPromemoria);
-
-    console.log(`⏰ Promemoria schedulato per ${v.cliente} alle ${promemoria.toLocaleString('it-IT')} (tra ${Math.round(msAlPromemoria/60000)} min)`);
-  });
-}
-
-// Avvisa l'utente se le notifiche non sono abilitate
-async function verificaNotifiche() {
-  if (!('Notification' in window)) return;
-  if (Notification.permission === 'default') {
-    // Mostra banner discreto
-    const banner = document.createElement('div');
-    banner.id = 'notif-banner';
-    banner.style.cssText = 'position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%);background:var(--amber,#b45309);color:#fff;padding:10px 20px;border-radius:8px;font-size:13px;font-weight:600;z-index:999;cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,.2);display:flex;align-items:center;gap:10px';
-    banner.innerHTML = '🔔 <span>Abilita le notifiche per i promemoria FAC SIMILE</span> <button style="background:rgba(255,255,255,.25);border:none;color:#fff;padding:3px 10px;border-radius:5px;cursor:pointer;font-weight:700">Abilita</button>';
-    banner.onclick = async () => {
-      const ok = await richiediPermessoNotifiche();
-      banner.remove();
-      if (ok) toast('✅ Notifiche abilitate — riceverai i promemoria FAC SIMILE');
-    };
-    document.body.appendChild(banner);
-    setTimeout(() => banner?.remove(), 12000);
-  }
-}
-
-// ── MAPPA ──────────────────────────────────────────────
-let _map = null;
-let _mapLayers = [];
-let _geoCache = {};  // { "indirizzo" -> [lat,lng] }
-
-function initMap() {
-  const mapEl = document.getElementById('map');
-  if (_map) {
-    _map.invalidateSize();
-    return;
-  }
-  _map = L.map(mapEl, { zoomControl: true }).setView([45.7, 12.3], 8);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '© <a href="https://openstreetmap.org">OpenStreetMap</a>',
-    maxZoom: 18
-  }).addTo(_map);
-  try { _geoCache = JSON.parse(localStorage.getItem('viaggio_geocache')||'{}'); } catch{}
-}
-
-function saveGeoCache() {
-  localStorage.setItem('viaggio_geocache', JSON.stringify(_geoCache));
-}
-
-async function geocodeAddr(addr) {
-  if (!addr) return null;
-  const key = addr.toLowerCase().trim();
-  if (_geoCache[key]) return _geoCache[key];
+async function initFirebase(cfg) {
   try {
-    const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(addr+', Italia')}&format=json&limit=1&countrycodes=it`;
-    const r = await fetch(url, {headers:{'Accept-Language':'it'}});
-    const d = await r.json();
-    if (d && d[0]) {
-      const coords = [parseFloat(d[0].lat), parseFloat(d[0].lon)];
-      _geoCache[key] = coords;
-      saveGeoCache();
-      return coords;
-    }
-  } catch(e) {}
-  return null;
-}
-
-// Palette colori vivaci per le tratte — uno diverso per ogni viaggio
-const TRATTA_COLORS = [
-  '#FF2D55', // rosso acceso
-  '#FF9500', // arancio
-  '#FFCC00', // giallo
-  '#34C759', // verde
-  '#00C7BE', // teal
-  '#007AFF', // blu
-  '#5856D6', // indaco
-  '#AF52DE', // viola
-  '#FF3B30', // rosso vivo
-  '#FF6B35', // arancio scuro
-  '#00D4FF', // azzurro
-  '#30D158', // verde lime
-  '#BF5AF2', // lilla
-  '#FF9F0A', // ambra
-  '#0A84FF', // blu elettrico
-];
-
-function getTrattaColor(idx) {
-  return TRATTA_COLORS[idx % TRATTA_COLORS.length];
-}
-
-function makeMarkerIcon(col, isOrig, cliente) {
-  const label = isOrig ? 'P' : 'A';
-  const fontSize = 11;
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="42" viewBox="0 0 32 42">
-    <path d="M16 0C7.16 0 0 7.16 0 16c0 10.84 14.4 25.08 15.04 25.72a1.34 1.34 0 001.92 0C17.6 41.08 32 26.84 32 16 32 7.16 24.84 0 16 0z" fill="${col}"/>
-    <path d="M16 0C7.16 0 0 7.16 0 16c0 10.84 14.4 25.08 15.04 25.72a1.34 1.34 0 001.92 0C17.6 41.08 32 26.84 32 16 32 7.16 24.84 0 16 0z" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="1.5"/>
-    <text x="16" y="${isOrig && cliente ? 19 : 20}" text-anchor="middle" font-family="system-ui,sans-serif" font-size="${fontSize}" font-weight="900" fill="#fff">${label}</text>
-  </svg>`;
-  return L.divIcon({
-    className: '',
-    iconSize: [32, 42],
-    iconAnchor: [16, 42],
-    popupAnchor: [0, -42],
-    html: `<div title="${isOrig && cliente ? cliente : ''}" style="filter:drop-shadow(0 3px 6px rgba(0,0,0,.4));position:relative">${svg}${isOrig && cliente ? `<div class="marker-tooltip">${cliente}</div>` : ''}</div>`
-  });
-}
-
-function popupHTML(v, tipo, col) {
-  const tasks = STATE.tasks.length ? STATE.tasks : DEFAULT_TASKS;
-  const label = tipo === 'origine' ? '📍 Partenza' : '🏁 Arrivo';
-  const luogo = tipo === 'origine' ? (v.origine||'—') : (v.dest||'—');
-  const taskRows = tasks.map(t => {
-    const done = v.checks?.[slugify(t)];
-    return `<div class="map-popup-task">
-      <span style="font-size:14px">${done?'✅':'⬜'}</span>
-      <span style="color:${done?'#065f46':'#9ca3af'};${done?'':'text-decoration:line-through'}">${t}</span>
-    </div>`;
-  }).join('');
-  return `<div class="map-popup-header" style="background:${col}">
-    ${label} — <strong>${v.cliente||'—'}</strong>
-  </div>
-  <div class="map-popup-body">
-    <div style="font-size:11px;color:#6b7280;margin-bottom:6px">${fmtDate(v.data)}${v.ora?' · '+v.ora:''} ${v.trasportatore?'· 🚛 '+v.trasportatore:''}</div>
-    <div style="font-weight:600;margin-bottom:8px">${luogo}</div>
-    <div>${taskRows}</div>
-    ${v.note?`<div style="margin-top:8px;padding-top:8px;border-top:1px solid #f3f4f6;font-size:11px;color:#6b7280">📝 ${v.note}</div>`:''}
-  </div>`;
-}
-
-// Mostra un viaggio sulla mappa (geocodifica lazy) — usato da lista e pannello effettuati
-window.mostraSuMappa = async function(id) {
-  const v = STATE.viaggi[id];
-  if (!v) return;
-  switchView('mappa');
-  setTimeout(async () => {
-    initMap();
-    _map.invalidateSize();
-    // Usa colore tratta se non effettuato, grigio se effettuato
-    const idx = Object.keys(STATE.viaggi).indexOf(id);
-    const col = isEffettuato(v) ? '#999' : getTrattaColor(idx);
-    const origCoords = v.origine ? await geocodeAddr(v.origine) : null;
-    const destCoords = v.dest    ? await geocodeAddr(v.dest)    : null;
-    if (origCoords) {
-      const m = L.marker(origCoords, {icon: makeMarkerIcon(col, true, v.cliente)})
-        .bindPopup(popupHTML(v,'origine',col), {maxWidth:280}).addTo(_map);
-      _mapLayers.push(m);
-    }
-    if (destCoords) {
-      const m = L.marker(destCoords, {icon: makeMarkerIcon(col, false)})
-        .bindPopup(popupHTML(v,'dest',col), {maxWidth:280}).addTo(_map);
-      _mapLayers.push(m);
-    }
-    if (origCoords && destCoords) {
-      const line = L.polyline([origCoords, destCoords], {
-        color: col, weight: 4, opacity: .85, dashArray: '8 5'
-      }).addTo(_map);
-      _mapLayers.push(line);
-      _map.fitBounds([origCoords, destCoords], {padding:[60,60]});
-    } else if (origCoords) {
-      _map.setView(origCoords, 11);
-    } else {
-      toast('Indirizzo non trovato — verifica Origine e Destinazione', 'err');
-    }
-  }, 200);
-};
-
-async function renderMappa() {
-  if (!_map) return;
-  // Rimuovi layer precedenti ma lascia la mappa vuota —
-  // i viaggi vengono mostrati solo su clic dal pannello
-  _mapLayers.forEach(l => _map.removeLayer(l));
-  _mapLayers = [];
-  _map.setView([45.7, 12.3], 8);
-  _map.invalidateSize();
-  setTimeout(() => _map.invalidateSize(), 300);
-}
-
-window.geocodificaTutti = function() {};
-
-// ── PANNELLO VIAGGI DI OGGI ───────────────────────────
-function renderOggiPanel() {
-  const oggi    = toISO(new Date());
-  const wrap    = document.getElementById('oggi-list-wrap');
-  const lbl     = document.getElementById('oggi-data-label');
-  if (!wrap || !lbl) return;
-
-  const d = new Date();
-  lbl.textContent = d.toLocaleDateString('it-IT', {weekday:'long', day:'numeric', month:'long', year:'numeric'});
-
-  const viaggiOggi = Object.entries(STATE.viaggi)
-    .filter(([,v]) => v.data === oggi && !isEffettuato(v))
-    .sort((a,b) => (a[1].ora||'') < (b[1].ora||'') ? -1 : 1);
-
-  if (!viaggiOggi.length) {
-    wrap.innerHTML = '<div class="oggi-empty">Nessun viaggio in programma per oggi</div>';
-    return;
-  }
-
-  wrap.innerHTML = `<div class="oggi-list">${viaggiOggi.map(([id, v]) => {
-    const sem = semaforo(v);
-    const semCol = sem==='done'?'var(--teal)':sem==='partial'?'var(--amber)':'var(--red)';
-    const tasks  = STATE.tasks.length ? STATE.tasks : DEFAULT_TASKS;
-    const fatti  = tasks.filter(t => v.checks?.[slugify(t)]).length;
-    return `<div class="oggi-card" id="oggi-card-${id}" onclick="geoLocalizzaViaggio('${id}')">
-      <div class="oggi-sem" style="background:${semCol}"></div>
-      <div class="oggi-info">
-        <div class="oggi-cliente">${v.cliente||'—'}</div>
-        <div class="oggi-sub">${v.trasportatore||''}${v.origine?' · '+v.origine+' → '+(v.dest||'?'):''}</div>
-        <div style="font-size:10px;color:var(--ink3);margin-top:2px">${fatti}/${tasks.length} attività · ${v.tipoMezzo||'—'}</div>
-      </div>
-      <span class="oggi-ora">${v.ora||''}</span>
-      <span class="oggi-pin">📍</span>
-    </div>`;
-  }).join('')}</div>`;
-}
-
-window.geoLocalizzaViaggio = async function(id) {
-  const card = document.getElementById(`oggi-card-${id}`);
-  const v    = STATE.viaggi[id];
-  if (!v || !card) return;
-
-  card.classList.add('loading');
-  const pin = card.querySelector('.oggi-pin');
-  if (pin) pin.textContent = '⏳';
-
-  // Assicura che la mappa sia inizializzata
-  if (!_map) { initMap(); await new Promise(r => setTimeout(r, 200)); }
-  _map.invalidateSize();
-
-  const col        = getTrattaColor(Object.keys(STATE.viaggi).indexOf(id));
-  const origCoords = v.origine ? await geocodeAddr(v.origine) : null;
-  const destCoords = v.dest    ? await geocodeAddr(v.dest)    : null;
-
-  card.classList.remove('loading');
-  if (pin) pin.textContent = origCoords || destCoords ? '✅' : '❌';
-
-  if (origCoords) {
-    const m = L.marker(origCoords, {icon: makeMarkerIcon(col, true, v.cliente)})
-      .bindPopup(popupHTML(v,'origine',col), {maxWidth:280}).addTo(_map);
-    _mapLayers.push(m);
-    m.openPopup();
-  }
-  if (destCoords) {
-    const m = L.marker(destCoords, {icon: makeMarkerIcon(col, false)})
-      .bindPopup(popupHTML(v,'dest',col), {maxWidth:280}).addTo(_map);
-    _mapLayers.push(m);
-  }
-  if (origCoords && destCoords) {
-    const line = L.polyline([origCoords, destCoords], {
-      color: col, weight: 4, opacity: .85, dashArray: '8 5'
-    }).addTo(_map);
-    _mapLayers.push(line);
-    _map.fitBounds([origCoords, destCoords], {padding:[50,50]});
-  } else if (origCoords) {
-    _map.setView(origCoords, 11);
-  } else {
-    toast('Indirizzo non trovato — verifica i campi Origine e Destinazione', 'err');
-  }
-};
-// ── PANNELLO PROSSIMI VIAGGI ──────────────────────────
-let _prossimiOffset = 0; // 0 = settimana prossima, 1 = quella dopo, ecc.
-
-const GIORNI_IT = ['Dom','Lun','Mar','Mer','Gio','Ven','Sab'];
-const MESI_SHORT = ['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
-
-function getLunedi(offsetSettimane) {
-  const oggi = new Date();
-  oggi.setHours(0,0,0,0);
-  const dow = oggi.getDay() || 7; // 1=lun .. 7=dom
-  const lunediCorrente = new Date(oggi);
-  lunediCorrente.setDate(oggi.getDate() - dow + 1);
-  // Venerdì (dow=5) con offset 0 → salta direttamente alla settimana prossima
-  const baseOffset = (dow === 5 && offsetSettimane === 0) ? 1 : offsetSettimane;
-  const target = new Date(lunediCorrente);
-  target.setDate(lunediCorrente.getDate() + 7 * baseOffset);
-  return target;
-}
-
-function renderProssimiPanel() {
-  const wrap  = document.getElementById('prossimi-list-wrap');
-  const label = document.getElementById('prossimi-label');
-  if (!wrap || !label) return;
-
-  const lun = getLunedi(_prossimiOffset);
-  const dom = new Date(lun); dom.setDate(lun.getDate() + 6);
-
-  const fmtShort = d => `${d.getDate()} ${MESI_SHORT[d.getMonth()]}`;
-  label.textContent = `${fmtShort(lun)} — ${fmtShort(dom)}`;
-
-  // Giorni della settimana selezionata
-  const giorni = [];
-  for (let i = 0; i < 7; i++) {
-    const g = new Date(lun); g.setDate(lun.getDate() + i);
-    giorni.push(g);
-  }
-
-  // Filtro viaggi nella settimana
-  const isoLun = toISO(lun);
-  const isoDom = toISO(dom);
-
-  // Escludi oggi (già nel pannello sopra) e viaggi effettuati
-  const oggi = toISO(new Date());
-  const viaggiSett = Object.entries(STATE.viaggi)
-    .filter(([,v]) => v.data > oggi && v.data >= isoLun && v.data <= isoDom && !isEffettuato(v))
-    .sort((a,b) => (a[1].data + (a[1].ora||'')) < (b[1].data + (b[1].ora||'')) ? -1 : 1);
-
-  if (!viaggiSett.length) {
-    wrap.innerHTML = '<div class="oggi-empty">Nessun viaggio programmato per questa settimana</div>';
-    return;
-  }
-
-  // Raggruppa per giorno
-  const perGiorno = {};
-  viaggiSett.forEach(([id, v]) => {
-    if (!perGiorno[v.data]) perGiorno[v.data] = [];
-    perGiorno[v.data].push([id, v]);
-  });
-
-  wrap.innerHTML = '<div class="prossimi-settimana">' +
-    Object.entries(perGiorno).map(([data, list]) => {
-      const d   = new Date(data + 'T00:00:00');
-      const lbl = `${GIORNI_IT[d.getDay()]} ${d.getDate()} ${MESI_SHORT[d.getMonth()]}`;
-      const cards = list.map(([id, v]) => {
-        const sem    = semaforo(v);
-        const semCol = sem==='done'?'var(--teal)':sem==='partial'?'var(--amber)':'var(--red)';
-        const tasks  = STATE.tasks.length ? STATE.tasks : DEFAULT_TASKS;
-        const fatti  = tasks.filter(t => v.checks?.[slugify(t)]).length;
-        return `<div class="oggi-card" id="oggi-card-${id}" onclick="geoLocalizzaViaggio('${id}')">
-          <div class="oggi-sem" style="background:${semCol}"></div>
-          <div class="oggi-info">
-            <div class="oggi-cliente">${v.cliente||'—'}</div>
-            <div class="oggi-sub">${v.trasportatore||''}${v.origine?' · '+v.origine+' → '+(v.dest||'?'):''}</div>
-            <div style="font-size:10px;color:var(--ink3);margin-top:2px">${fatti}/${tasks.length} att. · ${v.tipoMezzo||'—'}</div>
-          </div>
-          <span class="oggi-ora">${v.ora||''}</span>
-          <span class="oggi-pin">📍</span>
-        </div>`;
-      }).join('');
-      return `<div class="sett-label">📅 ${lbl}</div><div class="prossimi-list">${cards}</div>`;
-    }).join('') + '</div>';
-}
-
-window.shiftProssimi = function(n) {
-  _prossimiOffset = Math.max(0, _prossimiOffset + n);
-  renderProssimiPanel();
-};
-window.resetProssimi = function() {
-  _prossimiOffset = 0;
-  renderProssimiPanel();
-};
-
-window.pulisciMappa = function() {
-  if (_map) {
-    _mapLayers.forEach(l => _map.removeLayer(l));
-    _mapLayers = [];
-  }
-  document.querySelectorAll('.oggi-pin').forEach(p => p.textContent = '📍');
-  document.querySelectorAll('.oggi-card').forEach(c => c.classList.remove('loading'));
-};
-window.resetMappaFiltri = function() {};
-window.aggiornaMappaFiltri = function() {};
-window.apriOrdineServizio = function() {
-  const data          = document.getElementById('m-data').value;
-  const cliente       = document.getElementById('m-cliente').value.trim();
-  const trasportatore = document.getElementById('m-trasportatore').value.trim();
-  const tipoMezzo = (function(){
-    const sel = document.getElementById('m-tipo-mezzo').value;
-    return sel === 'ALTRO' ? document.getElementById('m-tipo-mezzo-altro').value.trim() : sel;
-  })();
-  const origine = document.getElementById('m-origine').value.trim();
-  const dest    = document.getElementById('m-dest').value.trim();
-  const note    = document.getElementById('m-note').value.trim();
-  const payload = { data, cliente, trasportatore, tipoMezzo, origine, dest, note };
-
-  chiudiModal();
-  switchView('ordine');
-
-  const iframe = document.getElementById('iframe-ordine');
-  const send = () => {
-    try { iframe.contentWindow.postMessage({ type: 'prefill_ordine', payload }, '*'); }
-    catch(e) {}
-  };
-  if (iframe.getAttribute('data-loaded')) {
-    setTimeout(send, 300);
-  } else {
-    iframe.addEventListener('load', () => setTimeout(send, 200), { once: true });
-  }
-  toast('📋 Apertura ordine di servizio...');
-};
-
-window.switchView = function(name) {
-  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-  document.querySelectorAll('.sbtn').forEach(b => b.classList.remove('act'));
-  document.getElementById('view-'+name).classList.add('active');
-  const btn = document.getElementById('snav-'+name);
-  if (btn) btn.classList.add('act');
-  if (name==='mese')      renderMese();
-  if (name==='lista')     renderLista();
-  if (name==='settimana') renderSettimana();
-  if (name==='setup')     renderTaskEditor();
-  if (name==='listino') {
-    const base = window.location.href.split('/').slice(0,-1).join('/') + '/';
-    const iListino = document.getElementById('iframe-listino');
-    if (iListino && !iListino.getAttribute('data-loaded')) {
-      iListino.src = base + 'LISTINO_KEOMA.html';
-      iListino.setAttribute('data-loaded','1');
-    }
-  }
-  if (name==='ordine') {
-    const base = window.location.href.split('/').slice(0,-1).join('/') + '/';
-    const iOrdine = document.getElementById('iframe-ordine');
-    if (iOrdine && !iOrdine.getAttribute('data-loaded')) {
-      iOrdine.src = base + 'ordine_di_servizio.html';
-      iOrdine.setAttribute('data-loaded','1');
-    }
-  }
-  if (name==='mappa')  {
-    setTimeout(() => {
-      initMap();
-      _map.invalidateSize();
-      renderMappa();
-      renderOggiPanel();
-      renderProssimiPanel();
-    }, 100);
-  }
-};
-
-// ── FIREBASE CONFIG ────────────────────────────────────
-function loadCfg() {
-  try { return JSON.parse(localStorage.getItem('viaggio_cfg_v1')||'null'); } catch { return null; }
-}
-function saveCfg(c) { localStorage.setItem('viaggio_cfg_v1', JSON.stringify(c)); }
-
-async function connectFirebase(cfg) {
-  try {
-    const app = initializeApp(cfg);
+    const app = initializeApp(cfg, 'tracker-' + Date.now());
     db = getDatabase(app);
-    const dot = document.getElementById('fb-dot');
-    if (dot) dot.setAttribute('fill', '#0b7c6e');
-    if (dot) dot.setAttribute('title','Firebase: connesso');
-    onValue(ref(db,'viaggi_programmazione'), snap => {
-      STATE.viaggi = snap.val() || {};
-      renderAll();
-    });
-    onValue(ref(db,'viaggi_tasks'), snap => {
-      STATE.tasks = snap.val() || [];
-      renderTaskEditor();
-    });
+    document.getElementById('fb-dot').className = 'firebase-dot ok';
+    document.getElementById('fb-dot').title = 'Firebase: connesso';
+    subscribeAll();
     return true;
   } catch(e) {
-    console.error('Firebase error:', e);
-    const dot = document.getElementById('fb-dot');
-    if (dot) dot.setAttribute('fill', '#c0392b');
+    document.getElementById('fb-dot').className = 'firebase-dot err';
+    document.getElementById('fb-dot').title = 'Firebase: errore — ' + e.message;
     return false;
   }
 }
 
+function subscribeAll() {
+  if (!db) return;
+  // Cassoni
+  const rCas = ref(db, 'cassoni');
+  onValue(rCas, snap => {
+    STATE.cassoni = snap.val() || {};
+    renderAll();
+  });
+  // Movimenti
+  const rMov = ref(db, 'movimenti');
+  onValue(rMov, snap => {
+    STATE.movimenti = snap.val() || {};
+    renderAll();
+  });
+  // Clienti
+  const rCli = ref(db, 'clienti');
+  onValue(rCli, snap => {
+    STATE.clienti = snap.val() || [];
+    renderClientiDatalist();
+  });
+}
+
+// ── Utility ────────────────────────────────────────
+function now() { return new Date().toISOString(); }
+function fmtDT(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  return d.toLocaleDateString('it-IT',{day:'2-digit',month:'2-digit',year:'2-digit'}) + ' ' +
+         d.toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'});
+}
+function fmtDate(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  return d.toLocaleDateString('it-IT',{day:'2-digit',month:'2-digit',year:'numeric'});
+}
+function isOggi(iso) {
+  if (!iso) return false;
+  const d = new Date(iso); const t = new Date();
+  return d.getDate()===t.getDate() && d.getMonth()===t.getMonth() && d.getFullYear()===t.getFullYear();
+}
+
+function toast(msg, type='') {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.className = 'toast show ' + (type?'toast-'+type:'');
+  clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove('show'), 2800);
+}
+
+// ── RENDER ALL ─────────────────────────────────────
+function renderAll() {
+  renderKPI();
+  renderPiazzale();
+  renderDDTAlerts();
+  renderDashMovimenti();
+  renderBollettazione();
+  renderCassoniSetup();
+}
+
+function renderKPI() {
+  const cas = Object.values(STATE.cassoni);
+  const piazzale = cas.filter(c => c.stato === 'piazzale').length;
+  const fuori    = cas.filter(c => c.stato === 'fuori').length;
+  const movs = Object.values(STATE.movimenti);
+  const ddtPend  = movs.filter(m => !m.ddtNumero).length;
+  const oggi     = movs.filter(m => isOggi(m.ts)).length;
+  document.getElementById('kpi-piazzale').textContent  = piazzale;
+  document.getElementById('kpi-fuori').textContent     = fuori;
+  document.getElementById('kpi-ddt-pend').textContent  = ddtPend;
+  document.getElementById('kpi-oggi').textContent      = oggi;
+  document.getElementById('last-update').textContent   = 'Aggiornato ' + new Date().toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'});
+}
+
+function renderPiazzale() {
+  const container = document.getElementById('piazzale-grouped');
+  const cas = Object.entries(STATE.cassoni);
+  if (!cas.length) {
+    container.innerHTML = '<span class="chip-empty">Nessun cassone nell\'anagrafica</span>';
+    return;
+  }
+
+  // Raggruppa per tipo (prima parola significativa)
+  const gruppi = {};
+  cas.forEach(([id, c]) => {
+    const tipo = (c.tipo || 'Altro').split('·')[0].trim();
+    if (!gruppi[tipo]) gruppi[tipo] = [];
+    gruppi[tipo].push({ id, ...c });
+  });
+
+  const tipiOrdinati = Object.keys(gruppi).sort();
+  container.innerHTML = tipiOrdinati.map(tipo => {
+    const lista = gruppi[tipo];
+    const inPiazzale = lista.filter(c => c.stato === 'piazzale').length;
+    const fuori      = lista.filter(c => c.stato === 'fuori').length;
+    const chips = lista
+      .sort((a,b) => a.id.localeCompare(b.id))
+      .map(c => {
+        const cls   = c.stato === 'piazzale' ? 'chip-piazzale' : 'chip-fuori';
+        const ico   = c.stato === 'piazzale' ? '✅' : '🔴';
+        const title = c.stato === 'fuori' && c.clienteAttuale ? ` → ${c.clienteAttuale}` : '';
+        return `<div class="cassone-chip ${cls}" title="${c.id}${title}">${ico} <strong>${c.id}</strong>${title ? `<span style="font-size:10px;opacity:.75"> ${title}</span>` : ''}</div>`;
+      }).join('');
+
+    return `<div style="margin-bottom:1.25rem">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;padding-bottom:5px;border-bottom:1px solid var(--border)">
+        <span style="font-size:12px;font-weight:700;color:var(--ink);flex:1">${tipo}</span>
+        <span style="font-size:11px;font-weight:600;background:var(--green-l);color:var(--green-d);padding:2px 8px;border-radius:10px">✅ ${inPiazzale}</span>
+        <span style="font-size:11px;font-weight:600;background:var(--red-l);color:var(--red);padding:2px 8px;border-radius:10px">🔴 ${fuori}</span>
+      </div>
+      <div class="piazzale-grid">${chips}</div>
+    </div>`;
+  }).join('');
+}
+
+window.cercaCassone = function(val) {
+  const result = document.getElementById('cerca-cassone-result');
+  val = val.trim().toUpperCase();
+  if (!val) { result.innerHTML = ''; return; }
+
+  const matches = Object.entries(STATE.cassoni)
+    .filter(([id]) => id.includes(val))
+    .sort((a,b) => a[0].localeCompare(b[0]))
+    .slice(0, 10);
+
+  if (!matches.length) {
+    result.innerHTML = `<div style="font-size:12px;color:var(--ink3);padding:6px 0">Nessun cassone trovato per "<strong>${val}</strong>"</div>`;
+    return;
+  }
+
+  result.innerHTML = matches.map(([id, c]) => {
+    const isOut = c.stato === 'fuori';
+    const movs  = Object.values(STATE.movimenti)
+      .filter(m => m.cassoneId === id)
+      .sort((a,b) => b.ts > a.ts ? 1 : -1);
+    const ultimo = movs[0];
+    return `<div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:var(--radius-sm);background:${isOut?'var(--red-l)':'var(--green-l)'};margin-bottom:5px;border:1px solid ${isOut?'#f0b8b3':'#a7e5cc'}">
+      <span style="font-size:16px">${isOut?'🔴':'✅'}</span>
+      <div style="flex:1">
+        <div style="font-size:14px;font-weight:800;color:var(--ink)">${id}</div>
+        <div style="font-size:11px;color:var(--ink2)">${c.tipo||'—'}</div>
+        ${ultimo ? `<div style="font-size:11px;color:var(--ink3)">${ultimo.tipo} · ${ultimo.cliente||'—'} · ${fmtDT(ultimo.ts)}</div>` : ''}
+      </div>
+      <span style="font-size:12px;font-weight:700;color:${isOut?'var(--red)':'var(--green-d)'}">${isOut?'FUORI':'PIAZZALE'}</span>
+    </div>`;
+  }).join('');
+};
+
+function renderDDTAlerts() {
+  const container = document.getElementById('ddt-alerts');
+  const movs = Object.entries(STATE.movimenti)
+    .filter(([,m]) => !m.ddtNumero)
+    .sort((a,b) => b[1].ts > a[1].ts ? 1 : -1)
+    .slice(0, 8);
+  if (!movs.length) {
+    container.innerHTML = '<span style="font-size:12px;color:var(--ink3)">✅ Nessun DDT in sospeso</span>';
+    return;
+  }
+  container.innerHTML = movs.map(([id, m]) =>
+    `<div class="alert-row ${m.tipo==='RIENTRO'?'alert-in':''}">
+      <span class="alert-icon">${m.tipo==='USCITA'?'📤':'📥'}</span>
+      <span class="alert-text">
+        <strong>${m.cassoneId}</strong> · ${m.tipo} · ${m.cliente||'—'}
+        <span style="color:var(--ink3);font-size:10px;display:block">${fmtDT(m.ts)}</span>
+      </span>
+      <button class="btn-ddt ${m.tipo==='USCITA'?'btn-ddt-out':'btn-ddt-in'}"
+        onclick="openDDT('${id}')">📄 DDT</button>
+    </div>`
+  ).join('');
+}
+
+function renderDashMovimenti() {
+  const container = document.getElementById('dash-movimenti');
+  const movs = Object.entries(STATE.movimenti)
+    .sort((a,b) => b[1].ts > a[1].ts ? 1 : -1)
+    .slice(0, 12);
+  if (!movs.length) { container.innerHTML = '<span style="font-size:12px;color:var(--ink3)">Nessun movimento</span>'; return; }
+  container.innerHTML = movs.map(([,m]) =>
+    `<div class="mov-row">
+      <span class="mov-badge ${m.tipo==='USCITA'?'badge-out':'badge-in'}">${m.tipo==='USCITA'?'↑ USCITA':'↓ RIENTRO'}</span>
+      <span class="mov-cassone">${m.cassoneId}</span>
+      <span class="mov-info">${m.cliente||'—'} ${m.autista?'· '+m.autista:''}</span>
+      <span class="mov-time">${fmtDT(m.ts)}</span>
+    </div>`
+  ).join('');
+}
+
+function renderBollettazione() {
+  const cerca = document.getElementById('filt-cerca').value.toLowerCase();
+  const tipo  = document.getElementById('filt-tipo').value;
+  const ddt   = document.getElementById('filt-ddt').value;
+  const data  = document.getElementById('filt-data').value;
+  let movs = Object.entries(STATE.movimenti)
+    .sort((a,b) => b[1].ts > a[1].ts ? 1 : -1);
+  if (tipo)  movs = movs.filter(([,m]) => m.tipo === tipo);
+  if (ddt === 'pend')   movs = movs.filter(([,m]) => !m.ddtNumero);
+  if (ddt === 'emesso') movs = movs.filter(([,m]) => !!m.ddtNumero);
+  if (data)  movs = movs.filter(([,m]) => m.ts && m.ts.startsWith(data));
+  if (cerca) movs = movs.filter(([,m]) =>
+    (m.cassoneId||'').toLowerCase().includes(cerca) ||
+    (m.cliente||'').toLowerCase().includes(cerca) ||
+    (m.autista||'').toLowerCase().includes(cerca) ||
+    (m.ddtNumero||'').toLowerCase().includes(cerca)
+  );
+  const tbody = document.getElementById('boll-tbody');
+  if (!movs.length) {
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--ink3);padding:1.5rem;font-size:13px">Nessun movimento trovato</td></tr>';
+    return;
+  }
+  tbody.innerHTML = movs.map(([id,m]) => {
+    const cas = STATE.cassoni[m.cassoneId] || {};
+    const ddtHtml = m.ddtNumero
+      ? `<span class="ddt-tag">${m.ddtNumero}</span>`
+      : `<span class="ddt-tag pend">Da emettere</span>`;
+    return `<tr>
+      <td style="white-space:nowrap;color:var(--ink2)">${fmtDT(m.ts)}</td>
+      <td><strong>${m.cassoneId}</strong></td>
+      <td style="color:var(--ink2)">${cas.tipo||'—'}</td>
+      <td><span class="status-pill ${m.tipo==='USCITA'?'pill-out':'pill-in'}" onclick="toggleTipoMovimento('${id}',this)" style="cursor:pointer;user-select:none" title="Clicca per cambiare tipo">${m.tipo==='USCITA'?'↑ Uscita':'↓ Rientro'}</span></td>
+      <td>${m.cliente||'—'}</td>
+      <td style="color:var(--ink2)">${m.autista||'—'}</td>
+      <td>${ddtHtml}</td>
+      <td style="white-space:nowrap">
+        <button class="btn btn-ghost btn-sm" onclick="openDDT('${id}')">📄 ${m.ddtNumero ? 'Modifica' : 'DDT'}</button>
+        ${m.ddtNumero ? `<button class="btn btn-ghost btn-sm" onclick="stampaDDTDiretto('${id}')" style="margin-left:4px" title="Stampa DDT ${m.ddtNumero}">🖨️</button>` : ''}
+        <button class="btn btn-ghost btn-sm" onclick="eliminaMovimento('${id}')" style="color:var(--red,#c0392b);margin-left:4px" title="Elimina movimento">🗑</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+async function eliminaMovimento(movId) {
+  if (!db) { toast('Firebase non connesso', 'err'); return; }
+  const mov = STATE.movimenti[movId];
+  if (!mov) { toast('Movimento non trovato', 'err'); return; }
+
+  const cassoneId = mov.cassoneId;
+  const tipoMov   = mov.tipo; // 'USCITA' o 'RIENTRO'
+  const data      = fmtDT(mov.ts);
+  const cliente   = mov.cliente || '—';
+
+  // Stato inverso: se era USCITA → torna in PIAZZALE, se era RIENTRO → torna FUORI
+  const statoRipristino = tipoMov === 'USCITA' ? 'piazzale' : 'fuori';
+  const labelRip = statoRipristino === 'piazzale' ? 'IN PIAZZALE' : 'FUORI';
+
+  const conferma = confirm(
+    `Eliminare questo movimento?\n\n` +
+    `Cassone: ${cassoneId}\n` +
+    `Tipo: ${tipoMov}\n` +
+    `Data: ${data}\n` +
+    `Cliente: ${cliente}\n\n` +
+    `Il cassone verrà ripristinato a "${labelRip}".`
+  );
+  if (!conferma) return;
+
+  const { remove: fbRemove } = { remove };
+
+  // Elimina il movimento
+  await fbRemove(ref(db, `movimenti/${movId}`));
+
+  // Ripristina stato cassone
+  const aggCassone = { stato: statoRipristino };
+  if (statoRipristino === 'piazzale') {
+    aggCassone.clienteAttuale = '';
+  } else {
+    aggCassone.clienteAttuale = mov.cliente || '';
+  }
+  await update(ref(db, `cassoni/${cassoneId}`), aggCassone);
+
+  toast(`✓ Movimento eliminato — ${cassoneId} → ${labelRip}`, 'ok');
+}
+window.eliminaMovimento = eliminaMovimento;
+
+function renderCassoniSetup() {
+  const el = document.getElementById('cassoni-list-setup');
+  const cas = Object.entries(STATE.cassoni);
+  if (!cas.length) { el.innerHTML = '<p style="font-size:12px;color:var(--ink3)">Nessun cassone</p>'; return; }
+  el.innerHTML = `<table style="width:100%;font-size:12px;border-collapse:collapse">
+    <thead><tr style="background:var(--surface2)"><th style="padding:5px 8px;text-align:left">Codice</th><th>Tipo</th><th>Stato</th><th></th></tr></thead>
+    <tbody>${cas.map(([id,c]) =>
+      `<tr style="border-bottom:1px solid var(--border)">
+        <td style="padding:5px 8px;font-weight:700">${id}</td>
+        <td style="padding:5px 8px">${c.tipo}</td>
+        <td style="padding:5px 8px"><span class="status-pill ${c.stato==='piazzale'?'pill-in':'pill-out'}">${c.stato}</span></td>
+        <td style="padding:5px 8px"><button class="btn btn-danger btn-sm" onclick="eliminaCassone('${id}')">🗑</button></td>
+      </tr>`
+    ).join('')}</tbody></table>`;
+}
+
+function renderClientiDatalist() {
+  const dl = document.getElementById('clienti-list');
+  if (dl) dl.innerHTML = STATE.clienti.map(c => `<option value="${c}">`).join('');
+  const elSetup = document.getElementById('clienti-list-setup');
+  if (elSetup) {
+    elSetup.innerHTML = STATE.clienti.map(c =>
+      `<div style="display:flex;align-items:center;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border);font-size:12px">
+        <span>${c}</span>
+        <button class="btn btn-danger btn-sm" onclick="eliminaCliente('${c}')">✕</button>
+      </div>`
+    ).join('') || '<p style="font-size:12px;color:var(--ink3)">Nessun cliente</p>';
+  }
+}
+
+// ══ TRASPORTATORE ══════════════════════════════════
+let _scanCassoneId = null;
+
+let _scanDropIdx = -1;
+
+function onScanInput(val) {
+  val = val.trim().toUpperCase();
+  _scanCassoneId = null;
+  _scanDropIdx = -1;
+  document.getElementById('cassone-found').classList.remove('visible');
+  document.getElementById('trasp-form').classList.remove('visible');
+  document.getElementById('btn-uscita').disabled = true;
+  document.getElementById('btn-rientro').disabled = true;
+
+  const drop = document.getElementById('scan-drop');
+
+  if (!val) { drop.style.display = 'none'; return; }
+
+  // Filtra cassoni che corrispondono (codice o tipo)
+  const matches = Object.entries(STATE.cassoni)
+    .filter(([id, c]) =>
+      id.toUpperCase().includes(val) ||
+      (c.tipo||'').toUpperCase().includes(val)
+    )
+    .sort((a, b) => {
+      // Priorità: inizia con il valore cercato
+      const aStart = a[0].startsWith(val) ? 0 : 1;
+      const bStart = b[0].startsWith(val) ? 0 : 1;
+      return aStart - bStart || a[0].localeCompare(b[0]);
+    })
+    .slice(0, 20);
+
+  if (!matches.length) { drop.style.display = 'none'; return; }
+
+  drop.innerHTML = matches.map(([id, c], i) => {
+    const statoCls = c.stato === 'piazzale' ? 'stato-piazzale' : 'stato-fuori';
+    const statoLbl = c.stato === 'piazzale' ? '✅ Piazzale' : '🔴 Fuori';
+    const tipo = (c.tipo||'').length > 40 ? c.tipo.slice(0,38)+'…' : (c.tipo||'');
+    return `<div class="scan-drop-item" data-id="${id}" onmousedown="selezionaDaCassone('${id}')">
+      <span class="scan-drop-code">${id}</span>
+      <span class="scan-drop-tipo">${tipo}</span>
+      <span class="scan-drop-stato ${statoCls}">${statoLbl}</span>
+    </div>`;
+  }).join('');
+  drop.style.display = 'block';
+
+  // Se esiste corrispondenza esatta → seleziona subito
+  if (STATE.cassoni[val]) selezionaDaCassone(val);
+}
+
+function onScanKeydown(e) {
+  const drop = document.getElementById('scan-drop');
+  const items = drop.querySelectorAll('.scan-drop-item');
+  if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    _scanDropIdx = Math.min(_scanDropIdx + 1, items.length - 1);
+    items.forEach((el,i) => el.classList.toggle('sdactive', i === _scanDropIdx));
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    _scanDropIdx = Math.max(_scanDropIdx - 1, 0);
+    items.forEach((el,i) => el.classList.toggle('sdactive', i === _scanDropIdx));
+  } else if (e.key === 'Enter') {
+    if (_scanDropIdx >= 0 && items[_scanDropIdx]) {
+      selezionaDaCassone(items[_scanDropIdx].dataset.id);
+    } else {
+      confermaScan();
+    }
+  } else if (e.key === 'Escape') {
+    drop.style.display = 'none';
+  }
+}
+
+function selezionaDaCassone(id) {
+  const drop = document.getElementById('scan-drop');
+  drop.style.display = 'none';
+  document.getElementById('scan-input').value = id;
+  confermaScan(id);
+}
+
+function confermaScan(val) {
+  val = val || document.getElementById('scan-input').value.trim().toUpperCase();
+  if (!val) return;
+  const cas = STATE.cassoni[val];
+  const foundEl = document.getElementById('cassone-found');
+  if (cas) {
+    _scanCassoneId = val;
+    document.getElementById('found-id').textContent = val;
+    document.getElementById('found-tipo').textContent = cas.tipo;
+    const stato = cas.stato === 'piazzale' ? '✅ In piazzale — pronto per uscita' : '🔴 Fuori piazzale — in attesa di rientro';
+    document.getElementById('found-status').textContent = stato;
+    foundEl.classList.add('visible');
+    document.getElementById('trasp-form').classList.add('visible');
+    document.getElementById('btn-uscita').disabled  = (cas.stato !== 'piazzale');
+    document.getElementById('btn-rientro').disabled = (cas.stato !== 'fuori');
+  } else {
+    document.getElementById('found-id').textContent = val;
+    document.getElementById('found-tipo').textContent = '⚠️ Cassone non trovato in anagrafica';
+    document.getElementById('found-status').textContent = '';
+    foundEl.classList.add('visible');
+  }
+}
+
+function aggiornaSegnalazioni() {
+  const altroCheck = document.getElementById('flag-altro');
+  const altroTesto = document.getElementById('flag-altro-testo');
+  if (altroTesto) altroTesto.style.display = altroCheck?.checked ? 'block' : 'none';
+}
+window.aggiornaSegnalazioni = aggiornaSegnalazioni;
+
+async function registraMovimento(tipo) {
+  if (!db) { toast('Firebase non connesso', 'err'); return; }
+  if (!_scanCassoneId) { toast('Nessun cassone selezionato', 'err'); return; }
+  const cliente = document.getElementById('t-cliente').value.trim();
+  const autista = document.getElementById('t-autista').value.trim();
+  const note    = document.getElementById('t-note').value.trim();
+  const segnalazioni = [];
+  if (document.getElementById('flag-tag')?.checked)     segnalazioni.push('Manca tag');
+  if (document.getElementById('flag-rotture')?.checked) segnalazioni.push('Presenta rotture');
+  if (document.getElementById('flag-telo')?.checked)    segnalazioni.push('Telo danneggiato');
+  if (document.getElementById('flag-altro')?.checked) {
+    const alt = document.getElementById('flag-altro-testo')?.value.trim();
+    segnalazioni.push(alt ? 'Altro: ' + alt : 'Altro');
+  }
+  const noteManutenzione = [note, ...segnalazioni].filter(Boolean).join(' | ');
+  if (!cliente) { toast('Inserisci il cliente', 'err'); return; }
+
+  const movRef = ref(db, 'movimenti');
+  const nuovoMov = { cassoneId:_scanCassoneId, tipo, ts:now(), cliente, autista, note:noteManutenzione, ddtNumero:'', ddtTs:'' };
+  await push(movRef, nuovoMov);
+
+  // Aggiorna stato cassone
+  const casRef = ref(db, `cassoni/${_scanCassoneId}`);
+  await update(casRef, {
+    stato: tipo === 'USCITA' ? 'fuori' : 'piazzale',
+    clienteAttuale: tipo === 'USCITA' ? cliente : '',
+    lastMov: now()
+  });
+
+  toast(tipo === 'USCITA' ? '🔴 Uscita registrata — DDT da emettere' : '🟢 Rientro registrato', 'ok');
+
+  // Reset form
+  document.getElementById('scan-input').value = '';
+  document.getElementById('t-cliente').value = '';
+  document.getElementById('t-note').value = '';
+  // Reset segnalazioni
+  ['flag-tag','flag-rotture','flag-telo','flag-altro'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.checked = false;
+  });
+  const altroTesto = document.getElementById('flag-altro-testo');
+  if (altroTesto) { altroTesto.value = ''; altroTesto.style.display = 'none'; }
+  document.getElementById('cassone-found').classList.remove('visible');
+  document.getElementById('trasp-form').classList.remove('visible');
+  _scanCassoneId = null;
+
+  // Aggiorna recenti trasportatore
+  renderTrasportatoreRecenti(autista);
+}
+
+function renderTrasportatoreRecenti(autistaNome) {
+  const movs = Object.values(STATE.movimenti)
+    .filter(m => !autistaNome || m.autista === autistaNome)
+    .sort((a,b) => b.ts > a.ts ? 1 : -1)
+    .slice(0, 5);
+  const el = document.getElementById('trasp-recenti-list');
+  if (!movs.length) { el.innerHTML = '<span style="font-size:12px;color:var(--ink3)">Nessuno ancora</span>'; return; }
+  el.innerHTML = movs.map(m =>
+    `<div class="trasp-rec-item">
+      <span class="mov-badge ${m.tipo==='USCITA'?'badge-out':'badge-in'}" style="font-size:9px">${m.tipo}</span>
+      <strong>${m.cassoneId}</strong>
+      <span style="color:var(--ink2);flex:1">${m.cliente||'—'}</span>
+      <span style="color:var(--ink3)">${fmtDT(m.ts)}</span>
+    </div>`
+  ).join('');
+}
+
+// ══ DDT ════════════════════════════════════════════
+let _ddtMovId = null;
+
+
+function stampaDDTDiretto(movId) {
+  const m = STATE.movimenti[movId];
+  if (!m) return;
+  const cas = STATE.cassoni[m.cassoneId] || {};
+  const isUscita = m.tipo === 'USCITA';
+  const dataFmt = ts => {
+    if (!ts) return new Date().toLocaleDateString('it-IT');
+    let d = typeof ts === 'string' ? new Date(ts) : new Date(ts < 1e10 ? ts*1000 : ts);
+    if (isNaN(d.getTime())) return '—';
+    return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear();
+  };
+  const dataMov = dataFmt(m.ts);
+  const destinatario = isUscita ? (m.cliente||'—') : 'CENTRO RISORSE S.p.A. — Via Lazio 48 - 31045 - MOTTA DI LIVENZA (TV)';
+  const causale = isUscita ? 'POSIZIONAMENTO CASSONE' : 'RITIRO CASSONE';
+  const ddtNum = m.ddtNumero || '____________________';
+  // Usa stesso logo base64 del modal
+  const logoSrc = document.querySelector('#ddt-print-area img')?.src ||
+    document.querySelector('[id^="ddt-"] img')?.src || '';
+
+  // Genera HTML temporaneo per la stampa
+  const tmpDiv = document.createElement('div');
+  tmpDiv.id = 'ddt-print-area';
+  tmpDiv.style.cssText = 'font-family:Arial,sans-serif;font-size:12px;color:#111;max-width:740px;margin:0 auto';
+
+  // Richiama openDDT per generare il contenuto, poi stampa
+  _ddtMovId = movId;
+  document.getElementById('ddt-numero').value = m.ddtNumero || '';
+  const defaultTrasp = new Date() < new Date('2026-08-01') ? 'KEOMA S.R.L.' : 'CENTRO RISORSE SPA';
+  document.getElementById('ddt-trasportatore').value = m.ddtNumero ? (m.autista || defaultTrasp) : defaultTrasp;
+  openDDT(movId);
+  setTimeout(() => {
+    stampaDDT();
+    setTimeout(() => closeDDT(), 500);
+  }, 150);
+}
+window.stampaDDTDiretto = stampaDDTDiretto;
+
+async function aggiornaTipoMovimento(movId, nuovoTipo) {
+  if (!db) return;
+  await update(ref(db, `movimenti/${movId}`), { tipo: nuovoTipo });
+  toast(`✓ Tipo aggiornato → ${nuovoTipo}`, 'ok');
+}
+window.aggiornaTipoMovimento = aggiornaTipoMovimento;
+
+async function toggleTipoMovimento(movId, el) {
+  if (!db) { toast('Firebase non connesso', 'err'); return; }
+  const mov = STATE.movimenti[movId];
+  if (!mov) return;
+  const nuovoTipo = mov.tipo === 'USCITA' ? 'RIENTRO' : 'USCITA';
+  // Aggiorna UI subito
+  el.className = 'status-pill ' + (nuovoTipo === 'USCITA' ? 'pill-out' : 'pill-in');
+  el.textContent = nuovoTipo === 'USCITA' ? '↑ Uscita' : '↓ Rientro';
+  el.setAttribute('onclick', `toggleTipoMovimento('${movId}',this)`);
+  // Salva su Firebase
+  await update(ref(db, `movimenti/${movId}`), { tipo: nuovoTipo });
+  toast(`✓ ${movId} → ${nuovoTipo}`, 'ok');
+}
+window.toggleTipoMovimento = toggleTipoMovimento;
+
+
+function calcolaProssimoNumero() {
+  const anno = new Date().getFullYear().toString().slice(-2);
+  const movs = Object.values(STATE.movimenti || {});
+  let maxNum = 0;
+  movs.forEach(m => {
+    if (m.ddtNumero) {
+      const match = m.ddtNumero.match(/^(\d+)\//);
+      if (match) {
+        const n = parseInt(match[1]);
+        if (n > maxNum) maxNum = n;
+      }
+    }
+  });
+  const prossimo = String(maxNum + 1).padStart(2, '0');
+  return `${prossimo}/${anno}`;
+}
+
+function openDDT(movId) {
+  _ddtMovId = movId;
+  const m = STATE.movimenti[movId];
+  if (!m) return;
+  const cas = STATE.cassoni[m.cassoneId] || {};
+  const isUscita = m.tipo === 'USCITA';
+  const dataFmt = ts => {
+    if (!ts) return new Date().toLocaleDateString('it-IT');
+    // ts può essere stringa ISO, numero in ms o numero in secondi
+    let d;
+    if (typeof ts === 'string') {
+      d = new Date(ts);
+    } else {
+      // se è un numero < 10^10 è in secondi, altrimenti in ms
+      d = new Date(ts < 1e10 ? ts * 1000 : ts);
+    }
+    if (isNaN(d.getTime())) return '—';
+    return String(d.getDate()).padStart(2,'0') + '/' +
+           String(d.getMonth()+1).padStart(2,'0') + '/' +
+           d.getFullYear();
+  };
+  const dataMov = dataFmt(m.ts);
+  const destinatario = isUscita ? (m.cliente||'—') : 'CENTRO RISORSE S.p.A. — Via Lazio 48 - 31045 - MOTTA DI LIVENZA (TV)';
+  const causale = isUscita ? 'POSIZIONAMENTO CASSONE' : 'RITIRO CASSONE';
+  const ddtNum = m.ddtNumero || '____________________';
+  document.getElementById('ddt-modal-title').textContent = `DDT — ${m.cassoneId} — ${isUscita?'USCITA':'RIENTRO'}`;
+  const oggi = new Date();
+  const defaultTrasportatore = oggi < new Date('2026-08-01') ? 'KEOMA S.R.L.' : 'CENTRO RISORSE SPA';
+  document.getElementById('ddt-numero').value = m.ddtNumero || calcolaProssimoNumero();
+  document.getElementById('ddt-trasportatore').value = defaultTrasportatore;
+  document.getElementById('ddt-preview').innerHTML = `
+<div id="ddt-print-area" style="font-family:Arial,sans-serif;font-size:12px;color:#111;max-width:740px;margin:0 auto">
+  <table style="width:100%;border-collapse:collapse;border:2px solid #111;margin-bottom:10px">
+    <tr>
+      <td style="width:28%;border-right:2px solid #111;border-bottom:2px solid #111;padding:8px 12px;vertical-align:middle;text-align:center">
+        <img src="data:image/png;base64,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" alt="Itelyum" style="max-width:130px;max-height:65px;display:block;margin:0 auto 6px">
+        <div style="font-size:11px;font-weight:700;text-align:center">DOCUMENTO DI TRASPORTO<br><span style="font-weight:400">(D.d.t.)</span></div>
+      </td>
+      <td style="border-bottom:2px solid #111;padding:6px 10px;vertical-align:top;font-size:11px">
+        <div style="font-weight:700">CENTRO RISORSE S.P.A.</div>
+        <div>Via Lazio 48 - 31045 - MOTTA DI LIVENZA (TV)</div>
+        <div>C.F.&nbsp;&nbsp;00584180269 &nbsp;&nbsp; P.IVA&nbsp;&nbsp;00584180269</div>
+        <div style="margin-top:6px"><em>Destinatario</em>&nbsp;&nbsp;<strong>${destinatario}</strong></div>
+      </td>
+    </tr>
+    <tr>
+      <td colspan="2" style="padding:5px 10px;font-size:11px">
+        <strong>Bolla N° <span id="ddt-num-preview">${ddtNum}</span></strong>
+        &nbsp;&nbsp; del ${dataMov}
+        &nbsp;&nbsp;&nbsp;&nbsp;
+        <strong>Luogo di destinazione</strong>&nbsp; ${destinatario.split(' —')[0]}
+      </td>
+    </tr>
+  </table>
+  <table style="width:100%;border-collapse:collapse;border:1.5px solid #111;margin-bottom:10px">
+    <thead><tr style="background:#eee">
+      <th style="border:1px solid #999;padding:5px 8px;text-align:left;width:10%">Codice</th>
+      <th style="border:1px solid #999;padding:5px 8px;text-align:left">Descrizione</th>
+      <th style="border:1px solid #999;padding:5px 8px;text-align:center;width:8%">Qta</th>
+      <th style="border:1px solid #999;padding:5px 8px;text-align:center;width:7%">U.M.</th>
+      <th style="border:1px solid #999;padding:5px 8px;text-align:left;width:30%">Note</th>
+    </tr></thead>
+    <tbody><tr>
+      <td style="border:1px solid #999;padding:6px 8px;font-weight:700;vertical-align:top">${m.cassoneId}</td>
+      <td style="border:1px solid #999;padding:6px 8px;vertical-align:top">${cas.tipo?cas.tipo.toUpperCase():''} SCARRABILE</td>
+      <td style="border:1px solid #999;padding:6px 8px;text-align:center;vertical-align:top">1</td>
+      <td style="border:1px solid #999;padding:6px 8px;text-align:center;vertical-align:top">Nr.</td>
+      <td style="border:1px solid #999;padding:6px 8px;vertical-align:top;font-size:11px;line-height:1.7">
+        <strong>PROPRIETARIO/COMMITTENTE/CARICATORE:<br>CENTRO RISORSE SPA</strong>
+        ${m.autista||document.getElementById('ddt-trasportatore')?.value ? '<br><br>TRASPORTATORE : '+(document.getElementById('ddt-trasportatore')?.value||m.autista||'') : ''}
+        ${m.note?'<br><br>'+m.note:''}
+      </td>
+    </tr></tbody>
+  </table>
+  <table style="width:100%;border-collapse:collapse;border:1.5px solid #111;margin-bottom:10px">
+    <thead><tr style="background:#eee">
+      <th style="border:1px solid #999;padding:4px 8px;text-align:center;width:8%">N.colli</th>
+      <th style="border:1px solid #999;padding:4px 8px;text-align:left">Aspetto esteriore</th>
+      <th style="border:1px solid #999;padding:4px 8px;text-align:left">Causale di trasporto</th>
+      <th style="border:1px solid #999;padding:4px 8px;text-align:left">Porto</th>
+      <th style="border:1px solid #999;padding:4px 8px;text-align:left">Trasporto a cura</th>
+    </tr></thead>
+    <tbody><tr>
+      <td style="border:1px solid #999;padding:6px 8px;text-align:center">1</td>
+      <td style="border:1px solid #999;padding:6px 8px">A VISTA</td>
+      <td style="border:1px solid #999;padding:6px 8px">${causale}</td>
+      <td style="border:1px solid #999;padding:6px 8px">PORTO FRANCO</td>
+      <td style="border:1px solid #999;padding:6px 8px">Vettore</td>
+    </tr></tbody>
+  </table>
+  <table style="width:100%;border-collapse:collapse;border:1.5px solid #111;margin-bottom:16px">
+    <thead><tr style="background:#eee">
+      <th style="border:1px solid #999;padding:4px 8px;text-align:left;width:55%">Trasportatore</th>
+      <th style="border:1px solid #999;padding:4px 8px;text-align:center;width:15%">Targa</th>
+      <th style="border:1px solid #999;padding:4px 8px;text-align:center;width:15%">Data trasporto</th>
+      <th style="border:1px solid #999;padding:4px 8px;text-align:center;width:15%">Ora trasporto</th>
+    </tr></thead>
+    <tbody><tr>
+      <td style="border:1px solid #999;padding:6px 8px;font-size:11px">${document.getElementById('ddt-trasportatore')?.value || (new Date() < new Date('2026-08-01') ? 'KEOMA S.R.L.' : 'CENTRO RISORSE SPA')}<br>Via Lazio 48 - 31045 - MOTTA DI LIVENZA (TV)<br>C.F. 00429860315</td>
+      <td style="border:1px solid #999;padding:6px 8px;text-align:center">________</td>
+      <td style="border:1px solid #999;padding:6px 8px;text-align:center">${dataMov}</td>
+      <td style="border:1px solid #999;padding:6px 8px;text-align:center">______</td>
+    </tr></tbody>
+  </table>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:3rem;margin-top:2rem">
+    <div style="text-align:center"><div style="border-top:1px solid #111;padding-top:6px;font-size:11px">Firma destinatario</div></div>
+    <div style="text-align:center"><div style="border-top:1px solid #111;padding-top:6px;font-size:11px">Firma trasportatore</div></div>
+  </div>
+  <div style="margin-top:20px;border-top:1px solid #ccc;padding-top:8px;font-size:9px;color:#666;display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px">
+    <div>CENTRO RISORSE S.p.A. · Via Lazio 48 · 31045 Motta di Livenza (TV)<br>T +39 0422 50 37 11 · F +39 0422 86 19 80 · info@centrorisorse.com</div>
+    <div>C.F. e P.IVA 00584180263 · REA TV 128757 · Capitale Sociale € 2.000.000</div>
+  </div>
+</div>`;
+  document.getElementById('ddt-numero').oninput = function() {
+    const el = document.getElementById('ddt-num-preview');
+    if (el) el.textContent = this.value || '____________________';
+  };
+  document.getElementById('ddt-trasportatore').oninput = function() {
+    // Aggiorna anteprima trasportatore — il template viene rigenerato al click stampa
+  };
+  document.getElementById('ddt-modal').classList.add('open');
+}
+function closeDDT() { document.getElementById('ddt-modal').classList.remove('open'); _ddtMovId = null; }
+
+async function confermaDDT() {
+  if (!_ddtMovId || !db) return;
+  const numero = document.getElementById('ddt-numero').value.trim();
+  if (!numero) { toast('Inserisci il numero DDT', 'err'); return; }
+  await update(ref(db, `movimenti/${_ddtMovId}`), { ddtNumero: numero, ddtTs: now() });
+  toast('✓ DDT ' + numero + ' registrato', 'ok');
+  closeDDT();
+}
+
+function stampaDDT() {
+  // Aggiorna numero e trasportatore nell'anteprima prima di stampare
+  const numEl = document.getElementById('ddt-num-preview');
+  if (numEl) numEl.textContent = document.getElementById('ddt-numero')?.value || '____________________';
+  const area = document.getElementById('ddt-print-area');
+  if (!area) return;
+  const w = window.open('', '_blank');
+  w.document.write('<!DOCTYPE html><html><head><title>DDT</title><style>@page{size:A4;margin:15mm}body{font-family:Arial,sans-serif;font-size:12px;color:#111;margin:0;padding:0}*{box-sizing:border-box}img{max-width:100%}</style></head><body>' + area.outerHTML + '</body></html>');
+  w.document.close();
+  setTimeout(() => w.print(), 400);
+}
+
+// ══ ANAGRAFICA CASSONI ═════════════════════════════
+async function aggiungiCassone() {
+  if (!db) { toast('Firebase non connesso', 'err'); return; }
+  const id   = document.getElementById('new-cas-id').value.trim().toUpperCase();
+  const tipo = document.getElementById('new-cas-tipo').value;
+  if (!id) { toast('Inserisci il codice', 'err'); return; }
+  if (STATE.cassoni[id]) { toast('Cassone già presente', 'err'); return; }
+  await set(ref(db, `cassoni/${id}`), { tipo, stato:'piazzale', clienteAttuale:'', lastMov:'' });
+  document.getElementById('new-cas-id').value = '';
+  toast('✓ Cassone ' + id + ' aggiunto', 'ok');
+}
+
+async function eliminaCassone(id) {
+  if (!confirm('Eliminare il cassone ' + id + '?')) return;
+  await set(ref(db, `cassoni/${id}`), null);
+  toast('Cassone eliminato', 'ok');
+}
+
+async function aggiungiCliente() {
+  if (!db) { toast('Firebase non connesso', 'err'); return; }
+  const nome = document.getElementById('new-cliente').value.trim();
+  if (!nome) return;
+  const lista = [...(STATE.clienti||[])];
+  if (!lista.includes(nome)) lista.push(nome);
+  await set(ref(db, 'clienti'), lista);
+  document.getElementById('new-cliente').value = '';
+  toast('✓ Cliente aggiunto', 'ok');
+}
+
+async function eliminaCliente(nome) {
+  const lista = (STATE.clienti||[]).filter(c => c !== nome);
+  await set(ref(db, 'clienti'), lista);
+}
+
+// ══ CSV ════════════════════════════════════════════
+function exportCSV() {
+  const rows = [['Data','Ora','Cassone','Tipo','Movimento','Cliente','Autista','Note','N° DDT','Data DDT']];
+  Object.values(STATE.movimenti).sort((a,b)=>b.ts>a.ts?1:-1).forEach(m => {
+    const d = new Date(m.ts);
+    rows.push([
+      d.toLocaleDateString('it-IT'), d.toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'}),
+      m.cassoneId, (STATE.cassoni[m.cassoneId]||{}).tipo||'', m.tipo,
+      m.cliente||'', m.autista||'', m.note||'', m.ddtNumero||'', m.ddtTs?fmtDate(m.ddtTs):''
+    ]);
+  });
+  const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(';')).join('\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8;'}));
+  a.download = 'movimenti_cassoni_' + new Date().toISOString().slice(0,10) + '.csv';
+  a.click();
+}
+
+// ══ NAV ════════════════════════════════════════════
+const FLAGS = ['Manca tag', 'Presenta rotture', 'Telo danneggiato', 'Altro'];
+const FLAG_ICONS = { 'Manca tag':'🏷️', 'Presenta rotture':'🔧', 'Telo danneggiato':'🪟' };
+
+function estraiFlag(note) {
+  if (!note) return [];
+  return FLAGS.filter(f => note.includes(f));
+}
+
+function renderManutenzione() {
+  const tbody    = document.getElementById('man-tbody');
+  const filtroF  = document.getElementById('man-filtro-flag')?.value || '';
+  const filtroS  = document.getElementById('man-filtro-stato')?.value || '';
+  const countEl  = document.getElementById('man-count');
+  if (!tbody) return;
+
+  // Raccoglie tutti i movimenti con almeno un flag
+  const movs = Object.entries(STATE.movimenti || {})
+    .filter(([,m]) => {
+      const flags = estraiFlag(m.note);
+      if (!flags.length) return false;
+      if (filtroF && !flags.some(f => f.startsWith(filtroF))) return false;
+      return true;
+    })
+    .sort((a,b) => (b[1].ts||0) - (a[1].ts||0));
+
+  // Filtra per stato cassone
+  const rows = movs.filter(([,m]) => {
+    const cas = STATE.cassoni[m.cassoneId] || {};
+    return !filtroS || cas.stato === filtroS;
+  });
+
+  if (countEl) countEl.textContent = rows.length
+    ? `${rows.length} segnalazion${rows.length===1?'e':'i'} trovate`
+    : 'Nessuna segnalazione';
+
+  if (!rows.length) {
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:2rem;color:var(--ink3);font-style:italic">Nessun cassone con segnalazioni${filtroF||filtroS?' per i filtri selezionati':''}</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = rows.map(([id,m]) => {
+    const cas   = STATE.cassoni[m.cassoneId] || {};
+    const flags = estraiFlag(m.note);
+    const noteLibera = (m.note||'').split(' | ')
+      .filter(p => !FLAGS.some(f => p.startsWith(f)))
+      .join(' | ');
+    const altroTesto = (m.note||'').match(/Altro: ([^|]+)/)?.[1]?.trim() || '';
+    const flagBadges = flags.map(f => {
+      const ico = f.startsWith('Altro') ? '⚠️' : (FLAG_ICONS[f]||'⚠️');
+      const label = f.startsWith('Altro') && altroTesto ? `Altro: ${altroTesto}` : f;
+      return `<span style="display:inline-block;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:700;background:#fef2f2;color:#c0392b;border:1px solid #fca5a5;margin:2px">${ico} ${label}</span>`;
+    }).join('');
+    const statoCls = cas.stato === 'piazzale' ? 'pill-in' : 'pill-out';
+    const statoLbl = cas.stato === 'piazzale' ? '🟢 Piazzale' : '🔴 Fuori';
+    return `<tr>
+      <td style="white-space:nowrap;color:var(--ink2);font-size:12px">${fmtDT(m.ts)}</td>
+      <td><strong>${m.cassoneId}</strong></td>
+      <td style="color:var(--ink2);font-size:12px">${cas.tipo||'—'}</td>
+      <td><span class="status-pill ${statoCls}" style="font-size:11px">${statoLbl}</span></td>
+      <td style="font-size:12px">${m.cliente||'—'}</td>
+      <td style="min-width:180px">${flagBadges}</td>
+      <td style="color:var(--ink2);font-size:12px">${noteLibera||'—'}</td>
+    </tr>`;
+  }).join('');
+}
+window.renderManutenzione = renderManutenzione;
+
+window.switchView = function(name) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('view-' + name)?.classList.add('active');
+  const tabs = [...document.querySelectorAll('.nav-tab')];
+  const map  = {dashboard:0, bollettazione:1, manutenzione:2, trasportatore:3, setup:4};
+  if (tabs[map[name]]) tabs[map[name]].classList.add('active');
+  if (name === 'bollettazione') renderBollettazione();
+  if (name === 'manutenzione')  renderManutenzione();
+};
+
+// ══ SETUP ══════════════════════════════════════════
 window.salvaConfig = async function() {
   const cfg = {
     apiKey:      document.getElementById('cfg-apikey').value.trim(),
-    authDomain:  document.getElementById('cfg-domain').value.trim(),
+    authDomain:  document.getElementById('cfg-authdomain').value.trim(),
     databaseURL: document.getElementById('cfg-dburl').value.trim(),
-    projectId:   document.getElementById('cfg-pid').value.trim(),
+    projectId:   document.getElementById('cfg-projectid').value.trim(),
   };
-  if (!cfg.apiKey||!cfg.databaseURL) { document.getElementById('cfg-status').textContent='⚠️ Compila API Key e Database URL'; return; }
-  saveCfg(cfg);
-  const ok = await connectFirebase(cfg);
-  document.getElementById('cfg-status').textContent = ok ? '✅ Connesso!' : '❌ Errore — controlla le credenziali';
+  if (!cfg.apiKey || !cfg.databaseURL) {
+    document.getElementById('cfg-status').textContent = '⚠️ Compila almeno API Key e Database URL';
+    return;
+  }
+  saveConfig(cfg);
+  const ok = await initFirebase(cfg);
+  document.getElementById('cfg-status').textContent = ok ? '✅ Connesso!' : '❌ Errore di connessione — controlla le credenziali';
 };
 
-window.testConn = async function() {
-  const cfg = loadCfg();
-  if (!cfg) { document.getElementById('cfg-status').textContent='⚠️ Nessuna config salvata'; return; }
-  document.getElementById('cfg-status').textContent='🔄 Connessione...';
-  const ok = await connectFirebase(cfg);
-  document.getElementById('cfg-status').textContent = ok ? '✅ Connesso!' : '❌ Errore';
+window.testConnection = async function() {
+  const cfg = loadConfig();
+  if (!cfg) { document.getElementById('cfg-status').textContent = '⚠️ Nessuna config salvata'; return; }
+  document.getElementById('cfg-status').textContent = '🔄 Connessione in corso...';
+  const ok = await initFirebase(cfg);
+  document.getElementById('cfg-status').textContent = ok ? '✅ Firebase connesso e funzionante!' : '❌ Connessione fallita';
 };
 
-// ── ESC ────────────────────────────────────────────────
-document.addEventListener('keydown', e => { if(e.key==='Escape') chiudiModal(); });
+// Esponi funzioni globali
+window.openDDT         = openDDT;
+window.closeDDT        = closeDDT;
+window.confermaDDT     = confermaDDT;
+window.stampaDDT       = stampaDDT;
+window.aggiungiCassone = aggiungiCassone;
+window.eliminaCassone  = eliminaCassone;
+window.aggiungiCliente = aggiungiCliente;
+window.eliminaCliente  = eliminaCliente;
+window.registraMovimento = registraMovimento;
+window.renderBollettazione = renderBollettazione;
+window.exportCSV       = exportCSV;
+window.onScanInput      = onScanInput;
+window.onScanKeydown    = onScanKeydown;
+window.selezionaDaCassone = selezionaDaCassone;
 
-// ── BOOT ───────────────────────────────────────────────
+// ── Import Excel ────────────────────────────────────
+window.resetStatoCassoni = async function(stato) {
+  if (!db) { toast('Firebase non connesso', 'err'); return; }
+  const n = Object.keys(STATE.cassoni).length;
+  const lbl = stato === 'fuori' ? 'FUORI / IN GIRO' : 'IN PIAZZALE';
+  if (!confirm(`Impostare TUTTI i ${n} cassoni su "${lbl}"?\nQuesta operazione non può essere annullata.`)) return;
+  const statusEl = document.getElementById('reset-stato-status');
+  statusEl.textContent = '⏳ Aggiornamento in corso…';
+  const updates = {};
+  Object.keys(STATE.cassoni).forEach(id => {
+    updates[`cassoni/${id}/stato`] = stato;
+    updates[`cassoni/${id}/clienteAttuale`] = '';
+  });
+  const { update: fbUpdate } = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js');
+  await fbUpdate(ref(db, '/'), updates);
+  statusEl.textContent = `✅ ${n} cassoni impostati su "${lbl}"`;
+  toast(`✓ ${n} cassoni → ${lbl}`, 'ok');
+};
+
+window.importaClienti = async function(event) {
+  if (!file) return;
+  const statusEl = document.getElementById('import-clienti-status');
+  statusEl.textContent = '⏳ Lettura...';
+  const reader = new FileReader();
+  reader.onload = async function(e) {
+    try {
+      const wb   = XLSX.read(e.target.result, {type:'array'});
+      const ws   = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
+      const clientiNuovi = [];
+      rows.forEach(row => {
+        const v = String(row[0]||'').trim();
+        if (v && v.toLowerCase() !== 'ragione sociale' && v !== 'nan') clientiNuovi.push(v);
+      });
+      const uniq = [...new Set([...(STATE.clienti||[]), ...clientiNuovi])].sort();
+      await set(ref(db, 'clienti'), uniq);
+      statusEl.textContent = `✅ ${clientiNuovi.length} clienti importati`;
+      toast(`✓ ${clientiNuovi.length} clienti caricati`, 'ok');
+      event.target.value = '';
+    } catch(err) {
+      statusEl.textContent = '❌ ' + err.message;
+    }
+  };
+  reader.readAsArrayBuffer(file);
+};
+
+window.importaExcel = async function(event) {
+  if (!db) { toast('Firebase non connesso', 'err'); return; }
+  const file = event.target.files[0];
+  if (!file) return;
+  const statusEl = document.getElementById('import-status');
+  statusEl.textContent = '⏳ Lettura file...';
+
+  const reader = new FileReader();
+  reader.onload = async function(e) {
+    try {
+      const wb = XLSX.read(e.target.result, {type:'array'});
+      // Cerca il foglio "ELENCO UFFICIALE" o usa il primo
+      const sheetName = wb.SheetNames.find(n => n.toUpperCase().includes('UFFICIALE') || n.toUpperCase().includes('ELENCO')) || wb.SheetNames[0];
+      const ws  = wb.Sheets[sheetName];
+      const rows = XLSX.utils.sheet_to_json(ws, {defval:''});
+
+      let contatore = 0;
+      const updates = {};
+
+      rows.forEach(row => {
+        // Cerca colonne per nome (case-insensitive, spazi flessibili)
+        const keys = Object.keys(row);
+        const findVal = (...candidates) => {
+          for (const c of candidates) {
+            const k = keys.find(k => k.trim().toUpperCase().includes(c.toUpperCase()));
+            if (k && row[k] !== undefined && row[k] !== '') return String(row[k]).trim();
+          }
+          return '';
+        };
+        const codice = findVal('NR.INTERNO','INTERNO','CODICE').toUpperCase();
+        const desc   = findVal('DESCRIZIONE CESPITE','DESCRIZIONE','DESC');
+        const note   = findVal('NOTE MAX','NOTE','COPERCHIO');
+        const matr   = findVal('MATRICOLA','MATR');
+
+        if (!codice || codice === 'NAN') return;
+        let tipo = desc || 'Cassone';
+        if (note && !['', 'NAN', '???'].includes(note.toUpperCase())) tipo += ' · ' + note;
+
+        // Non sovrascrive cassoni già esistenti nel db
+        if (!STATE.cassoni[codice]) {
+          updates[`cassoni/${codice}`] = {
+            tipo, matricola: matr !== 'NAN' ? matr : '',
+            stato:'piazzale', clienteAttuale:'', lastMov:''
+          };
+          contatore++;
+        }
+      });
+
+      if (!contatore) {
+        statusEl.textContent = '⚠️ Nessun cassone nuovo da importare';
+        return;
+      }
+
+      // Scrivi su Firebase in batch
+      const { update: fbUpdate } = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js');
+      await fbUpdate(ref(db, '/'), updates);
+      statusEl.textContent = `✅ ${contatore} cassoni importati da "${sheetName}"`;
+      toast(`✓ ${contatore} cassoni importati`, 'ok');
+      event.target.value = '';
+    } catch(err) {
+      statusEl.textContent = '❌ Errore: ' + err.message;
+      console.error(err);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+};
+
+// ── FOTOCAMERA / QR SCANNER ────────────────────────
+// ── FOTOCAMERA QR — getUserMedia + BarcodeDetector ──
+let _qrStream   = null;
+let _qrRunning  = false;
+let _qrFacing   = 'environment';
+
+window.apriCamera = async function() {
+  document.getElementById('qr-modal').style.display = 'flex';
+  document.getElementById('qr-status').textContent = 'Avvio fotocamera…';
+  await _avviaQr(_qrFacing);
+};
+
+async function _avviaQr(facingMode) {
+  // Ferma stream precedente
+  if (_qrStream) { _qrStream.getTracks().forEach(t => t.stop()); _qrStream = null; }
+  _qrRunning = false;
+
+  const video = document.getElementById('qr-video');
+  video.style.display = 'block';
+
+  try {
+    _qrStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: facingMode }, width: { ideal: 1280 } }
+    });
+    video.srcObject = _qrStream;
+    video.setAttribute('playsinline', true);
+    await video.play();
+    _qrRunning = true;
+    document.getElementById('qr-status').textContent = 'Inquadra il QR code del cassone';
+    _qrDecode(video);
+  } catch(e) {
+    document.getElementById('qr-status').textContent = '❌ ' + e.message;
+  }
+}
+
+function _qrDecode(video) {
+  const canvas = document.createElement('canvas');
+  const ctx    = canvas.getContext('2d', { willReadFrequently: true });
+
+  // BarcodeDetector nativo (Chrome 83+, Android)
+  if (typeof BarcodeDetector !== 'undefined') {
+    const det = new BarcodeDetector({ formats: ['qr_code'] });
+    const scan = async () => {
+      if (!_qrRunning) return;
+      try {
+        if (video.readyState >= 2) {
+          const codes = await det.detect(video);
+          if (codes.length) { _qrHit(codes[0].rawValue); return; }
+        }
+      } catch(e) {}
+      requestAnimationFrame(scan);
+    };
+    requestAnimationFrame(scan);
+    return;
+  }
+
+  // Fallback jsQR (caricato inline come script)
+  if (typeof jsQR !== 'undefined') {
+    const scan = () => {
+      if (!_qrRunning) return;
+      if (video.readyState >= 2) {
+        canvas.width  = video.videoWidth;
+        canvas.height = video.videoHeight;
+        ctx.drawImage(video, 0, 0);
+        const img  = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const code = jsQR(img.data, img.width, img.height, { inversionAttempts: 'dontInvert' });
+        if (code) { _qrHit(code.data); return; }
+      }
+      setTimeout(scan, 150);
+    };
+    scan();
+    return;
+  }
+
+  document.getElementById('qr-status').textContent = '⚠️ Scanner non supportato — digita il codice manualmente';
+}
+
+function _qrHit(rawValue) {
+  if (!_qrRunning) return;
+  _qrRunning = false;
+  const codice = rawValue.trim().toUpperCase();
+  document.getElementById('qr-status').textContent = '✅ ' + codice;
+  if (navigator.vibrate) navigator.vibrate([80, 40, 80]);
+  setTimeout(() => {
+    chiudiCamera();
+    document.getElementById('scan-input').value = codice;
+    onScanInput(codice);
+    if (STATE.cassoni[codice]) selezionaDaCassone(codice);
+    else toast('Cassone ' + codice + ' non in anagrafica', 'err');
+  }, 400);
+}
+
+window.chiudiCamera = function() {
+  _qrRunning = false;
+  if (_qrStream) { _qrStream.getTracks().forEach(t => t.stop()); _qrStream = null; }
+  const video = document.getElementById('qr-video');
+  if (video) { video.srcObject = null; }
+  document.getElementById('qr-modal').style.display = 'none';
+};
+
+window.switchCamera = function() {
+  _qrFacing = _qrFacing === 'environment' ? 'user' : 'environment';
+  _avviaQr(_qrFacing);
+};
+
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') chiudiCamera();
+});
+
+// ── PIN CONFIG ─────────────────────────────────────
+const CONFIG_PIN = '7575';
+
+window.richiestaPin = function() {
+  document.getElementById('pin-input').value = '';
+  document.getElementById('pin-error').textContent = '';
+  document.getElementById('pin-modal').classList.add('open');
+  setTimeout(() => document.getElementById('pin-input').focus(), 100);
+};
+
+window.chiudiPin = function() {
+  document.getElementById('pin-modal').classList.remove('open');
+};
+
+window.verificaPin = function() {
+  const pin = document.getElementById('pin-input').value;
+  if (pin === CONFIG_PIN) {
+    chiudiPin();
+    document.getElementById('nav-tab-setup').style.display = '';
+    sessionStorage.setItem('admin_ok', '1');
+    switchView('setup');
+  } else {
+    document.getElementById('pin-error').textContent = '❌ PIN errato';
+    document.getElementById('pin-input').value = '';
+    document.getElementById('pin-input').focus();
+  }
+};
+
+// Chiudi dropdown cassoni cliccando fuori
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('.scan-area')) {
+    var drop = document.getElementById('scan-drop');
+    if (drop) drop.style.display = 'none';
+  }
+});
+
+// ══ BOOT ═══════════════════════════════════════════
 (async function boot() {
-  // Hardcoded — stesse credenziali del tracker cassoni
-  const hardcoded = {
+  // ── Favicon e link dinamici ─────────────────────
+  const baseUrl = window.location.origin + window.location.pathname;
+  const adminUrl   = baseUrl;
+  const autistaUrl = baseUrl + '?autista';
+
+  // Aggiorna link nel setup
+  const la = document.getElementById('link-admin');
+  const lu = document.getElementById('link-autista');
+  if (la) la.href = adminUrl;
+  if (lu) lu.href = autistaUrl;
+
+  // Favicon differenziata
+  const isAutista = new URLSearchParams(window.location.search).has('autista');
+  const faviconSvg = isAutista
+    ? `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'>
+        <rect width='64' height='64' rx='12' fill='%230a7c4e'/>
+        <rect x='4' y='28' width='44' height='20' rx='4' fill='%23fff' opacity='.95'/>
+        <rect x='36' y='18' width='20' height='18' rx='3' fill='%23fff' opacity='.85'/>
+        <circle cx='14' cy='50' r='6' fill='%230a7c4e' stroke='%23fff' stroke-width='2.5'/>
+        <circle cx='38' cy='50' r='6' fill='%230a7c4e' stroke='%23fff' stroke-width='2.5'/>
+        <rect x='4' y='24' width='44' height='6' rx='2' fill='%23fff' opacity='.4'/>
+      </svg>`
+    : `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'>
+        <rect width='64' height='64' rx='12' fill='%231a4f8a'/>
+        <rect x='12' y='16' width='40' height='28' rx='3' fill='%23fff' opacity='.9'/>
+        <rect x='16' y='20' width='32' height='4' rx='2' fill='%231a4f8a' opacity='.3'/>
+        <rect x='16' y='27' width='32' height='3' rx='1.5' fill='%231a4f8a' opacity='.3'/>
+        <rect x='16' y='33' width='20' height='3' rx='1.5' fill='%231a4f8a' opacity='.3'/>
+        <rect x='12' y='46' width='40' height='4' rx='2' fill='%23fff' opacity='.5'/>
+        <circle cx='20' cy='48' r='2' fill='%23fff'/>
+        <circle cx='44' cy='48' r='2' fill='%23fff'/>
+      </svg>`;
+
+  const encoded = 'data:image/svg+xml,' + faviconSvg.replace(/\s+/g,' ');
+  let favicon = document.querySelector("link[rel='icon']");
+  if (!favicon) { favicon = document.createElement('link'); favicon.rel = 'icon'; document.head.appendChild(favicon); }
+  favicon.href = encoded;
+  document.title = isAutista ? '🚛 Movimento Cassone' : '🖥️ Tracker Cassoni — Admin';
+
+  // ── Tab Config: visibile solo con click su brand 3 volte o PIN ──
+  let _brandClicks = 0;
+  document.querySelector('.nav-brand').addEventListener('click', () => {
+    _brandClicks++;
+    if (_brandClicks >= 3) {
+      _brandClicks = 0;
+      document.getElementById('nav-tab-setup').style.display = '';
+      richiestaPin();
+    }
+  });
+  // Mostra sempre il tab setup se in modalità autista=no e sessionStorage lo ricorda
+  if (sessionStorage.getItem('admin_ok') === '1') {
+    document.getElementById('nav-tab-setup').style.display = '';
+  }
+  const urlParams = new URLSearchParams(window.location.search);
+  const modoAutista = urlParams.has('autista');
+  if (modoAutista) {
+    document.body.classList.add('modo-autista');
+    // Mostra solo la schermata trasportatore, nascondi nav
+    document.querySelector('nav.nav').style.display = 'none';
+    switchView('trasportatore');
+    // Pulsante discreto per tornare alla versione completa (solo admin)
+    const backBtn = document.createElement('button');
+    backBtn.className = 'autista-back';
+    backBtn.textContent = '⚙️ Versione completa';
+    backBtn.style.display = 'block';
+    backBtn.onclick = () => { window.location.href = window.location.pathname; };
+    document.body.appendChild(backBtn);
+  }
+  const hardcodedCfg = {
     apiKey:      'AIzaSyCixZmG-Pc2hbXc-sKeuCZXvknzC_Bo52k',
     authDomain:  'cassoni-centrorisorse.firebaseapp.com',
     databaseURL: 'https://cassoni-centrorisorse-default-rtdb.europe-west1.firebasedatabase.app',
     projectId:   'cassoni-centrorisorse',
   };
-  const cfg = loadCfg() || hardcoded;
-  document.getElementById('cfg-apikey').value  = cfg.apiKey     || '';
-  document.getElementById('cfg-domain').value  = cfg.authDomain || '';
-  document.getElementById('cfg-dburl').value   = cfg.databaseURL|| '';
-  document.getElementById('cfg-pid').value     = cfg.projectId  || '';
-  await connectFirebase(cfg);
-  switchView('mappa');
-  verificaNotifiche();
+  // Popola anche i campi Config (per riferimento)
+  document.getElementById('cfg-apikey').value     = hardcodedCfg.apiKey;
+  document.getElementById('cfg-authdomain').value = hardcodedCfg.authDomain;
+  document.getElementById('cfg-dburl').value      = hardcodedCfg.databaseURL;
+  document.getElementById('cfg-projectid').value  = hardcodedCfg.projectId;
+  saveConfig(hardcodedCfg);
+  await initFirebase(hardcodedCfg);
 })();
 </script>
 </body>
