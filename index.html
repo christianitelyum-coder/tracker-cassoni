@@ -374,6 +374,7 @@ body.modo-autista .autista-header { display: block }
         <th>Cliente</th>
         <th>Segnalazioni</th>
         <th>Note</th>
+        <th></th>
       </tr>
     </thead>
     <tbody id="man-tbody"></tbody>
@@ -605,7 +606,7 @@ body.modo-autista .autista-header { display: block }
 </div>
 
 <!-- ════════ MODAL SEGNALAZIONI ════════ -->
-<div class="modal-overlay" id="segn-modal" onclick="if(event.target===this)closeSegn()" style="display:none">
+<div class="modal-overlay" id="segn-modal" onclick="if(event.target===this)closeSegn()">
   <div class="modal-box" style="max-width:420px">
     <div class="modal-header">
       <span class="modal-title">🔧 Segnalazioni manutenzione</span>
@@ -965,12 +966,12 @@ function openSegnalazioniModal(movId) {
   document.getElementById('segn-altro-testo').value   = altroTesto;
   document.getElementById('segn-altro-testo').style.display = hasAltro ? 'block' : 'none';
   document.getElementById('segn-note-libere').value   = noteLibere;
-  document.getElementById('segn-modal').style.display = 'flex';
+  document.getElementById('segn-modal').classList.add('open');
 }
 window.openSegnalazioniModal = openSegnalazioniModal;
 
 function closeSegn() {
-  document.getElementById('segn-modal').style.display = 'none';
+  document.getElementById('segn-modal').classList.remove('open');
   _segnMovId = null;
 }
 window.closeSegn = closeSegn;
@@ -1573,6 +1574,15 @@ function renderManutenzione() {
     }).join('');
     const statoCls = cas.stato === 'piazzale' ? 'pill-in' : 'pill-out';
     const statoLbl = cas.stato === 'piazzale' ? '🟢 Piazzale' : '🔴 Fuori';
+
+    // Prepara mailto
+    const subject = encodeURIComponent(`Segnalazione manutenzione cassone ${m.cassoneId}`);
+    const flagText = flags.join(', ');
+    const body = encodeURIComponent(
+      `Buongiorno,\n\nSi segnala il cassone ${m.cassoneId} (${cas.tipo||''}) per le seguenti problematiche:\n\n${flagText}${noteLibera ? '\n\nNote: ' + noteLibera : ''}\n\nData segnalazione: ${fmtDT(m.ts)}\nCliente: ${m.cliente||'—'}\nStato attuale: ${cas.stato||'—'}\n\nCordiali saluti`
+    );
+    const mailto = `mailto:massimo.pizzoli@itelyum.com;trasporti.centrorisorse@itelyum.com?subject=${subject}&body=${body}`;
+
     return `<tr>
       <td style="white-space:nowrap;color:var(--ink2);font-size:12px">${fmtDT(m.ts)}</td>
       <td><strong>${m.cassoneId}</strong></td>
@@ -1581,6 +1591,9 @@ function renderManutenzione() {
       <td style="font-size:12px">${m.cliente||'—'}</td>
       <td style="min-width:180px">${flagBadges}</td>
       <td style="color:var(--ink2);font-size:12px">${noteLibera||'—'}</td>
+      <td style="white-space:nowrap">
+        <a href="${mailto}" class="btn btn-ghost btn-sm" style="text-decoration:none" title="Invia segnalazione per email">✉️ Invia</a>
+      </td>
     </tr>`;
   }).join('');
 }
