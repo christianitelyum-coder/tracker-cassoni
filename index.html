@@ -1583,6 +1583,15 @@ function renderManutenzione() {
     );
     const mailto = `mailto:massimo.pizzoli@itelyum.com;trasporti.centrorisorse@itelyum.com?subject=${subject}&body=${body}`;
 
+    const mailInviata = m.mailManutenzione;
+    const btnMail = mailInviata
+      ? `<div style="font-size:10px;color:var(--ink3);text-align:center;line-height:1.4">
+           <span style="display:block;font-weight:700;color:#16a34a">✓ Inviata</span>
+           ${mailInviata}
+         </div>`
+      : `<a href="${mailto}" class="btn btn-ghost btn-sm" style="text-decoration:none" title="Invia segnalazione per email"
+           onclick="segnaMailInviata('${id}', event)">✉️ Invia</a>`;
+
     return `<tr>
       <td style="white-space:nowrap;color:var(--ink2);font-size:12px">${fmtDT(m.ts)}</td>
       <td><strong>${m.cassoneId}</strong></td>
@@ -1591,12 +1600,28 @@ function renderManutenzione() {
       <td style="font-size:12px">${m.cliente||'—'}</td>
       <td style="min-width:180px">${flagBadges}</td>
       <td style="color:var(--ink2);font-size:12px">${noteLibera||'—'}</td>
-      <td style="white-space:nowrap">
-        <a href="${mailto}" class="btn btn-ghost btn-sm" style="text-decoration:none" title="Invia segnalazione per email">✉️ Invia</a>
+      <td style="white-space:nowrap;text-align:center;min-width:90px">
+        ${btnMail}
       </td>
     </tr>`;
   }).join('');
 }
+async function segnaMailInviata(movId, event) {
+  if (!db) return;
+  // Piccolo delay per permettere al browser di aprire il client mail
+  setTimeout(async () => {
+    const ora = new Date();
+    const ts = String(ora.getDate()).padStart(2,'0') + '/' +
+               String(ora.getMonth()+1).padStart(2,'0') + '/' +
+               ora.getFullYear() + ' ' +
+               String(ora.getHours()).padStart(2,'0') + ':' +
+               String(ora.getMinutes()).padStart(2,'0');
+    await update(ref(db, `movimenti/${movId}`), { mailManutenzione: ts });
+    toast('✓ Segnalazione inviata registrata', 'ok');
+  }, 800);
+}
+window.segnaMailInviata = segnaMailInviata;
+
 window.renderManutenzione = renderManutenzione;
 
 window.switchView = function(name) {
