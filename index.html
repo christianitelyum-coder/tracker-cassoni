@@ -1409,20 +1409,30 @@ function openDDT(movId) {
 
   document.getElementById('ddt-modal-title').textContent = `DDT — ${m.cassoneId} — ${isUscita?'USCITA':'RIENTRO'}`;
 
-  // Popola tutti i campi
-  document.getElementById('ddt-numero').value          = m.ddtNumero || calcolaProssimoNumero();
-  document.getElementById('ddt-data').value            = dataFmt(m.ts);
-  document.getElementById('ddt-dest-nome').value       = isUscita ? (m.cliente||'') : 'CENTRO RISORSE S.p.A.';
-  document.getElementById('ddt-dest-indirizzo').value  = isUscita ? '' : 'Via Lazio 48 - 31045 - MOTTA DI LIVENZA (TV)';
-  document.getElementById('ddt-dest-luogo').value      = isUscita ? (m.cliente||'') : 'CENTRO RISORSE S.p.A.';
-  document.getElementById('ddt-descrizione').value     = cas.tipo ? cas.tipo.toUpperCase() + ' SCARRABILE' : 'CASSONE SCARRABILE';
-  document.getElementById('ddt-causale').value         = isUscita ? 'POSIZIONAMENTO CASSONE' : 'RITIRO CASSONE';
-  document.getElementById('ddt-note-extra').value      = m.note || '';
-  document.getElementById('ddt-trasportatore').value   = defaultTrasp;
-  document.getElementById('ddt-trasp-indirizzo').value = 'Via Lazio 48 - 31045 - MOTTA DI LIVENZA (TV)';
-  document.getElementById('ddt-trasp-cf').value        = '00429860315';
-  document.getElementById('ddt-targa').value           = '';
-  document.getElementById('ddt-ora').value             = '';
+  // Estrai targa dalle note (es. "Fw361vj" o qualsiasi cosa prima di " | ")
+  const estraiTarga = note => {
+    if (!note) return '';
+    // Prende la prima parte delle note (prima del primo | ) se non è un flag
+    const FLAGS_KEYS = ['Manca tag','Presenta rotture','Telo danneggiato','Altro'];
+    const parti = note.split(' | ');
+    const notaLibera = parti.find(p => !FLAGS_KEYS.some(f => p.startsWith(f))) || '';
+    return notaLibera.trim();
+  };
+
+  // Se il DDT è già stato salvato, ricarica i valori salvati
+  document.getElementById('ddt-numero').value           = m.ddtNumero || calcolaProssimoNumero();
+  document.getElementById('ddt-data').value             = m.ddtData || dataFmt(m.ts);
+  document.getElementById('ddt-dest-nome').value        = m.ddtDestNome || (isUscita ? (m.cliente||'') : 'CENTRO RISORSE S.p.A.');
+  document.getElementById('ddt-dest-indirizzo').value   = m.ddtDestIndirizzo || (isUscita ? '' : 'Via Lazio 48 - 31045 - MOTTA DI LIVENZA (TV)');
+  document.getElementById('ddt-dest-luogo').value       = m.ddtDestLuogo || (isUscita ? (m.cliente||'') : 'CENTRO RISORSE S.p.A.');
+  document.getElementById('ddt-descrizione').value      = m.ddtDescrizione || (cas.tipo ? cas.tipo.toUpperCase() + ' SCARRABILE' : 'CASSONE SCARRABILE');
+  document.getElementById('ddt-causale').value          = m.ddtCausale || (isUscita ? 'POSIZIONAMENTO CASSONE' : 'RITIRO CASSONE');
+  document.getElementById('ddt-note-extra').value       = m.ddtNoteExtra !== undefined ? m.ddtNoteExtra : (m.note || '');
+  document.getElementById('ddt-trasportatore').value    = m.ddtTrasportatore || defaultTrasp;
+  document.getElementById('ddt-trasp-indirizzo').value  = m.ddtTruspIndirizzo || 'Via Lazio 48 - 31045 - MOTTA DI LIVENZA (TV)';
+  document.getElementById('ddt-trasp-cf').value         = m.ddtTruspCf || '00429860315';
+  document.getElementById('ddt-targa').value            = m.ddtTarga || estraiTarga(m.note);
+  document.getElementById('ddt-ora').value              = m.ddtOra || '';
 
   aggiornaDDTPreview();
   document.getElementById('ddt-modal').classList.add('open');
@@ -1557,7 +1567,24 @@ async function confermaDDT() {
   if (!_ddtMovId || !db) return;
   const numero = document.getElementById('ddt-numero').value.trim();
   if (!numero) { toast('Inserisci il numero DDT', 'err'); return; }
-  await update(ref(db, `movimenti/${_ddtMovId}`), { ddtNumero: numero, ddtTs: now() });
+  // Salva tutti i campi modificabili del DDT
+  const v = getDDTValues();
+  await update(ref(db, `movimenti/${_ddtMovId}`), {
+    ddtNumero:       numero,
+    ddtTs:           now(),
+    ddtData:         document.getElementById('ddt-data').value,
+    ddtDestNome:     v.destNome,
+    ddtDestIndirizzo:v.destIndirizzo,
+    ddtDestLuogo:    v.destLuogo,
+    ddtDescrizione:  v.descrizione,
+    ddtCausale:      v.causale,
+    ddtNoteExtra:    v.noteExtra,
+    ddtTrasportatore:v.trasportatore,
+    ddtTruspIndirizzo:v.traspIndirizzo,
+    ddtTruspCf:      v.traspCf,
+    ddtTarga:        document.getElementById('ddt-targa').value,
+    ddtOra:          document.getElementById('ddt-ora').value,
+  });
   toast('✓ DDT ' + numero + ' registrato', 'ok');
   closeDDT();
 }
