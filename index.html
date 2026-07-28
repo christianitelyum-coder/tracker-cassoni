@@ -158,7 +158,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);min-height:10
 .trasp-rec-item:last-child{border-bottom:none}
 
 /* ── DDT MODAL ───────────────────────────────────── */
-.modal-overlay{position:fixed;inset:0;background:rgba(26,31,46,.55);z-index:1000;display:none;align-items:center;justify-content:center;padding:1rem}
+.modal-overlay{position:fixed;inset:0;background:rgba(26,31,46,.55);z-index:6000;display:none;align-items:center;justify-content:center;padding:1rem}
 .modal-overlay.open{display:flex}
 .modal{background:var(--surface);border-radius:var(--radius);box-shadow:var(--shadow-lg);width:min(620px,100%);max-height:90vh;overflow-y:auto}
 .modal-header{padding:1.1rem 1.5rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
@@ -722,6 +722,7 @@ body.auth-locked{overflow:hidden}
         <div class="auth-error" id="auth-register-error"></div>
         <button class="btn btn-primary" style="width:100%;justify-content:center;margin-top:.5rem" onclick="eseguiRegistrazione()">✓ Crea account</button>
         </div>
+        <button class="btn btn-ghost" style="width:100%;justify-content:center;margin-top:1.25rem;font-size:11px" onclick="richiestaPin()">🔑 Sei amministratore? Sblocca con PIN</button>
       </div>
     </div>
   </div>
@@ -2379,6 +2380,8 @@ window.verificaPin = function() {
     chiudiPin();
     document.getElementById('nav-tab-setup').style.display = '';
     sessionStorage.setItem('admin_ok', '1');
+    document.getElementById('auth-overlay').classList.remove('open');
+    document.body.classList.remove('auth-locked');
     renderApprovazioni(_ultimiUtenti);
     switchView('setup');
   } else {
