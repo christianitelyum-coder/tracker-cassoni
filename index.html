@@ -254,6 +254,9 @@ body.auth-locked{overflow:hidden}
   .auth-form-panel{width:100%;padding:1.75rem 1.25rem;box-sizing:border-box}
   .auth-card{width:100%;margin:0 auto}
 }
+.nav-notif-btn{position:relative;background:none;border:none;color:rgba(255,255,255,.8);font-size:16px;cursor:pointer;padding:0 10px;height:100%;display:flex;align-items:center}
+.nav-notif-btn:hover{color:#fff}
+.nav-notif-btn #nav-notif-badge{position:absolute;top:8px;right:2px;background:var(--red);color:#fff;font-size:9px;font-weight:800;border-radius:10px;min-width:15px;height:15px;line-height:15px;text-align:center;padding:0 3px}
 .auth-user-badge{display:none;align-items:center;gap:6px;margin-left:12px;font-size:12px;color:rgba(255,255,255,.75);flex-shrink:0}
 .auth-user-badge button{background:none;border:none;color:rgba(255,255,255,.6);cursor:pointer;font-size:13px;padding:0;line-height:1}
 .auth-user-badge button:hover{color:#fff}
@@ -291,6 +294,9 @@ body.auth-locked{overflow:hidden}
     <button class="nav-tab" onclick="switchView('manutenzione')">🔧 Manutenzione</button>
     <button class="nav-tab" onclick="switchView('trasportatore')">📱 Trasportatore</button>
     <button class="nav-tab" id="nav-tab-setup" onclick="richiestaPin()" style="display:none">⚙️ Config</button>
+    <button class="nav-notif-btn" id="nav-notif-btn" onclick="switchView('setup')" style="display:none" title="Richieste di registrazione in attesa">
+      🔔<span id="nav-notif-badge"></span>
+    </button>
   </div>
   <div class="firebase-dot" id="fb-dot" title="Firebase: non connesso"></div>
   <div class="auth-user-badge" id="auth-user-badge">
@@ -531,6 +537,12 @@ body.auth-locked{overflow:hidden}
 <!-- ════════ SETUP ════════ -->
 <div class="view" id="view-setup">
 <div class="setup">
+  <div class="setup-card" id="approvazioni-card">
+    <h2>🔔 Richieste di registrazione</h2>
+    <p style="margin-bottom:.75rem">Approva una richiesta assegnando un ruolo, oppure rifiutala.</p>
+    <p id="approvazioni-empty" style="font-size:13px;color:var(--ink3);margin-bottom:0">Nessuna richiesta in attesa</p>
+    <div id="approvazioni-list"></div>
+  </div>
   <div class="setup-card">
     <h2>⚙️ Configurazione Firebase</h2>
     <p>Inserisci le credenziali del tuo Firebase Realtime Database. Le trovi su <strong>console.firebase.google.com</strong> → Impostazioni progetto → App web → Configurazione SDK.</p>
@@ -663,9 +675,16 @@ body.auth-locked{overflow:hidden}
       <div class="auth-card">
         <h2 id="auth-card-title">Bentornato</h2>
         <p class="auth-sub" id="auth-card-sub">Accedi con il tuo account per continuare</p>
-        <div class="auth-tabs">
+        <div class="auth-tabs" id="auth-tabs">
           <button class="auth-tab active" id="auth-tab-login" onclick="switchAuthTab('login')">Accedi</button>
           <button class="auth-tab" id="auth-tab-register" onclick="switchAuthTab('register')">Registrati</button>
+        </div>
+        <div id="auth-pending-msg" style="display:none;text-align:center">
+          <p style="font-size:13px;color:var(--ink2);margin-bottom:1rem">
+            L'account <strong id="auth-pending-user"></strong> è stato creato ed è in attesa di approvazione
+            da parte di un amministratore. Riprova ad accedere più tardi.
+          </p>
+          <button class="btn btn-ghost" style="width:100%;justify-content:center" onclick="tornaAlLogin()">← Torna al login</button>
         </div>
         <div id="auth-login-form">
       <div class="auth-form-row">
@@ -1860,7 +1879,17 @@ window.segnaMailInviata = segnaMailInviata;
 
 window.renderManutenzione = renderManutenzione;
 
+const VISTE_PER_RUOLO = {
+  admin:         ['dashboard','bollettazione','manutenzione','trasportatore'],
+  ufficio:       ['dashboard','bollettazione','manutenzione'],
+  manutenzione:  ['manutenzione'],
+  trasportatore: ['trasportatore'],
+};
 window.switchView = function(name) {
+  if (window._ruoloCorrente && name !== 'setup') {
+    const consentite = VISTE_PER_RUOLO[window._ruoloCorrente];
+    if (consentite && !consentite.includes(name)) return;
+  }
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
   document.getElementById('view-' + name)?.classList.add('active');
@@ -2150,11 +2179,40 @@ function aggiornaBadgeUtente(user) {
   const aBar   = document.getElementById('autista-user-bar');
   if (aLabel && aBar) { aLabel.textContent = '👤 ' + user; aBar.style.display = 'flex'; }
 }
-function completaLogin(user) {
+const RUOLI_LABEL = { admin:'Admin', ufficio:'Ufficio', manutenzione:'Manutenzione', trasportatore:'Trasportatore' };
+function applicaRuolo(ruolo) {
+  window._ruoloCorrente = ruolo;
+  const tabDash = document.querySelector('.nav-tab[onclick*="dashboard"]');
+  const tabBoll = document.querySelector('.nav-tab[onclick*="bollettazione"]');
+  const tabMan  = document.querySelector('.nav-tab[onclick*="manutenzione"]');
+  const tabTra  = document.querySelector('.nav-tab[onclick*="trasportatore"]');
+  [tabDash, tabBoll, tabMan, tabTra].forEach(t => t && (t.style.display = ''));
+  let vistaIniziale = 'dashboard';
+  if (ruolo === 'trasportatore') {
+    if (tabDash) tabDash.style.display = 'none';
+    if (tabBoll) tabBoll.style.display = 'none';
+    if (tabMan)  tabMan.style.display  = 'none';
+    vistaIniziale = 'trasportatore';
+  } else if (ruolo === 'manutenzione') {
+    if (tabDash) tabDash.style.display = 'none';
+    if (tabBoll) tabBoll.style.display = 'none';
+    if (tabTra)  tabTra.style.display  = 'none';
+    vistaIniziale = 'manutenzione';
+  } else if (ruolo === 'ufficio') {
+    if (tabTra) tabTra.style.display = 'none';
+  } else if (ruolo === 'admin') {
+    document.getElementById('nav-tab-setup').style.display = '';
+    sessionStorage.setItem('admin_ok', '1');
+  }
+  switchView(vistaIniziale);
+}
+function completaLogin(user, ruolo) {
   localStorage.setItem('tracker_auth_user', user);
+  localStorage.setItem('tracker_auth_role', ruolo || '');
   document.getElementById('auth-overlay').classList.remove('open');
   document.body.classList.remove('auth-locked');
   aggiornaBadgeUtente(user);
+  applicaRuolo(ruolo);
 }
 window.switchAuthTab = function(tab) {
   document.getElementById('auth-tab-login').classList.toggle('active', tab === 'login');
@@ -2168,6 +2226,11 @@ window.switchAuthTab = function(tab) {
     ? 'Accedi con il tuo account per continuare'
     : 'Scegli un nome utente e un PIN a 4 cifre';
 };
+window.tornaAlLogin = function() {
+  document.getElementById('auth-pending-msg').style.display = 'none';
+  document.getElementById('auth-tabs').style.display = 'flex';
+  switchAuthTab('login');
+};
 window.eseguiLogin = async function() {
   const errEl = document.getElementById('auth-login-error');
   errEl.textContent = '';
@@ -2180,7 +2243,9 @@ window.eseguiLogin = async function() {
     const rec = snap.val();
     const hash = await sha256Hex(pin);
     if (!rec || rec.pin !== hash) { errEl.textContent = '❌ Nome utente o PIN errati'; return; }
-    completaLogin(user);
+    if (rec.stato === 'rifiutato') { errEl.textContent = '❌ Registrazione rifiutata, contatta un amministratore'; return; }
+    if (rec.stato !== 'approvato') { errEl.textContent = '⏳ Account in attesa di approvazione da un amministratore'; return; }
+    completaLogin(user, rec.ruolo);
   } catch(e) {
     errEl.textContent = 'Errore di connessione, riprova';
   }
@@ -2199,16 +2264,20 @@ window.eseguiRegistrazione = async function() {
     const rRef = ref(db, 'utenti/' + user);
     const snap = await get(rRef);
     if (snap.exists()) { errEl.textContent = '❌ Nome utente già registrato'; return; }
-    const hash = await sha256Hex(pin);
-    await set(rRef, { pin: hash, createdAt: now() });
-    completaLogin(user);
-    toast('✓ Account creato', 'ok');
+    await set(rRef, { pin: await sha256Hex(pin), createdAt: now(), stato: 'pending', ruolo: null });
+    document.getElementById('auth-register-form').style.display = 'none';
+    document.getElementById('auth-tabs').style.display = 'none';
+    document.getElementById('auth-pending-msg').style.display = 'block';
+    document.getElementById('auth-pending-user').textContent = user;
+    document.getElementById('auth-card-title').textContent = 'Richiesta inviata';
+    document.getElementById('auth-card-sub').textContent = 'In attesa di approvazione';
   } catch(e) {
     errEl.textContent = 'Errore durante la registrazione, riprova';
   }
 };
 window.logoutUtente = function() {
   localStorage.removeItem('tracker_auth_user');
+  localStorage.removeItem('tracker_auth_role');
   location.reload();
 };
 async function verificaSessioneAuth() {
@@ -2217,17 +2286,77 @@ async function verificaSessioneAuth() {
   if (!user) { overlay.classList.add('open'); document.body.classList.add('auth-locked'); return; }
   try {
     const snap = await get(ref(db, 'utenti/' + user));
-    if (!snap.exists()) {
+    const rec = snap.val();
+    if (!rec || rec.stato !== 'approvato') {
       localStorage.removeItem('tracker_auth_user');
+      localStorage.removeItem('tracker_auth_role');
       overlay.classList.add('open');
       document.body.classList.add('auth-locked');
       return;
     }
     aggiornaBadgeUtente(user);
+    applicaRuolo(rec.ruolo);
   } catch(e) {
     // offline: mantieni la sessione locale senza bloccare l'app
     aggiornaBadgeUtente(user);
+    applicaRuolo(localStorage.getItem('tracker_auth_role'));
   }
+}
+window.approvaUtente = async function(user) {
+  const sel = document.getElementById('ruolo-select-' + user);
+  const ruolo = sel ? sel.value : 'ufficio';
+  try {
+    await update(ref(db, 'utenti/' + user), { stato: 'approvato', ruolo });
+    toast('✓ ' + user + ' approvato come ' + (RUOLI_LABEL[ruolo] || ruolo), 'ok');
+  } catch(e) {
+    toast('Errore durante l\'approvazione', 'err');
+  }
+};
+window.rifiutaUtente = async function(user) {
+  try {
+    await update(ref(db, 'utenti/' + user), { stato: 'rifiutato', ruolo: null });
+    toast('Registrazione di ' + user + ' rifiutata', '');
+  } catch(e) {
+    toast('Errore durante il rifiuto', 'err');
+  }
+};
+function renderApprovazioni(utenti) {
+  const list  = document.getElementById('approvazioni-list');
+  const empty = document.getElementById('approvazioni-empty');
+  if (!list) return;
+  const pending = Object.entries(utenti || {}).filter(([_, r]) => r && r.stato === 'pending');
+  const badge = document.getElementById('nav-notif-badge');
+  const btn   = document.getElementById('nav-notif-btn');
+  if (btn && badge) {
+    const puoVedere = window._ruoloCorrente === 'admin' || sessionStorage.getItem('admin_ok') === '1';
+    if (puoVedere && pending.length) { btn.style.display = 'flex'; badge.textContent = pending.length; }
+    else { btn.style.display = 'none'; }
+  }
+  if (!pending.length) { list.innerHTML = ''; empty.style.display = 'block'; return; }
+  empty.style.display = 'none';
+  list.innerHTML = pending.map(([user, rec]) => `
+    <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);flex-wrap:wrap">
+      <div style="flex:1;min-width:120px">
+        <div style="font-weight:700;font-size:13px">${user}</div>
+        <div style="font-size:11px;color:var(--ink3)">Richiesta il ${fmtDT(rec.createdAt)}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <select id="ruolo-select-${user}" style="font-family:var(--font);font-size:12px;padding:6px 8px;border:1.5px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--ink)">
+          <option value="admin">Admin</option>
+          <option value="ufficio" selected>Ufficio</option>
+          <option value="manutenzione">Manutenzione</option>
+          <option value="trasportatore">Trasportatore</option>
+        </select>
+        <button class="btn btn-primary btn-sm" onclick="approvaUtente('${user}')">✓ Approva</button>
+        <button class="btn btn-danger btn-sm" onclick="rifiutaUtente('${user}')">✕ Rifiuta</button>
+      </div>
+    </div>
+  `).join('');
+}
+let _ultimiUtenti = {};
+function subscribeUtenti() {
+  if (!db) return;
+  onValue(ref(db, 'utenti'), snap => { _ultimiUtenti = snap.val() || {}; renderApprovazioni(_ultimiUtenti); });
 }
 
 // ── PIN CONFIG ─────────────────────────────────────
@@ -2250,6 +2379,7 @@ window.verificaPin = function() {
     chiudiPin();
     document.getElementById('nav-tab-setup').style.display = '';
     sessionStorage.setItem('admin_ok', '1');
+    renderApprovazioni(_ultimiUtenti);
     switchView('setup');
   } else {
     document.getElementById('pin-error').textContent = '❌ PIN errato';
@@ -2350,6 +2480,7 @@ document.addEventListener('click', function(e) {
   saveConfig(hardcodedCfg);
   await initFirebase(hardcodedCfg);
   await verificaSessioneAuth();
+  subscribeUtenti();
 })();
 </script>
 </body>
