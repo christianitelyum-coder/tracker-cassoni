@@ -8,16 +8,16 @@
 /* ── RESET & BASE ──────────────────────────────── */
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --ink:#1a1f2e;--ink2:#4a5568;--ink3:#8896aa;
-  --bg:#f0f2f7;--surface:#fff;--surface2:#f7f9fc;
-  --green:#0a7c4e;--green-l:#e6f7f0;--green-d:#065c39;
+  --ink:#0f3350;--ink2:#35566d;--ink3:#7b93a3;
+  --bg:#eef6f5;--surface:#fff;--surface2:#f2f8f7;
+  --green:#2fae9e;--green-l:#dbf3ef;--green-d:#1f8a7c;
   --red:#c0392b;--red-l:#fdf0ee;
   --amber:#b45309;--amber-l:#fef3c7;
-  --blue:#1a4f8a;--blue-l:#e8f0fc;
-  --border:#dde3ef;
+  --blue:#3d6c8a;--blue-l:#e4eef2;
+  --border:#d7e6e3;
   --radius:10px;--radius-sm:7px;
-  --shadow:0 2px 12px rgba(26,31,46,.09);
-  --shadow-lg:0 8px 32px rgba(26,31,46,.14);
+  --shadow:0 2px 12px rgba(15,51,80,.09);
+  --shadow-lg:0 8px 32px rgba(15,51,80,.14);
   --font:'Inter',system-ui,sans-serif;
 }
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
@@ -25,14 +25,15 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);min-height:10
 
 /* ── NAVBAR ─────────────────────────────────────── */
 .nav{background:var(--ink);color:#fff;padding:0 1.5rem;display:flex;align-items:center;gap:0;height:52px;position:sticky;top:0;z-index:100;box-shadow:0 2px 8px rgba(0,0,0,.25)}
-.nav-brand{font-size:15px;font-weight:700;letter-spacing:-.01em;margin-right:auto;display:flex;align-items:center;gap:8px}
-.nav-brand span{background:#0a7c4e;padding:3px 8px;border-radius:5px;font-size:11px;font-weight:800;letter-spacing:.06em}
+.nav-brand{font-size:15px;font-weight:800;letter-spacing:-.01em;margin-right:auto;display:flex;align-items:center;gap:8px}
+.nav-brand span{background:#2fae9e;padding:3px 8px;border-radius:5px;font-size:11px;font-weight:800;letter-spacing:.06em}
+.brand-mark{display:inline-block;width:0;height:0;border-top:7px solid transparent;border-bottom:7px solid transparent;border-left:9px solid var(--green);transform:skewY(-10deg);flex-shrink:0}
 .nav-tabs{display:flex;height:100%}
 .nav-tab{padding:0 18px;height:100%;display:flex;align-items:center;font-size:13px;font-weight:500;color:rgba(255,255,255,.55);cursor:pointer;border:none;background:none;border-bottom:3px solid transparent;transition:all .15s;letter-spacing:.01em}
-.nav-tab.active{color:#fff;border-bottom-color:#0a7c4e}
+.nav-tab.active{color:#fff;border-bottom-color:#2fae9e}
 .nav-tab:hover:not(.active){color:rgba(255,255,255,.85)}
 .firebase-dot{width:8px;height:8px;border-radius:50%;background:#555;margin-left:12px;transition:background .3s;flex-shrink:0}
-.firebase-dot.ok{background:#0a7c4e}
+.firebase-dot.ok{background:#2fae9e}
 .firebase-dot.err{background:#c0392b}
 
 /* ── VIEWS ───────────────────────────────────────── */
@@ -53,13 +54,13 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);min-height:10
 .dash-grid{display:grid;grid-template-columns:1fr 1fr;gap:1.25rem}
 .card{background:var(--surface);border-radius:var(--radius);box-shadow:var(--shadow);border:1px solid var(--border);overflow:hidden}
 .card-header{padding:.9rem 1.25rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
-.card-title{font-size:13px;font-weight:700;color:var(--ink);display:flex;align-items:center;gap:7px}
+.card-title{font-size:13px;font-weight:800;letter-spacing:-.01em;color:var(--ink);display:flex;align-items:center;gap:7px}
 .card-body{padding:1.1rem 1.25rem}
 
 /* Piazzale live */
 .piazzale-grid{display:flex;flex-wrap:wrap;gap:8px}
 .cassone-chip{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:20px;font-size:12px;font-weight:600;border:1.5px solid;cursor:default;transition:all .15s}
-.chip-piazzale{background:var(--green-l);border-color:#a7e5cc;color:var(--green-d)}
+.chip-piazzale{background:var(--green-l);border-color:#a3ddd3;color:var(--green-d)}
 .chip-fuori{background:var(--red-l);border-color:#f0b8b3;color:var(--red)}
 .chip-empty{color:var(--ink3);font-style:italic;font-size:12px;padding:8px 0}
 
@@ -76,7 +77,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);min-height:10
 /* Alerts DDT */
 .alert-list{display:flex;flex-direction:column;gap:8px}
 .alert-row{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:var(--radius-sm);background:var(--amber-l);border:1px solid #fcd34d;font-size:12px}
-.alert-row.alert-in{background:var(--green-l);border-color:#a7e5cc}
+.alert-row.alert-in{background:var(--green-l);border-color:#a3ddd3}
 .alert-icon{font-size:16px;flex-shrink:0}
 .alert-text{flex:1;font-weight:500;color:var(--ink)}
 .btn-ddt{padding:5px 12px;border-radius:6px;border:none;font-size:11px;font-weight:700;cursor:pointer;transition:all .15s;font-family:var(--font)}
@@ -89,11 +90,11 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);min-height:10
 .boll-filters{display:flex;gap:10px;margin-bottom:1.25rem;flex-wrap:wrap;align-items:center}
 .boll-filters input,.boll-filters select{font-family:var(--font);font-size:13px;padding:8px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--ink);outline:none}
 .boll-filters input:focus,.boll-filters select:focus{border-color:var(--green)}
-.btn{padding:8px 16px;border-radius:var(--radius-sm);border:none;font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;display:inline-flex;align-items:center;gap:6px}
+.btn{padding:8px 16px;border-radius:var(--radius-sm);border:1.5px solid transparent;font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer;transition:all .15s;display:inline-flex;align-items:center;gap:6px}
 .btn-primary{background:var(--green);color:#fff}
 .btn-primary:hover{background:var(--green-d)}
-.btn-ghost{background:var(--surface2);color:var(--ink2);border:1.5px solid var(--border)}
-.btn-ghost:hover{background:var(--border)}
+.btn-ghost{background:transparent;color:var(--ink);border-color:var(--border)}
+.btn-ghost:hover{border-color:var(--green);color:var(--green-d);background:var(--green-l)}
 .btn-danger{background:var(--red-l);color:var(--red);border:1px solid #f0b8b3}
 .btn-sm{padding:5px 10px;font-size:11px}
 
@@ -108,13 +109,13 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);min-height:10
 .status-pill[onclick]{transition:opacity .15s;border:1.5px dashed currentColor}
 .status-pill[onclick]:hover{opacity:.75}
 .pill-pend{background:var(--amber-l);color:var(--amber)}
-.ddt-tag{font-size:10px;font-weight:700;padding:2px 7px;border-radius:5px;background:#e8f0fc;color:var(--blue);border:1px solid #c5d9f7;display:inline-block}
+.ddt-tag{font-size:10px;font-weight:700;padding:2px 7px;border-radius:5px;background:#e4eef2;color:var(--blue);border:1px solid #c3d8e0;display:inline-block}
 .ddt-tag.pend{background:var(--amber-l);color:var(--amber);border-color:#fcd34d}
 
 /* ── TRASPORTATORE (mobile) ──────────────────────── */
 .trasp{max-width:420px;margin:0 auto;padding:1rem}
 .trasp-hero{background:linear-gradient(135deg,var(--green-d),var(--green));border-radius:var(--radius);padding:1.5rem;color:#fff;text-align:center;margin-bottom:1.25rem;box-shadow:var(--shadow)}
-.trasp-hero h2{font-size:1.15rem;font-weight:800;margin-bottom:4px}
+.trasp-hero h2{font-size:1.15rem;font-weight:800;letter-spacing:-.02em;margin-bottom:4px}
 .trasp-hero p{font-size:12px;opacity:.75}
 
 .scan-area{background:var(--surface);border-radius:var(--radius);padding:1.25rem;box-shadow:var(--shadow);border:1px solid var(--border);margin-bottom:1rem;position:relative}
@@ -139,7 +140,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);min-height:10
 .form-ctrl{width:100%;font-family:var(--font);font-size:14px;padding:10px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);color:var(--ink);background:var(--surface2);outline:none;transition:border-color .15s}
 .form-ctrl:focus{border-color:var(--green);background:#fff}
 
-.cassone-found{background:var(--green-l);border:2px solid #a7e5cc;border-radius:var(--radius-sm);padding:10px 14px;display:none;margin-bottom:.9rem}
+.cassone-found{background:var(--green-l);border:2px solid #a3ddd3;border-radius:var(--radius-sm);padding:10px 14px;display:none;margin-bottom:.9rem}
 .cassone-found.visible{display:block}
 .cassone-found-id{font-size:22px;font-weight:800;color:var(--green-d);letter-spacing:.08em}
 .cassone-found-tipo{font-size:12px;color:var(--green);font-weight:600}
@@ -161,7 +162,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);min-height:10
 .modal-overlay.open{display:flex}
 .modal{background:var(--surface);border-radius:var(--radius);box-shadow:var(--shadow-lg);width:min(620px,100%);max-height:90vh;overflow-y:auto}
 .modal-header{padding:1.1rem 1.5rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
-.modal-title{font-size:15px;font-weight:700}
+.modal-title{font-size:15px;font-weight:800;letter-spacing:-.01em}
 .modal-close{background:none;border:none;font-size:22px;cursor:pointer;color:var(--ink3);line-height:1;padding:0 4px}
 .modal-body{padding:1.5rem}
 .ddt-lbl{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--ink3);display:block;margin-bottom:4px}
@@ -178,7 +179,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);min-height:10
 /* ── SETUP ───────────────────────────────────────── */
 .setup{max-width:520px;margin:3rem auto;padding:1.5rem}
 .setup-card{background:var(--surface);border-radius:var(--radius);padding:2rem;box-shadow:var(--shadow-lg);border:1px solid var(--border)}
-.setup-card h2{font-size:18px;font-weight:800;margin-bottom:.5rem}
+.setup-card h2{font-size:18px;font-weight:800;letter-spacing:-.02em;margin-bottom:.5rem}
 .setup-card p{font-size:13px;color:var(--ink2);margin-bottom:1.5rem;line-height:1.6}
 .setup-form-row{margin-bottom:1rem}
 .setup-form-row label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ink3);display:block;margin-bottom:5px}
@@ -222,6 +223,42 @@ body.modo-autista .autista-header { display: block }
   z-index: 50;
   font-family: var(--font);
 }
+/* ── AUTENTICAZIONE — pagina iniziale login/registrazione ── */
+body.auth-locked{overflow:hidden}
+.auth-overlay{position:fixed;inset:0;background:var(--ink);z-index:5000;display:none;overflow-y:auto;overflow-x:hidden}
+.auth-overlay.open{display:block}
+.auth-page{display:flex;min-height:100vh;max-width:100vw}
+.auth-brand-panel{flex:1 1 45%;background:linear-gradient(135deg,var(--ink) 55%,var(--green-d) 160%);color:#fff;display:flex;flex-direction:column;justify-content:center;padding:3rem 3.5rem;position:relative;overflow:hidden;min-width:0}
+.auth-brand-panel::before{content:'';position:absolute;right:-70px;top:-70px;width:280px;height:280px;background:var(--green);opacity:.16;border-radius:28px;transform:rotate(24deg) skewY(-10deg)}
+.auth-brand-panel::after{content:'';position:absolute;left:-50px;bottom:-90px;width:220px;height:220px;background:var(--green);opacity:.10;border-radius:28px;transform:rotate(-18deg) skewY(-10deg)}
+.auth-brand-mark-lg{width:0;height:0;border-top:22px solid transparent;border-bottom:22px solid transparent;border-left:28px solid var(--green);transform:skewY(-10deg);margin-bottom:1.5rem;position:relative}
+.auth-brand-panel h1{font-size:2.1rem;font-weight:800;letter-spacing:-.02em;line-height:1.12;margin-bottom:.85rem;position:relative}
+.auth-brand-panel p{font-size:14px;color:rgba(255,255,255,.72);max-width:320px;line-height:1.5;position:relative}
+.auth-form-panel{flex:1 1 55%;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:2.5rem 1.5rem}
+.auth-card{background:var(--surface);border-radius:var(--radius);box-shadow:var(--shadow-lg);width:min(380px,100%);padding:2rem 1.75rem}
+.auth-card h2{font-size:19px;font-weight:800;letter-spacing:-.01em;margin-bottom:.25rem;text-align:center}
+.auth-sub{font-size:12px;color:var(--ink3);text-align:center;margin-bottom:1.25rem}
+.auth-tabs{display:flex;gap:6px;margin-bottom:1.25rem;background:var(--surface2);border-radius:var(--radius-sm);padding:4px}
+.auth-tab{flex:1;text-align:center;padding:8px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;color:var(--ink3);border:none;background:none;font-family:var(--font)}
+.auth-tab.active{background:var(--surface);color:var(--ink);box-shadow:var(--shadow)}
+.auth-form-row{margin-bottom:.9rem}
+.auth-form-row label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--ink3);display:block;margin-bottom:5px}
+.auth-error{color:var(--red);font-size:12px;min-height:16px;margin-top:2px;text-align:center}
+@media(max-width:760px){
+  .auth-page{display:block}
+  .auth-brand-panel{width:100%;padding:2.25rem 1.5rem 2.75rem;text-align:center;align-items:center}
+  .auth-brand-panel::before,.auth-brand-panel::after{display:none}
+  .auth-brand-mark-lg{margin:0 auto 1rem}
+  .auth-brand-panel p{margin:0 auto;max-width:100%}
+  .auth-brand-panel h1{font-size:1.6rem}
+  .auth-form-panel{width:100%;padding:1.75rem 1.25rem;box-sizing:border-box}
+  .auth-card{width:100%;margin:0 auto}
+}
+.auth-user-badge{display:none;align-items:center;gap:6px;margin-left:12px;font-size:12px;color:rgba(255,255,255,.75);flex-shrink:0}
+.auth-user-badge button{background:none;border:none;color:rgba(255,255,255,.6);cursor:pointer;font-size:13px;padding:0;line-height:1}
+.auth-user-badge button:hover{color:#fff}
+.autista-user-bar{display:none;margin-top:8px;font-size:12px;opacity:.9;align-items:center;justify-content:center;gap:10px}
+.autista-user-bar button{background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:20px;padding:4px 12px;font-size:11px;cursor:pointer;font-family:var(--font)}
 @media(max-width:768px){
   .kpi-row{grid-template-columns:1fr 1fr}
   .dash-grid{grid-template-columns:1fr}
@@ -239,11 +276,15 @@ body.modo-autista .autista-header { display: block }
 <div class="autista-header">
   <h1>🚛 Movimento Cassone</h1>
   <p>Centro Risorse S.p.A. — Registra uscita o rientro</p>
+  <div class="autista-user-bar" id="autista-user-bar">
+    <span id="autista-user-label"></span>
+    <button onclick="logoutUtente()">Esci</button>
+  </div>
 </div>
 
 <!-- NAVBAR -->
 <nav class="nav">
-  <div class="nav-brand">🚛 <span>TRACKER</span> Cassoni</div>
+  <div class="nav-brand">🚛 <span>TRACKER</span> Cassoni <i class="brand-mark"></i></div>
   <div class="nav-tabs">
     <button class="nav-tab active" onclick="switchView('dashboard')">📊 Dashboard</button>
     <button class="nav-tab" onclick="switchView('bollettazione')">📋 Bollettazione</button>
@@ -252,6 +293,10 @@ body.modo-autista .autista-header { display: block }
     <button class="nav-tab" id="nav-tab-setup" onclick="richiestaPin()" style="display:none">⚙️ Config</button>
   </div>
   <div class="firebase-dot" id="fb-dot" title="Firebase: non connesso"></div>
+  <div class="auth-user-badge" id="auth-user-badge">
+    <span id="auth-user-label"></span>
+    <button onclick="logoutUtente()" title="Esci">⎋</button>
+  </div>
 </nav>
 
 <!-- ════════ DASHBOARD ════════ -->
@@ -347,7 +392,7 @@ body.modo-autista .autista-header { display: block }
 <!-- ════════ MANUTENZIONE ════════ -->
 <div class="view" id="view-manutenzione">
 <div class="boll-toolbar" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
-  <h2 style="margin:0;font-size:16px;font-weight:700">🔧 Cassoni segnalati per manutenzione</h2>
+  <h2 style="margin:0;font-size:16px;font-weight:800;letter-spacing:-.01em">🔧 Cassoni segnalati per manutenzione</h2>
   <div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">
     <select id="man-filtro-flag" onchange="renderManutenzione()" style="font-family:var(--font);font-size:13px;padding:6px 10px;border:1.5px solid var(--border);border-radius:var(--r);background:var(--surface);color:var(--ink);outline:none">
       <option value="">Tutti i flag</option>
@@ -410,7 +455,7 @@ body.modo-autista .autista-header { display: block }
       <div style="position:relative;background:#000;min-height:280px">
         <video id="qr-video" style="width:100%;display:block;max-height:340px;object-fit:cover" playsinline muted></video>
         <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none">
-          <div style="width:200px;height:200px;border:3px solid #0a7c4e;border-radius:10px;box-shadow:0 0 0 2000px rgba(0,0,0,.5)"></div>
+          <div style="width:200px;height:200px;border:3px solid #2fae9e;border-radius:10px;box-shadow:0 0 0 2000px rgba(0,0,0,.5)"></div>
         </div>
         <div id="qr-status" style="position:absolute;bottom:10px;left:0;right:0;text-align:center;color:#fff;font-size:12px;font-weight:700;text-shadow:0 1px 4px #000;pointer-events:none">Avvio fotocamera…</div>
       </div>
@@ -445,25 +490,25 @@ body.modo-autista .autista-header { display: block }
     <div class="form-row">
       <label class="form-lbl">Segnalazioni</label>
       <div style="display:flex;flex-direction:column;gap:8px;margin-top:4px">
-        <label style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--s2,#f7f9fc);border-radius:7px;border:1.5px solid var(--border,#dde3ef);cursor:pointer;font-size:13px;font-weight:500">
+        <label style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--s2,#f2f8f7);border-radius:7px;border:1.5px solid var(--border,#d7e6e3);cursor:pointer;font-size:13px;font-weight:500">
           <input type="checkbox" id="flag-tag" onchange="aggiornaSegnalazioni()" style="width:16px;height:16px;accent-color:#c0392b;cursor:pointer">
           🏷️ Manca tag
         </label>
-        <label style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--s2,#f7f9fc);border-radius:7px;border:1.5px solid var(--border,#dde3ef);cursor:pointer;font-size:13px;font-weight:500">
+        <label style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--s2,#f2f8f7);border-radius:7px;border:1.5px solid var(--border,#d7e6e3);cursor:pointer;font-size:13px;font-weight:500">
           <input type="checkbox" id="flag-rotture" onchange="aggiornaSegnalazioni()" style="width:16px;height:16px;accent-color:#c0392b;cursor:pointer">
           🔧 Presenta rotture
         </label>
-        <label style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--s2,#f7f9fc);border-radius:7px;border:1.5px solid var(--border,#dde3ef);cursor:pointer;font-size:13px;font-weight:500">
+        <label style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--s2,#f2f8f7);border-radius:7px;border:1.5px solid var(--border,#d7e6e3);cursor:pointer;font-size:13px;font-weight:500">
           <input type="checkbox" id="flag-telo" onchange="aggiornaSegnalazioni()" style="width:16px;height:16px;accent-color:#c0392b;cursor:pointer">
           🪟 Telo danneggiato
         </label>
-        <label style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--s2,#f7f9fc);border-radius:7px;border:1.5px solid var(--border,#dde3ef);cursor:pointer;font-size:13px;font-weight:500">
+        <label style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--s2,#f2f8f7);border-radius:7px;border:1.5px solid var(--border,#d7e6e3);cursor:pointer;font-size:13px;font-weight:500">
           <input type="checkbox" id="flag-altro" onchange="aggiornaSegnalazioni()" style="width:16px;height:16px;accent-color:#c0392b;cursor:pointer">
           ⚠️ Altro
         </label>
         <textarea id="flag-altro-testo" placeholder="Descrivi il problema..." rows="2"
-          style="display:none;font-family:var(--sans,sans-serif);font-size:13px;padding:8px 12px;border:1.5px solid var(--border,#dde3ef);border-radius:7px;background:var(--s2,#f7f9fc);color:var(--ink,#0f1923);resize:vertical;outline:none;transition:border-color .15s"
-          onfocus="this.style.borderColor='var(--green,#0a7c4e)'" onblur="this.style.borderColor='var(--border,#dde3ef)'"></textarea>
+          style="display:none;font-family:var(--sans,sans-serif);font-size:13px;padding:8px 12px;border:1.5px solid var(--border,#d7e6e3);border-radius:7px;background:var(--s2,#f2f8f7);color:var(--ink,#0f3350);resize:vertical;outline:none;transition:border-color .15s"
+          onfocus="this.style.borderColor='var(--green,#2fae9e)'" onblur="this.style.borderColor='var(--border,#d7e6e3)'"></textarea>
       </div>
     </div>
     <div class="action-btns">
@@ -553,10 +598,10 @@ body.modo-autista .autista-header { display: block }
     <hr style="margin:1.5rem 0;border:none;border-top:1px solid var(--border)">
     <h3 style="font-size:13px;font-weight:700;margin-bottom:.75rem">🔗 Link rapidi</h3>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
-      <a id="link-admin" href="#" target="_blank" style="flex:1;min-width:140px;padding:10px 12px;background:var(--blue-l);border:1.5px solid #c5d9f7;border-radius:var(--radius-sm);font-size:12px;font-weight:700;color:var(--blue);text-decoration:none;display:flex;align-items:center;gap:8px">
+      <a id="link-admin" href="#" target="_blank" style="flex:1;min-width:140px;padding:10px 12px;background:var(--blue-l);border:1.5px solid #c3d8e0;border-radius:var(--radius-sm);font-size:12px;font-weight:700;color:var(--blue);text-decoration:none;display:flex;align-items:center;gap:8px">
         🖥️ Versione ufficio / admin
       </a>
-      <a id="link-autista" href="#" target="_blank" style="flex:1;min-width:140px;padding:10px 12px;background:var(--green-l);border:1.5px solid #a7e5cc;border-radius:var(--radius-sm);font-size:12px;font-weight:700;color:var(--green-d);text-decoration:none;display:flex;align-items:center;gap:8px">
+      <a id="link-autista" href="#" target="_blank" style="flex:1;min-width:140px;padding:10px 12px;background:var(--green-l);border:1.5px solid #a3ddd3;border-radius:var(--radius-sm);font-size:12px;font-weight:700;color:var(--green-d);text-decoration:none;display:flex;align-items:center;gap:8px">
         🚛 Versione autista
       </a>
     </div>
@@ -564,7 +609,7 @@ body.modo-autista .autista-header { display: block }
     <hr style="margin:1.5rem 0;border:none;border-top:1px solid var(--border)">
     <h3 style="font-size:13px;font-weight:700;margin-bottom:.75rem">👥 Clienti frequenti</h3>
     <!-- Import da Excel -->
-    <div style="background:var(--green-l);border:1.5px dashed #a7e5cc;border-radius:var(--radius-sm);padding:10px 14px;margin-bottom:.75rem">
+    <div style="background:var(--green-l);border:1.5px dashed #a3ddd3;border-radius:var(--radius-sm);padding:10px 14px;margin-bottom:.75rem">
       <div style="font-size:12px;font-weight:700;color:var(--green-d);margin-bottom:5px">📥 Importa clienti da Excel</div>
       <div style="font-size:11px;color:var(--ink2);margin-bottom:7px">Prima colonna = Ragione Sociale. Importa tutta la rubrica in un colpo.</div>
       <label style="padding:7px 12px;background:var(--green);color:#fff;border-radius:var(--radius-sm);font-size:12px;font-weight:700;cursor:pointer;display:inline-block">
@@ -602,6 +647,63 @@ body.modo-autista .autista-header { display: block }
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="chiudiPin()">Annulla</button>
       <button class="btn btn-primary" onclick="verificaPin()">🔓 Accedi</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════════ AUTH OVERLAY — pagina iniziale login / registrazione ════════ -->
+<div class="auth-overlay" id="auth-overlay">
+  <div class="auth-page">
+    <div class="auth-brand-panel">
+      <i class="auth-brand-mark-lg"></i>
+      <h1>🚛 Tracker<br>Cassoni</h1>
+      <p>Centro Risorse S.p.A. — Gestione e tracciamento cassoni scarrabili, uscite, rientri e DDT in tempo reale.</p>
+    </div>
+    <div class="auth-form-panel">
+      <div class="auth-card">
+        <h2 id="auth-card-title">Bentornato</h2>
+        <p class="auth-sub" id="auth-card-sub">Accedi con il tuo account per continuare</p>
+        <div class="auth-tabs">
+          <button class="auth-tab active" id="auth-tab-login" onclick="switchAuthTab('login')">Accedi</button>
+          <button class="auth-tab" id="auth-tab-register" onclick="switchAuthTab('register')">Registrati</button>
+        </div>
+        <div id="auth-login-form">
+      <div class="auth-form-row">
+        <label>Nome utente</label>
+        <input class="form-ctrl" id="auth-login-user" placeholder="es. mrossi" autocomplete="username"
+          onkeydown="if(event.key==='Enter')document.getElementById('auth-login-pin').focus()">
+      </div>
+      <div class="auth-form-row">
+        <label>PIN (4 cifre)</label>
+        <input class="form-ctrl" id="auth-login-pin" type="password" inputmode="numeric" maxlength="4"
+          placeholder="● ● ● ●" style="text-align:center;letter-spacing:.4em;font-size:18px" autocomplete="current-password"
+          onkeydown="if(event.key==='Enter')eseguiLogin()">
+      </div>
+      <div class="auth-error" id="auth-login-error"></div>
+      <button class="btn btn-primary" style="width:100%;justify-content:center;margin-top:.5rem" onclick="eseguiLogin()">🔓 Accedi</button>
+    </div>
+    <div id="auth-register-form" style="display:none">
+      <div class="auth-form-row">
+        <label>Nome utente</label>
+        <input class="form-ctrl" id="auth-reg-user" placeholder="es. mrossi" autocomplete="username"
+          onkeydown="if(event.key==='Enter')document.getElementById('auth-reg-pin').focus()">
+      </div>
+      <div class="auth-form-row">
+        <label>PIN (4 cifre)</label>
+        <input class="form-ctrl" id="auth-reg-pin" type="password" inputmode="numeric" maxlength="4"
+          placeholder="● ● ● ●" style="text-align:center;letter-spacing:.4em;font-size:18px" autocomplete="new-password"
+          onkeydown="if(event.key==='Enter')document.getElementById('auth-reg-pin2').focus()">
+      </div>
+      <div class="auth-form-row">
+        <label>Conferma PIN</label>
+        <input class="form-ctrl" id="auth-reg-pin2" type="password" inputmode="numeric" maxlength="4"
+          placeholder="● ● ● ●" style="text-align:center;letter-spacing:.4em;font-size:18px" autocomplete="new-password"
+          onkeydown="if(event.key==='Enter')eseguiRegistrazione()">
+      </div>
+        <div class="auth-error" id="auth-register-error"></div>
+        <button class="btn btn-primary" style="width:100%;justify-content:center;margin-top:.5rem" onclick="eseguiRegistrazione()">✓ Crea account</button>
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -913,7 +1015,7 @@ window.cercaCassone = function(val) {
       .filter(m => m.cassoneId === id)
       .sort((a,b) => b.ts > a.ts ? 1 : -1);
     const ultimo = movs[0];
-    return `<div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:var(--radius-sm);background:${isOut?'var(--red-l)':'var(--green-l)'};margin-bottom:5px;border:1px solid ${isOut?'#f0b8b3':'#a7e5cc'}">
+    return `<div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:var(--radius-sm);background:${isOut?'var(--red-l)':'var(--green-l)'};margin-bottom:5px;border:1px solid ${isOut?'#f0b8b3':'#a3ddd3'}">
       <span style="font-size:16px">${isOut?'🔴':'✅'}</span>
       <div style="flex:1">
         <div style="font-size:14px;font-weight:800;color:var(--ink)">${id}</div>
@@ -2032,6 +2134,102 @@ document.addEventListener('keydown', function(e) {
   if (e.key === 'Escape') chiudiCamera();
 });
 
+// ── AUTENTICAZIONE UTENTI (nome utente + PIN a 4 cifre) ──
+async function sha256Hex(text) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+}
+function normalizzaUtente(u) {
+  return (u || '').trim().toLowerCase().replace(/[.#$/\[\]\s]/g, '_');
+}
+function aggiornaBadgeUtente(user) {
+  const navLabel = document.getElementById('auth-user-label');
+  const navBadge = document.getElementById('auth-user-badge');
+  if (navLabel && navBadge) { navLabel.textContent = '👤 ' + user; navBadge.style.display = 'flex'; }
+  const aLabel = document.getElementById('autista-user-label');
+  const aBar   = document.getElementById('autista-user-bar');
+  if (aLabel && aBar) { aLabel.textContent = '👤 ' + user; aBar.style.display = 'flex'; }
+}
+function completaLogin(user) {
+  localStorage.setItem('tracker_auth_user', user);
+  document.getElementById('auth-overlay').classList.remove('open');
+  document.body.classList.remove('auth-locked');
+  aggiornaBadgeUtente(user);
+}
+window.switchAuthTab = function(tab) {
+  document.getElementById('auth-tab-login').classList.toggle('active', tab === 'login');
+  document.getElementById('auth-tab-register').classList.toggle('active', tab === 'register');
+  document.getElementById('auth-login-form').style.display    = tab === 'login'    ? 'block' : 'none';
+  document.getElementById('auth-register-form').style.display = tab === 'register' ? 'block' : 'none';
+  document.getElementById('auth-login-error').textContent = '';
+  document.getElementById('auth-register-error').textContent = '';
+  document.getElementById('auth-card-title').textContent = tab === 'login' ? 'Bentornato' : 'Crea il tuo account';
+  document.getElementById('auth-card-sub').textContent   = tab === 'login'
+    ? 'Accedi con il tuo account per continuare'
+    : 'Scegli un nome utente e un PIN a 4 cifre';
+};
+window.eseguiLogin = async function() {
+  const errEl = document.getElementById('auth-login-error');
+  errEl.textContent = '';
+  const user = normalizzaUtente(document.getElementById('auth-login-user').value);
+  const pin  = document.getElementById('auth-login-pin').value;
+  if (!user || !/^\d{4}$/.test(pin)) { errEl.textContent = 'Inserisci nome utente e PIN a 4 cifre'; return; }
+  if (!db) { errEl.textContent = 'Connessione non disponibile, riprova'; return; }
+  try {
+    const snap = await get(ref(db, 'utenti/' + user));
+    const rec = snap.val();
+    const hash = await sha256Hex(pin);
+    if (!rec || rec.pin !== hash) { errEl.textContent = '❌ Nome utente o PIN errati'; return; }
+    completaLogin(user);
+  } catch(e) {
+    errEl.textContent = 'Errore di connessione, riprova';
+  }
+};
+window.eseguiRegistrazione = async function() {
+  const errEl = document.getElementById('auth-register-error');
+  errEl.textContent = '';
+  const user = normalizzaUtente(document.getElementById('auth-reg-user').value);
+  const pin  = document.getElementById('auth-reg-pin').value;
+  const pin2 = document.getElementById('auth-reg-pin2').value;
+  if (!user || user.length < 3) { errEl.textContent = 'Nome utente troppo corto (min. 3 caratteri)'; return; }
+  if (!/^\d{4}$/.test(pin)) { errEl.textContent = 'Il PIN deve essere di 4 cifre'; return; }
+  if (pin !== pin2) { errEl.textContent = 'I due PIN non coincidono'; return; }
+  if (!db) { errEl.textContent = 'Connessione non disponibile, riprova'; return; }
+  try {
+    const rRef = ref(db, 'utenti/' + user);
+    const snap = await get(rRef);
+    if (snap.exists()) { errEl.textContent = '❌ Nome utente già registrato'; return; }
+    const hash = await sha256Hex(pin);
+    await set(rRef, { pin: hash, createdAt: now() });
+    completaLogin(user);
+    toast('✓ Account creato', 'ok');
+  } catch(e) {
+    errEl.textContent = 'Errore durante la registrazione, riprova';
+  }
+};
+window.logoutUtente = function() {
+  localStorage.removeItem('tracker_auth_user');
+  location.reload();
+};
+async function verificaSessioneAuth() {
+  const overlay = document.getElementById('auth-overlay');
+  const user = localStorage.getItem('tracker_auth_user');
+  if (!user) { overlay.classList.add('open'); document.body.classList.add('auth-locked'); return; }
+  try {
+    const snap = await get(ref(db, 'utenti/' + user));
+    if (!snap.exists()) {
+      localStorage.removeItem('tracker_auth_user');
+      overlay.classList.add('open');
+      document.body.classList.add('auth-locked');
+      return;
+    }
+    aggiornaBadgeUtente(user);
+  } catch(e) {
+    // offline: mantieni la sessione locale senza bloccare l'app
+    aggiornaBadgeUtente(user);
+  }
+}
+
 // ── PIN CONFIG ─────────────────────────────────────
 const CONFIG_PIN = '7575';
 
@@ -2151,6 +2349,7 @@ document.addEventListener('click', function(e) {
   document.getElementById('cfg-projectid').value  = hardcodedCfg.projectId;
   saveConfig(hardcodedCfg);
   await initFirebase(hardcodedCfg);
+  await verificaSessioneAuth();
 })();
 </script>
 </body>
