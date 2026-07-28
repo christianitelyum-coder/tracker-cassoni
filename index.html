@@ -964,7 +964,7 @@ function renderKPI() {
   const piazzale = cas.filter(c => c.stato === 'piazzale').length;
   const fuori    = cas.filter(c => c.stato === 'fuori').length;
   const movs = Object.values(STATE.movimenti);
-  const ddtPend  = movs.filter(m => !m.ddtNumero).length;
+  const ddtPend  = movs.filter(m => m.tipo === 'USCITA' && !m.ddtNumero).length;
   const oggi     = movs.filter(m => isOggi(m.ts)).length;
   document.getElementById('kpi-piazzale').textContent  = piazzale;
   document.getElementById('kpi-fuori').textContent     = fuori;
@@ -1050,7 +1050,7 @@ window.cercaCassone = function(val) {
 function renderDDTAlerts() {
   const container = document.getElementById('ddt-alerts');
   const movs = Object.entries(STATE.movimenti)
-    .filter(([,m]) => !m.ddtNumero)
+    .filter(([,m]) => m.tipo === 'USCITA' && !m.ddtNumero)
     .sort((a,b) => b[1].ts > a[1].ts ? 1 : -1)
     .slice(0, 8);
   if (!movs.length) {
@@ -1094,7 +1094,7 @@ function renderBollettazione() {
   let movs = Object.entries(STATE.movimenti)
     .sort((a,b) => b[1].ts > a[1].ts ? 1 : -1);
   if (tipo)  movs = movs.filter(([,m]) => m.tipo === tipo);
-  if (ddt === 'pend')   movs = movs.filter(([,m]) => !m.ddtNumero);
+  if (ddt === 'pend')   movs = movs.filter(([,m]) => m.tipo === 'USCITA' && !m.ddtNumero);
   if (ddt === 'emesso') movs = movs.filter(([,m]) => !!m.ddtNumero);
   if (data)  movs = movs.filter(([,m]) => m.ts && m.ts.startsWith(data));
   if (cerca) movs = movs.filter(([,m]) =>
