@@ -1,0 +1,2920 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Tracker Cassoni</title>
+<style>
+/* ── RESET & BASE ──────────────────────────────── */
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --ink:#0f3350;--ink2:#35566d;--ink3:#7b93a3;
+  --bg:#eef6f5;--surface:#fff;--surface2:#f2f8f7;
+  --green:#2fae9e;--green-l:#dbf3ef;--green-d:#1f8a7c;
+  --red:#c0392b;--red-l:#fdf0ee;
+  --amber:#b45309;--amber-l:#fef3c7;
+  --blue:#3d6c8a;--blue-l:#e4eef2;
+  --border:#d7e6e3;
+  --radius:10px;--radius-sm:7px;
+  --shadow:0 2px 12px rgba(15,51,80,.09);
+  --shadow-lg:0 8px 32px rgba(15,51,80,.14);
+  --font:'Inter',system-ui,sans-serif;
+}
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+body{font-family:var(--font);background:var(--bg);color:var(--ink);min-height:100vh;-webkit-font-smoothing:antialiased}
+
+/* ── NAVBAR ─────────────────────────────────────── */
+.nav{background:var(--ink);color:#fff;padding:0 1.5rem;display:flex;align-items:center;gap:0;height:52px;position:sticky;top:0;z-index:100;box-shadow:0 2px 8px rgba(0,0,0,.25)}
+.nav-brand{font-size:15px;font-weight:800;letter-spacing:-.01em;margin-right:auto;display:flex;align-items:center;gap:8px}
+.nav-brand span{background:#2fae9e;padding:3px 8px;border-radius:5px;font-size:11px;font-weight:800;letter-spacing:.06em}
+.brand-mark{display:inline-block;width:0;height:0;border-top:7px solid transparent;border-bottom:7px solid transparent;border-left:9px solid var(--green);transform:skewY(-10deg);flex-shrink:0}
+.nav-tabs{display:flex;height:100%}
+.nav-tab{padding:0 18px;height:100%;display:flex;align-items:center;font-size:13px;font-weight:500;color:rgba(255,255,255,.55);cursor:pointer;border:none;background:none;border-bottom:3px solid transparent;transition:all .15s;letter-spacing:.01em}
+.nav-tab.active{color:#fff;border-bottom-color:#2fae9e}
+.nav-tab:hover:not(.active){color:rgba(255,255,255,.85)}
+.firebase-dot{width:8px;height:8px;border-radius:50%;background:#555;margin-left:12px;transition:background .3s;flex-shrink:0}
+.firebase-dot.ok{background:#2fae9e}
+.firebase-dot.err{background:#c0392b}
+
+/* ── VIEWS ───────────────────────────────────────── */
+.view{display:none;min-height:calc(100vh - 52px)}
+.view.active{display:block}
+
+/* ── DASHBOARD ───────────────────────────────────── */
+.dash{max-width:1200px;margin:0 auto;padding:1.5rem}
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-bottom:1.5rem}
+.kpi{background:var(--surface);border-radius:var(--radius);padding:1.1rem 1.25rem;box-shadow:var(--shadow);border:1px solid var(--border)}
+.kpi-val{font-size:2.2rem;font-weight:800;line-height:1;margin-bottom:4px}
+.kpi-lbl{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--ink3)}
+.kpi-val.green{color:var(--green)}
+.kpi-val.red{color:var(--red)}
+.kpi-val.amber{color:var(--amber)}
+.kpi-val.blue{color:var(--blue)}
+
+.dash-grid{display:grid;grid-template-columns:1fr 1fr;gap:1.25rem}
+.card{background:var(--surface);border-radius:var(--radius);box-shadow:var(--shadow);border:1px solid var(--border);overflow:hidden}
+.card-header{padding:.9rem 1.25rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.card-title{font-size:13px;font-weight:800;letter-spacing:-.01em;color:var(--ink);display:flex;align-items:center;gap:7px}
+.card-body{padding:1.1rem 1.25rem}
+
+/* Piazzale live */
+.piazzale-grid{display:flex;flex-wrap:wrap;gap:8px}
+.cassone-chip{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:20px;font-size:12px;font-weight:600;border:1.5px solid;cursor:default;transition:all .15s}
+.chip-piazzale{background:var(--green-l);border-color:#a3ddd3;color:var(--green-d)}
+.chip-fuori{background:var(--red-l);border-color:#f0b8b3;color:var(--red)}
+.chip-empty{color:var(--ink3);font-style:italic;font-size:12px;padding:8px 0}
+
+/* Movimenti recenti */
+.mov-list{display:flex;flex-direction:column;gap:6px;max-height:340px;overflow-y:auto}
+.mov-row{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:var(--radius-sm);background:var(--surface2);font-size:12px}
+.mov-badge{padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;white-space:nowrap}
+.badge-out{background:var(--red-l);color:var(--red)}
+.badge-in{background:var(--green-l);color:var(--green-d)}
+.mov-cassone{font-weight:700;color:var(--ink)}
+.mov-info{color:var(--ink2);flex:1}
+.mov-time{color:var(--ink3);font-size:11px;white-space:nowrap}
+
+/* Alerts DDT */
+.alert-list{display:flex;flex-direction:column;gap:8px}
+.alert-row{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:var(--radius-sm);background:var(--amber-l);border:1px solid #fcd34d;font-size:12px}
+.alert-row.alert-in{background:var(--green-l);border-color:#a3ddd3}
+.alert-icon{font-size:16px;flex-shrink:0}
+.alert-text{flex:1;font-weight:500;color:var(--ink)}
+.btn-ddt{padding:5px 12px;border-radius:6px;border:none;font-size:11px;font-weight:700;cursor:pointer;transition:all .15s;font-family:var(--font)}
+.btn-ddt-out{background:var(--amber);color:#fff}
+.btn-ddt-in{background:var(--green);color:#fff}
+.btn-ddt:hover{opacity:.85}
+
+/* ── BOLLETTAZIONE ───────────────────────────────── */
+.boll{max-width:1100px;margin:0 auto;padding:1.5rem}
+.boll-filters{display:flex;gap:10px;margin-bottom:1.25rem;flex-wrap:wrap;align-items:center}
+.boll-filters input,.boll-filters select{font-family:var(--font);font-size:13px;padding:8px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--ink);outline:none}
+.boll-filters input:focus,.boll-filters select:focus{border-color:var(--green)}
+.btn{padding:8px 16px;border-radius:var(--radius-sm);border:1.5px solid transparent;font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer;transition:all .15s;display:inline-flex;align-items:center;gap:6px}
+.btn-primary{background:var(--green);color:#fff}
+.btn-primary:hover{background:var(--green-d)}
+.btn-ghost{background:transparent;color:var(--ink);border-color:var(--border)}
+.btn-ghost:hover{border-color:var(--green);color:var(--green-d);background:var(--green-l)}
+.btn-danger{background:var(--red-l);color:var(--red);border:1px solid #f0b8b3}
+.btn-sm{padding:5px 10px;font-size:11px}
+
+.mov-table{width:100%;border-collapse:collapse;font-size:13px}
+.mov-table thead th{background:var(--ink);color:#fff;padding:9px 12px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;white-space:nowrap}
+.mov-table tbody tr{border-bottom:1px solid var(--border);transition:background .1s}
+.mov-table tbody tr:hover{background:var(--surface2)}
+.mov-table td{padding:9px 12px;vertical-align:middle}
+.status-pill{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:700}
+.pill-out{background:var(--red-l);color:var(--red)}
+.pill-in{background:var(--green-l);color:var(--green-d)}
+.status-pill[onclick]{transition:opacity .15s;border:1.5px dashed currentColor}
+.status-pill[onclick]:hover{opacity:.75}
+.pill-pend{background:var(--amber-l);color:var(--amber)}
+.ddt-tag{font-size:10px;font-weight:700;padding:2px 7px;border-radius:5px;background:#e4eef2;color:var(--blue);border:1px solid #c3d8e0;display:inline-block}
+.ddt-tag.pend{background:var(--amber-l);color:var(--amber);border-color:#fcd34d}
+
+/* ── TRASPORTATORE (mobile) ──────────────────────── */
+.trasp{max-width:420px;margin:0 auto;padding:1rem}
+.trasp-hero{background:linear-gradient(135deg,var(--green-d),var(--green));border-radius:var(--radius);padding:1.5rem;color:#fff;text-align:center;margin-bottom:1.25rem;box-shadow:var(--shadow)}
+.trasp-hero h2{font-size:1.15rem;font-weight:800;letter-spacing:-.02em;margin-bottom:4px}
+.trasp-hero p{font-size:12px;opacity:.75}
+
+.scan-area{background:var(--surface);border-radius:var(--radius);padding:1.25rem;box-shadow:var(--shadow);border:1px solid var(--border);margin-bottom:1rem;position:relative}
+.scan-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ink3);margin-bottom:8px}
+.scan-input{width:100%;font-family:var(--font);font-size:18px;font-weight:700;padding:14px 16px;border:2px solid var(--border);border-radius:var(--radius-sm);color:var(--ink);background:var(--surface2);outline:none;transition:border-color .15s;text-align:center;letter-spacing:.1em}
+.scan-input:focus{border-color:var(--green);background:#fff}
+.scan-hint{font-size:11px;color:var(--ink3);text-align:center;margin-top:6px}
+.scan-drop{display:none;position:absolute;left:0;right:0;background:var(--surface);border:1.5px solid var(--green);border-radius:var(--radius-sm);box-shadow:var(--shadow-lg);z-index:200;max-height:260px;overflow-y:auto;margin-top:2px}
+.scan-drop-item{padding:11px 14px;cursor:pointer;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border);transition:background .1s}
+.scan-drop-item:last-child{border-bottom:none}
+.scan-drop-item:hover,.scan-drop-item.sdactive{background:var(--green-l)}
+.scan-drop-code{font-size:15px;font-weight:800;color:var(--green-d);letter-spacing:.06em;min-width:72px}
+.scan-drop-tipo{font-size:11px;color:var(--ink2);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.scan-drop-stato{font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;flex-shrink:0}
+.stato-piazzale{background:var(--green-l);color:var(--green-d)}
+.stato-fuori{background:var(--red-l);color:var(--red)}
+
+.trasp-form{background:var(--surface);border-radius:var(--radius);padding:1.25rem;box-shadow:var(--shadow);border:1px solid var(--border);margin-bottom:1rem;display:none}
+.trasp-form.visible{display:block}
+.form-row{margin-bottom:.9rem}
+.form-lbl{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ink3);margin-bottom:5px;display:block}
+.form-ctrl{width:100%;font-family:var(--font);font-size:14px;padding:10px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);color:var(--ink);background:var(--surface2);outline:none;transition:border-color .15s}
+.form-ctrl:focus{border-color:var(--green);background:#fff}
+
+.cassone-found{background:var(--green-l);border:2px solid #a3ddd3;border-radius:var(--radius-sm);padding:10px 14px;display:none;margin-bottom:.9rem}
+.cassone-found.visible{display:block}
+.cassone-found-id{font-size:22px;font-weight:800;color:var(--green-d);letter-spacing:.08em}
+.cassone-found-tipo{font-size:12px;color:var(--green);font-weight:600}
+
+.action-btns{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.btn-uscita{background:var(--red);color:#fff;padding:16px;font-size:15px;font-weight:800;border-radius:var(--radius-sm);border:none;cursor:pointer;font-family:var(--font);transition:all .15s;display:flex;align-items:center;justify-content:center;gap:8px}
+.btn-rientro{background:var(--green);color:#fff;padding:16px;font-size:15px;font-weight:800;border-radius:var(--radius-sm);border:none;cursor:pointer;font-family:var(--font);transition:all .15s;display:flex;align-items:center;justify-content:center;gap:8px}
+.btn-uscita:hover{background:#a93226}
+.btn-rientro:hover{background:var(--green-d)}
+.btn-uscita:disabled,.btn-rientro:disabled{opacity:.4;cursor:not-allowed}
+
+.mezzo-card{background:var(--surface);border-radius:var(--radius);padding:1.25rem;box-shadow:var(--shadow);border:1.5px solid #fcd34d;border-left:5px solid var(--amber);margin-bottom:1rem}
+.mezzo-title{font-size:13px;font-weight:800;letter-spacing:.02em;color:var(--amber);text-transform:uppercase;margin-bottom:.9rem}
+.btn-invia-mezzo{width:100%;margin-top:.4rem;background:var(--amber);color:#fff;padding:14px;font-size:14px;font-weight:800;border-radius:var(--radius-sm);border:none;cursor:pointer;font-family:var(--font);transition:all .15s;letter-spacing:.02em}
+.btn-invia-mezzo:hover{background:#92400e}
+.mezzo-cat-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:4px}
+.mezzo-cat-btn{position:relative;width:2cm;height:2cm;flex-shrink:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;background:var(--s2,#f2f8f7);border:1.5px solid var(--border,#d7e6e3);border-radius:9px;cursor:pointer;font-family:var(--font);transition:all .15s;padding:4px}
+.mezzo-cat-btn .mezzo-cat-icon{font-size:24px;line-height:1}
+.mezzo-cat-btn .mezzo-cat-lbl{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.02em;color:var(--ink2);text-align:center;line-height:1.15}
+.mezzo-cat-btn.active{background:var(--amber-l);border-color:var(--amber);box-shadow:0 0 0 1px var(--amber) inset}
+.mezzo-cat-btn.active .mezzo-cat-lbl{color:var(--amber)}
+.mezzo-cat-badge{position:absolute;top:-7px;right:-7px;background:var(--amber);color:#fff;font-size:10px;font-weight:800;border-radius:10px;min-width:17px;height:17px;line-height:17px;text-align:center;padding:0 4px;box-shadow:0 1px 3px rgba(0,0,0,.25)}
+
+.trasp-recenti{background:var(--surface);border-radius:var(--radius);padding:1.1rem;box-shadow:var(--shadow);border:1px solid var(--border)}
+.trasp-recenti h3{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ink3);margin-bottom:.75rem}
+.trasp-rec-item{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border);font-size:12px}
+.trasp-rec-item:last-child{border-bottom:none}
+
+/* ── DDT MODAL ───────────────────────────────────── */
+.modal-overlay{position:fixed;inset:0;background:rgba(26,31,46,.55);z-index:6000;display:none;align-items:center;justify-content:center;padding:1rem}
+.modal-overlay.open{display:flex}
+.modal{background:var(--surface);border-radius:var(--radius);box-shadow:var(--shadow-lg);width:min(620px,100%);max-height:90vh;overflow-y:auto}
+.modal-header{padding:1.1rem 1.5rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.modal-title{font-size:15px;font-weight:800;letter-spacing:-.01em}
+.modal-close{background:none;border:none;font-size:22px;cursor:pointer;color:var(--ink3);line-height:1;padding:0 4px}
+.modal-body{padding:1.5rem}
+.ddt-lbl{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--ink3);display:block;margin-bottom:4px}
+.ddt-field{font-size:12px;padding:6px 10px;width:100%}border:1px solid var(--border);border-radius:var(--radius-sm);padding:1.25rem;font-size:13px;line-height:1.8}
+.ddt-preview h3{font-size:14px;font-weight:800;text-align:center;margin-bottom:.5rem;text-transform:uppercase;letter-spacing:.08em}
+.ddt-preview .ddt-meta{display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin:1rem 0;border-top:1px solid var(--border);border-bottom:1px solid var(--border);padding:.75rem 0}
+.ddt-preview .ddt-meta-item label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ink3);display:block}
+.ddt-preview .ddt-meta-item span{font-weight:600;color:var(--ink)}
+.ddt-table{width:100%;border-collapse:collapse;margin-top:.75rem;font-size:12px}
+.ddt-table th{background:var(--ink);color:#fff;padding:6px 10px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em}
+.ddt-table td{padding:7px 10px;border-bottom:1px solid var(--border)}
+.modal-footer{padding:1rem 1.5rem;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end}
+
+/* ── SETUP ───────────────────────────────────────── */
+.setup{max-width:520px;margin:3rem auto;padding:1.5rem}
+.setup-card{background:var(--surface);border-radius:var(--radius);padding:2rem;box-shadow:var(--shadow-lg);border:1px solid var(--border)}
+.setup-card h2{font-size:18px;font-weight:800;letter-spacing:-.02em;margin-bottom:.5rem}
+.setup-card p{font-size:13px;color:var(--ink2);margin-bottom:1.5rem;line-height:1.6}
+.setup-form-row{margin-bottom:1rem}
+.setup-form-row label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ink3);display:block;margin-bottom:5px}
+.setup-form-row input{width:100%;font-family:var(--font);font-size:13px;padding:9px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);color:var(--ink);outline:none}
+.setup-form-row input:focus{border-color:var(--green)}
+.setup-hint{font-size:11px;color:var(--ink3);margin-top:4px}
+
+/* ── TOAST ───────────────────────────────────────── */
+.toast{position:fixed;bottom:1.5rem;right:1.5rem;z-index:9999;background:var(--ink);color:#fff;padding:10px 18px;border-radius:var(--radius-sm);font-size:13px;font-weight:600;box-shadow:var(--shadow-lg);transform:translateY(60px);opacity:0;transition:all .3s cubic-bezier(.34,1.56,.64,1)}
+.toast.show{transform:translateY(0);opacity:1}
+.toast.toast-ok{background:var(--green)}
+.toast.toast-err{background:var(--red)}
+
+/* ── MODALITÀ AUTISTA ─────────────────────────────── */
+body.modo-autista .nav-tabs { display: none }
+body.modo-autista .nav-brand { font-size: 16px; }
+.autista-header {
+  display: none;
+  background: linear-gradient(135deg, var(--green-d), var(--green));
+  color: #fff;
+  padding: 1.5rem 1rem 1rem;
+  text-align: center;
+}
+body.modo-autista .autista-header { display: block }
+.autista-header h1 { font-size: 1.4rem; font-weight: 800; margin-bottom: 4px }
+.autista-header p  { font-size: 13px; opacity: .8 }
+.autista-back {
+  display: none;
+  position: fixed;
+  bottom: 1.25rem;
+  right: 1.25rem;
+  background: var(--ink);
+  color: #fff;
+  border: none;
+  border-radius: 50px;
+  padding: 10px 18px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: var(--shadow-lg);
+  z-index: 50;
+  font-family: var(--font);
+}
+/* ── AUTENTICAZIONE — pagina iniziale login/registrazione ── */
+body.auth-locked{overflow:hidden}
+.auth-overlay{position:fixed;inset:0;background:var(--ink);z-index:5000;display:none;overflow-y:auto;overflow-x:hidden}
+.auth-overlay.open{display:block}
+.auth-page{display:flex;min-height:100vh;max-width:100vw}
+.auth-brand-panel{flex:1 1 45%;background:linear-gradient(135deg,var(--ink) 55%,var(--green-d) 160%);color:#fff;display:flex;flex-direction:column;justify-content:center;padding:3rem 3.5rem;position:relative;overflow:hidden;min-width:0}
+.auth-brand-panel::before{content:'';position:absolute;right:-70px;top:-70px;width:280px;height:280px;background:var(--green);opacity:.16;border-radius:28px;transform:rotate(24deg) skewY(-10deg)}
+.auth-brand-panel::after{content:'';position:absolute;left:-50px;bottom:-90px;width:220px;height:220px;background:var(--green);opacity:.10;border-radius:28px;transform:rotate(-18deg) skewY(-10deg)}
+.auth-brand-mark-lg{width:0;height:0;border-top:22px solid transparent;border-bottom:22px solid transparent;border-left:28px solid var(--green);transform:skewY(-10deg);margin-bottom:1.5rem;position:relative}
+.auth-brand-panel h1{font-size:2.1rem;font-weight:800;letter-spacing:-.02em;line-height:1.12;margin-bottom:.85rem;position:relative}
+.auth-brand-panel p{font-size:14px;color:rgba(255,255,255,.72);max-width:320px;line-height:1.5;position:relative}
+.auth-form-panel{flex:1 1 55%;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:2.5rem 1.5rem}
+.auth-card{background:var(--surface);border-radius:var(--radius);box-shadow:var(--shadow-lg);width:min(380px,100%);padding:2rem 1.75rem}
+.auth-card h2{font-size:19px;font-weight:800;letter-spacing:-.01em;margin-bottom:.25rem;text-align:center}
+.auth-sub{font-size:12px;color:var(--ink3);text-align:center;margin-bottom:1.25rem}
+.auth-tabs{display:flex;gap:6px;margin-bottom:1.25rem;background:var(--surface2);border-radius:var(--radius-sm);padding:4px}
+.auth-tab{flex:1;text-align:center;padding:8px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;color:var(--ink3);border:none;background:none;font-family:var(--font)}
+.auth-tab.active{background:var(--surface);color:var(--ink);box-shadow:var(--shadow)}
+.auth-form-row{margin-bottom:.9rem}
+.auth-form-row label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--ink3);display:block;margin-bottom:5px}
+.auth-error{color:var(--red);font-size:12px;min-height:16px;margin-top:2px;text-align:center}
+@media(max-width:760px){
+  .auth-page{display:block}
+  .auth-brand-panel{width:100%;padding:2.25rem 1.5rem 2.75rem;text-align:center;align-items:center}
+  .auth-brand-panel::before,.auth-brand-panel::after{display:none}
+  .auth-brand-mark-lg{margin:0 auto 1rem}
+  .auth-brand-panel p{margin:0 auto;max-width:100%}
+  .auth-brand-panel h1{font-size:1.6rem}
+  .auth-form-panel{width:100%;padding:1.75rem 1.25rem;box-sizing:border-box}
+  .auth-card{width:100%;margin:0 auto}
+}
+.nav-notif-btn{position:relative;background:none;border:none;color:rgba(255,255,255,.8);font-size:16px;cursor:pointer;padding:0 10px;height:100%;display:flex;align-items:center}
+.nav-notif-btn:hover{color:#fff}
+.nav-notif-btn #nav-notif-badge{position:absolute;top:8px;right:2px;background:var(--red);color:#fff;font-size:9px;font-weight:800;border-radius:10px;min-width:15px;height:15px;line-height:15px;text-align:center;padding:0 3px}
+.auth-user-badge{display:none;align-items:center;gap:6px;margin-left:12px;font-size:12px;color:rgba(255,255,255,.75);flex-shrink:0}
+.auth-user-badge button{background:none;border:none;color:rgba(255,255,255,.6);cursor:pointer;font-size:13px;padding:0;line-height:1}
+.auth-user-badge button:hover{color:#fff}
+.autista-user-bar{display:none;margin-top:8px;font-size:12px;opacity:.9;align-items:center;justify-content:center;gap:10px}
+.autista-user-bar button{background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:20px;padding:4px 12px;font-size:11px;cursor:pointer;font-family:var(--font)}
+@media(max-width:768px){
+  .kpi-row{grid-template-columns:1fr 1fr}
+  .dash-grid{grid-template-columns:1fr}
+  .nav-tab{padding:0 12px;font-size:12px}
+}
+@media(max-width:480px){
+  .kpi-row{grid-template-columns:1fr 1fr}
+  .nav-brand{font-size:13px}
+}
+</style>
+</head>
+<body>
+
+<!-- MODALITÀ AUTISTA — header fisso visibile solo in ?autista -->
+<div class="autista-header">
+  <h1>🚛 Movimento Cassone</h1>
+  <p>Centro Risorse S.p.A. — Registra uscita o rientro</p>
+  <div class="autista-user-bar" id="autista-user-bar">
+    <span id="autista-user-label"></span>
+    <button onclick="logoutUtente()">Esci</button>
+  </div>
+</div>
+
+<!-- NAVBAR -->
+<nav class="nav">
+  <div class="nav-brand">🚛 <span>TRACKER</span> Cassoni <i class="brand-mark"></i></div>
+  <div class="nav-tabs">
+    <button class="nav-tab active" onclick="switchView('dashboard')">📊 Dashboard</button>
+    <button class="nav-tab" onclick="switchView('bollettazione')">📋 Bollettazione</button>
+    <button class="nav-tab" onclick="switchView('manutenzione')">🔧 Manutenzione</button>
+    <button class="nav-tab" id="nav-tab-mezzi" onclick="switchView('mezzi')">🚩 Mezzi</button>
+    <button class="nav-tab" onclick="switchView('trasportatore')">📱 Trasportatore</button>
+    <button class="nav-tab" id="nav-tab-setup" onclick="richiestaPin()" style="display:none">⚙️ Config</button>
+    <button class="nav-notif-btn" id="nav-notif-btn" onclick="switchView('setup')" style="display:none" title="Richieste di registrazione in attesa">
+      🔔<span id="nav-notif-badge"></span>
+    </button>
+  </div>
+  <div class="firebase-dot" id="fb-dot" title="Firebase: non connesso"></div>
+  <div class="auth-user-badge" id="auth-user-badge">
+    <span id="auth-user-label"></span>
+    <button onclick="logoutUtente()" title="Esci">⎋</button>
+  </div>
+</nav>
+
+<!-- ════════ DASHBOARD ════════ -->
+<div class="view active" id="view-dashboard">
+<div class="dash">
+  <div class="kpi-row">
+    <div class="kpi"><div class="kpi-val green" id="kpi-piazzale">—</div><div class="kpi-lbl">In piazzale</div></div>
+    <div class="kpi"><div class="kpi-val red" id="kpi-fuori">—</div><div class="kpi-lbl">Fuori / in giro</div></div>
+    <div class="kpi"><div class="kpi-val amber" id="kpi-ddt-pend">—</div><div class="kpi-lbl">DDT da emettere</div></div>
+    <div class="kpi"><div class="kpi-val blue" id="kpi-oggi">—</div><div class="kpi-lbl">Movimenti oggi</div></div>
+  </div>
+  <div class="dash-grid">
+    <!-- RICERCA RAPIDA CASSONE -->
+    <div class="card" style="grid-column:1/-1">
+      <div class="card-header">
+        <div class="card-title">🔍 Verifica stato cassone</div>
+      </div>
+      <div class="card-body" style="padding-bottom:.75rem">
+        <div style="display:flex;gap:8px">
+          <input id="cerca-cassone-input" type="text" placeholder="Digita il codice cassone (es. ER002)…"
+            style="flex:1;font-family:var(--font);font-size:14px;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--radius-sm);outline:none;transition:border-color .15s"
+            oninput="cercaCassone(this.value)" autocomplete="off" autocapitalize="characters"
+            onfocus="this.style.borderColor='var(--green)'" onblur="this.style.borderColor='var(--border)'">
+          <button class="btn btn-ghost btn-sm" onclick="document.getElementById('cerca-cassone-input').value='';document.getElementById('cerca-cassone-result').innerHTML=''">✕</button>
+        </div>
+        <div id="cerca-cassone-result" style="margin-top:8px"></div>
+      </div>
+    </div>
+
+    <!-- PIAZZALE RAGGRUPPATO PER TIPO -->
+    <div class="card" style="grid-column:1/-1">
+      <div class="card-header">
+        <div class="card-title">🏭 Piazzale — situazione live per tipologia</div>
+        <span id="last-update" style="font-size:11px;color:var(--ink3)"></span>
+      </div>
+      <div class="card-body" id="piazzale-grouped">
+        <span class="chip-empty">Nessun cassone registrato</span>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">⚠️ DDT da emettere</div>
+      </div>
+      <div class="card-body">
+        <div class="alert-list" id="ddt-alerts"><span style="font-size:12px;color:var(--ink3)">Nessun DDT in sospeso</span></div>
+      </div>
+    </div>
+    <div class="card" style="grid-column:1/-1">
+      <div class="card-header">
+        <div class="card-title">🔄 Ultimi movimenti</div>
+        <button class="btn btn-ghost btn-sm" onclick="switchView('bollettazione')">Vedi tutti →</button>
+      </div>
+      <div class="card-body">
+        <div class="mov-list" id="dash-movimenti"><span style="font-size:12px;color:var(--ink3)">Nessun movimento registrato</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ════════ BOLLETTAZIONE ════════ -->
+<div class="view" id="view-bollettazione">
+<div class="boll">
+  <div class="boll-filters">
+    <input type="text" id="filt-cerca" placeholder="🔍 Cassone, cliente..." oninput="renderBollettazione()" style="flex:1;min-width:180px">
+    <select id="filt-tipo" onchange="renderBollettazione()">
+      <option value="">Tutti i movimenti</option>
+      <option value="USCITA">Solo uscite</option>
+      <option value="RIENTRO">Solo rientri</option>
+    </select>
+    <select id="filt-ddt" onchange="renderBollettazione()">
+      <option value="">Tutti i DDT</option>
+      <option value="pend">DDT da emettere</option>
+      <option value="emesso">DDT emesso</option>
+    </select>
+    <input type="date" id="filt-data" onchange="renderBollettazione()">
+    <button class="btn btn-ghost btn-sm" onclick="document.getElementById('filt-cerca').value='';document.getElementById('filt-tipo').value='';document.getElementById('filt-ddt').value='';document.getElementById('filt-data').value='';renderBollettazione()">✕ Reset</button>
+    <button class="btn btn-primary btn-sm" onclick="exportCSV()">⬇ CSV</button>
+  </div>
+  <div class="card">
+    <table class="mov-table">
+      <thead><tr>
+        <th>Data / Ora</th><th>Cassone</th><th>Tipo</th><th>Movimento</th>
+        <th>Cliente</th><th>Autista</th><th>DDT</th><th></th>
+      </tr></thead>
+      <tbody id="boll-tbody"></tbody>
+    </table>
+  </div>
+</div>
+</div>
+
+<!-- ════════ TRASPORTATORE ════════ -->
+<!-- ════════ MANUTENZIONE ════════ -->
+<div class="view" id="view-manutenzione">
+<div class="boll-toolbar" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+  <h2 style="margin:0;font-size:16px;font-weight:800;letter-spacing:-.01em">🔧 Cassoni segnalati per manutenzione</h2>
+  <div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">
+    <select id="man-filtro-flag" onchange="renderManutenzione()" style="font-family:var(--font);font-size:13px;padding:6px 10px;border:1.5px solid var(--border);border-radius:var(--r);background:var(--surface);color:var(--ink);outline:none">
+      <option value="">Tutti i flag</option>
+      <option value="Manca tag">🏷️ Manca tag</option>
+      <option value="Presenta rotture">🔧 Presenta rotture</option>
+      <option value="Telo danneggiato">🪟 Telo danneggiato</option>
+      <option value="Altro">⚠️ Altro</option>
+    </select>
+    <select id="man-filtro-stato" onchange="renderManutenzione()" style="font-family:var(--font);font-size:13px;padding:6px 10px;border:1.5px solid var(--border);border-radius:var(--r);background:var(--surface);color:var(--ink);outline:none">
+      <option value="">Tutti gli stati</option>
+      <option value="piazzale">In piazzale</option>
+      <option value="fuori">Fuori</option>
+    </select>
+  </div>
+</div>
+<div id="man-count" style="font-size:13px;color:var(--ink3);margin:8px 0 4px"></div>
+<div style="overflow-x:auto">
+  <table class="boll-table">
+    <thead>
+      <tr>
+        <th>Data segnalazione</th>
+        <th>Cassone</th>
+        <th>Tipo cassone</th>
+        <th>Stato</th>
+        <th>Cliente</th>
+        <th>Segnalazioni</th>
+        <th>Note</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody id="man-tbody"></tbody>
+  </table>
+</div>
+</div>
+
+<!-- ════════ SEGNALAZIONE MANUTENZIONI MEZZI ════════ -->
+<div class="view" id="view-mezzi">
+<div class="boll-toolbar" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+  <h2 style="margin:0;font-size:16px;font-weight:800;letter-spacing:-.01em">🚩 Segnalazione Manutenzioni Mezzi</h2>
+</div>
+<div id="mezzi-count" style="font-size:13px;color:var(--ink3);margin:8px 0 4px"></div>
+<div id="mezzi-groups"></div>
+</div>
+
+<div class="view" id="view-trasportatore">
+<div class="trasp">
+  <div class="trasp-hero">
+    <h2>Registra movimento cassone</h2>
+    <p>Scansiona il QR code o inserisci il codice manualmente</p>
+  </div>
+
+  <div class="scan-area">
+    <div class="scan-label">Codice cassone</div>
+    <div style="display:flex;gap:8px;align-items:stretch">
+      <input class="scan-input" id="scan-input" type="text" placeholder="es. ER002" autocomplete="off" autocapitalize="characters" oninput="onScanInput(this.value)" onkeydown="onScanKeydown(event)" style="flex:1;text-align:left;font-size:15px">
+      <button onclick="apriCamera()" style="background:var(--green);color:#fff;border:none;border-radius:var(--radius-sm);padding:0 16px;font-size:22px;cursor:pointer;flex-shrink:0;transition:background .15s" title="Scansiona QR con fotocamera">📷</button>
+    </div>
+    <div class="scan-drop" id="scan-drop"></div>
+    <div class="scan-hint">Digita il codice o usa 📷 per scansionare il QR</div>
+  </div>
+
+  <!-- QR SCANNER MODAL -->
+  <div id="qr-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:2000;flex-direction:column;align-items:center;justify-content:center">
+    <div style="width:min(360px,94vw);background:#111;border-radius:var(--radius);overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,.5)">
+      <div style="padding:12px 16px;background:var(--green-d);color:#fff;display:flex;align-items:center;justify-content:space-between">
+        <span style="font-weight:700;font-size:14px">📷 Scansiona QR cassone</span>
+        <button onclick="chiudiCamera()" style="background:none;border:none;color:#fff;font-size:22px;cursor:pointer;line-height:1">×</button>
+      </div>
+      <div style="position:relative;background:#000;min-height:280px">
+        <video id="qr-video" style="width:100%;display:block;max-height:340px;object-fit:cover" playsinline muted></video>
+        <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none">
+          <div style="width:200px;height:200px;border:3px solid #2fae9e;border-radius:10px;box-shadow:0 0 0 2000px rgba(0,0,0,.5)"></div>
+        </div>
+        <div id="qr-status" style="position:absolute;bottom:10px;left:0;right:0;text-align:center;color:#fff;font-size:12px;font-weight:700;text-shadow:0 1px 4px #000;pointer-events:none">Avvio fotocamera…</div>
+      </div>
+      <div style="padding:12px 16px;display:flex;gap:8px">
+        <button onclick="switchCamera()" style="flex:1;padding:10px;background:#333;color:#fff;border:none;border-radius:var(--radius-sm);font-size:12px;font-weight:700;cursor:pointer">🔄 Cambia cam</button>
+        <button onclick="chiudiCamera()" style="flex:1;padding:10px;background:#c0392b;color:#fff;border:none;border-radius:var(--radius-sm);font-size:12px;font-weight:700;cursor:pointer">✕ Chiudi</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="cassone-found" id="cassone-found">
+    <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--green);margin-bottom:2px">Cassone rilevato</div>
+    <div class="cassone-found-id" id="found-id">—</div>
+    <div class="cassone-found-tipo" id="found-tipo">—</div>
+    <div id="found-status" style="font-size:11px;margin-top:4px;font-weight:600"></div>
+  </div>
+
+  <div class="trasp-form" id="trasp-form">
+    <div class="form-row">
+      <label class="form-lbl">Cliente / Destinazione</label>
+      <input class="form-ctrl" id="t-cliente" placeholder="Ragione sociale o cantiere" list="clienti-list">
+      <datalist id="clienti-list"></datalist>
+    </div>
+    <div class="form-row">
+      <label class="form-lbl">Il tuo nome (autista)</label>
+      <input class="form-ctrl" id="t-autista" placeholder="Nome e cognome">
+    </div>
+    <div class="form-row">
+      <label class="form-lbl">Note manutenzione</label>
+      <input class="form-ctrl" id="t-note" placeholder="Es. targa mezzo, riferimento ordine...">
+    </div>
+    <div class="form-row">
+      <label class="form-lbl">Segnalazioni</label>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-top:4px">
+        <label style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--s2,#f2f8f7);border-radius:7px;border:1.5px solid var(--border,#d7e6e3);cursor:pointer;font-size:13px;font-weight:500">
+          <input type="checkbox" id="flag-tag" onchange="aggiornaSegnalazioni()" style="width:16px;height:16px;accent-color:#c0392b;cursor:pointer">
+          🏷️ Manca tag
+        </label>
+        <label style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--s2,#f2f8f7);border-radius:7px;border:1.5px solid var(--border,#d7e6e3);cursor:pointer;font-size:13px;font-weight:500">
+          <input type="checkbox" id="flag-rotture" onchange="aggiornaSegnalazioni()" style="width:16px;height:16px;accent-color:#c0392b;cursor:pointer">
+          🔧 Presenta rotture
+        </label>
+        <label style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--s2,#f2f8f7);border-radius:7px;border:1.5px solid var(--border,#d7e6e3);cursor:pointer;font-size:13px;font-weight:500">
+          <input type="checkbox" id="flag-telo" onchange="aggiornaSegnalazioni()" style="width:16px;height:16px;accent-color:#c0392b;cursor:pointer">
+          🪟 Telo danneggiato
+        </label>
+        <label style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--s2,#f2f8f7);border-radius:7px;border:1.5px solid var(--border,#d7e6e3);cursor:pointer;font-size:13px;font-weight:500">
+          <input type="checkbox" id="flag-altro" onchange="aggiornaSegnalazioni()" style="width:16px;height:16px;accent-color:#c0392b;cursor:pointer">
+          ⚠️ Altro
+        </label>
+        <textarea id="flag-altro-testo" placeholder="Descrivi il problema..." rows="2"
+          style="display:none;font-family:var(--sans,sans-serif);font-size:13px;padding:8px 12px;border:1.5px solid var(--border,#d7e6e3);border-radius:7px;background:var(--s2,#f2f8f7);color:var(--ink,#0f3350);resize:vertical;outline:none;transition:border-color .15s"
+          onfocus="this.style.borderColor='var(--green,#2fae9e)'" onblur="this.style.borderColor='var(--border,#d7e6e3)'"></textarea>
+
+        <div id="t-foto-row" style="display:none;flex-wrap:wrap;gap:8px;margin-top:2px"></div>
+        <label style="display:flex;align-items:center;justify-content:center;gap:8px;padding:9px 12px;background:var(--s2,#f2f8f7);border:1.5px dashed var(--border,#d7e6e3);border-radius:7px;cursor:pointer;font-size:13px;font-weight:700;color:var(--green-d)">
+          📷 Scatta foto segnalazione
+          <input type="file" accept="image/*" capture="environment" multiple id="t-foto-input" style="display:none" onchange="onFotoSegnalazioneInput(event)">
+        </label>
+      </div>
+    </div>
+    <div class="action-btns">
+      <button class="btn-uscita" id="btn-uscita" onclick="registraMovimento('USCITA')" disabled>
+        🔴 USCITA
+      </button>
+      <button class="btn-rientro" id="btn-rientro" onclick="registraMovimento('RIENTRO')" disabled>
+        🟢 RIENTRO
+      </button>
+    </div>
+  </div>
+
+  <div class="mezzo-card">
+    <div class="mezzo-title">🚩 Segnalazioni manutenzioni mezzi</div>
+    <div class="form-row">
+      <label class="form-lbl">Targa</label>
+      <input class="form-ctrl" id="mezzo-targa" placeholder="Es. AB123CD" autocapitalize="characters">
+    </div>
+    <div class="form-row">
+      <label class="form-lbl">Anomalia riscontrata</label>
+      <div class="mezzo-cat-row">
+        <button type="button" class="mezzo-cat-btn" id="mezzo-cat-motore" onclick="apriCategoriaMezzoModal('motore')">
+          <span class="mezzo-cat-icon">⚙️</span><span class="mezzo-cat-lbl">Motore</span>
+        </button>
+        <button type="button" class="mezzo-cat-btn" id="mezzo-cat-carrozzeria" onclick="apriCategoriaMezzoModal('carrozzeria')">
+          <span class="mezzo-cat-icon">🚛</span><span class="mezzo-cat-lbl">Carrozzeria</span>
+        </button>
+        <button type="button" class="mezzo-cat-btn" id="mezzo-cat-spie" onclick="apriCategoriaMezzoModal('spie')">
+          <span class="mezzo-cat-icon">💡</span><span class="mezzo-cat-lbl">Spie accese</span>
+        </button>
+      </div>
+    </div>
+    <div class="form-row" style="margin-bottom:0">
+      <label class="form-lbl">Posizione</label>
+      <input class="form-ctrl" id="mezzo-posizione" placeholder="Es. cantiere, via, piazzale...">
+    </div>
+    <button class="btn-invia-mezzo" onclick="inviaSegnalazioneMezzo()">📨 Invia segnalazione</button>
+  </div>
+
+  <div class="trasp-recenti">
+    <h3>Ultimi tuoi movimenti</h3>
+    <div id="trasp-recenti-list"><span style="font-size:12px;color:var(--ink3)">Nessuno ancora</span></div>
+  </div>
+</div>
+</div>
+
+<!-- ════════ SETUP ════════ -->
+<div class="view" id="view-setup">
+<div class="setup">
+  <div class="setup-card" id="approvazioni-card">
+    <h2>🔔 Richieste di registrazione</h2>
+    <p style="margin-bottom:.75rem">Approva una richiesta assegnando un ruolo, oppure rifiutala.</p>
+    <p id="approvazioni-empty" style="font-size:13px;color:var(--ink3);margin-bottom:0">Nessuna richiesta in attesa</p>
+    <div id="approvazioni-list"></div>
+  </div>
+  <div class="setup-card">
+    <h2>⚙️ Configurazione Firebase</h2>
+    <p>Inserisci le credenziali del tuo Firebase Realtime Database. Le trovi su <strong>console.firebase.google.com</strong> → Impostazioni progetto → App web → Configurazione SDK.</p>
+    <div class="setup-form-row">
+      <label>API Key</label>
+      <input type="text" id="cfg-apikey" placeholder="AIza...">
+    </div>
+    <div class="setup-form-row">
+      <label>Auth Domain</label>
+      <input type="text" id="cfg-authdomain" placeholder="progetto.firebaseapp.com">
+    </div>
+    <div class="setup-form-row">
+      <label>Database URL</label>
+      <input type="text" id="cfg-dburl" placeholder="https://progetto-default-rtdb.europe-west1.firebasedatabase.app">
+      <div class="setup-hint">Deve includere https:// e terminare con .firebaseio.com o .firebasedatabase.app</div>
+    </div>
+    <div class="setup-form-row">
+      <label>Project ID</label>
+      <input type="text" id="cfg-projectid" placeholder="nome-progetto">
+    </div>
+    <div style="display:flex;gap:8px;margin-top:1.25rem">
+      <button class="btn btn-primary" onclick="salvaConfig()">💾 Salva e connetti</button>
+      <button class="btn btn-ghost" onclick="testConnection()">🔌 Testa connessione</button>
+    </div>
+    <div id="cfg-status" style="margin-top:1rem;font-size:12px;color:var(--ink3)"></div>
+
+    <hr style="margin:1.5rem 0;border:none;border-top:1px solid var(--border)">
+    <h3 style="font-size:13px;font-weight:700;margin-bottom:.75rem">📦 Anagrafica cassoni</h3>
+    <p style="font-size:12px;color:var(--ink2);margin-bottom:.75rem">Aggiungi i cassoni con QR code. Il codice deve corrispondere a quello stampato sul cassone.</p>
+
+    <!-- Import da Excel -->
+    <div style="background:var(--blue-l);border:1.5px dashed #a0bce0;border-radius:var(--radius-sm);padding:10px 14px;margin-bottom:1rem">
+      <div style="font-size:12px;font-weight:700;color:var(--blue);margin-bottom:6px">📥 Importa da Excel (censimento)</div>
+      <div style="font-size:11px;color:var(--ink2);margin-bottom:8px">Seleziona il file Excel con il censimento cassoni. Colonne richieste: <strong>NR.INTERNO = codice</strong>, <strong>Descrizione Cespite</strong>, <strong>NOTE MAX SU COPERCHIO</strong>.</div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <label style="flex:1;padding:8px 12px;background:var(--blue);color:#fff;border-radius:var(--radius-sm);font-size:12px;font-weight:700;cursor:pointer;text-align:center">
+          📂 Scegli file Excel
+          <input type="file" accept=".xlsx,.xls" onchange="importaExcel(event)" style="display:none">
+        </label>
+        <div id="import-status" style="font-size:11px;color:var(--ink3)"></div>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:.75rem">
+      <input class="form-ctrl" id="new-cas-id" placeholder="Codice (es. CS-001)" style="flex:1;font-size:13px;padding:8px 10px">
+      <select class="form-ctrl" id="new-cas-tipo" style="font-size:13px;padding:8px 10px">
+        <option>Scarrabile</option>
+        <option>Vasca</option>
+        <option>Pianale</option>
+        <option>Centinato</option>
+        <option>Altro</option>
+      </select>
+      <button class="btn btn-primary btn-sm" onclick="aggiungiCassone()">+ Aggiungi</button>
+    </div>
+    <div id="cassoni-list-setup" style="max-height:200px;overflow-y:auto"></div>
+
+    <hr style="margin:1.5rem 0;border:none;border-top:1px solid var(--border)">
+    <h3 style="font-size:13px;font-weight:700;margin-bottom:.75rem">⚠️ Reset stato cassoni</h3>
+    <p style="font-size:12px;color:var(--ink2);margin-bottom:.75rem">Imposta tutti i cassoni su "Fuori / in giro" o "In piazzale" in un colpo solo.</p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn btn-danger" onclick="resetStatoCassoni('fuori')">🔴 Tutti FUORI / IN GIRO</button>
+      <button class="btn btn-primary" onclick="resetStatoCassoni('piazzale')">✅ Tutti IN PIAZZALE</button>
+    </div>
+    <div id="reset-stato-status" style="font-size:11px;color:var(--ink3);margin-top:8px"></div>
+
+    <hr style="margin:1.5rem 0;border:none;border-top:1px solid var(--border)">
+    <h3 style="font-size:13px;font-weight:700;margin-bottom:.75rem">🔗 Link rapidi</h3>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <a id="link-admin" href="#" target="_blank" style="flex:1;min-width:140px;padding:10px 12px;background:var(--blue-l);border:1.5px solid #c3d8e0;border-radius:var(--radius-sm);font-size:12px;font-weight:700;color:var(--blue);text-decoration:none;display:flex;align-items:center;gap:8px">
+        🖥️ Versione ufficio / admin
+      </a>
+      <a id="link-autista" href="#" target="_blank" style="flex:1;min-width:140px;padding:10px 12px;background:var(--green-l);border:1.5px solid #a3ddd3;border-radius:var(--radius-sm);font-size:12px;font-weight:700;color:var(--green-d);text-decoration:none;display:flex;align-items:center;gap:8px">
+        🚛 Versione autista
+      </a>
+    </div>
+
+    <hr style="margin:1.5rem 0;border:none;border-top:1px solid var(--border)">
+    <h3 style="font-size:13px;font-weight:700;margin-bottom:.75rem">👥 Clienti frequenti</h3>
+    <!-- Import da Excel -->
+    <div style="background:var(--green-l);border:1.5px dashed #a3ddd3;border-radius:var(--radius-sm);padding:10px 14px;margin-bottom:.75rem">
+      <div style="font-size:12px;font-weight:700;color:var(--green-d);margin-bottom:5px">📥 Importa clienti da Excel</div>
+      <div style="font-size:11px;color:var(--ink2);margin-bottom:7px">Prima colonna = Ragione Sociale. Importa tutta la rubrica in un colpo.</div>
+      <label style="padding:7px 12px;background:var(--green);color:#fff;border-radius:var(--radius-sm);font-size:12px;font-weight:700;cursor:pointer;display:inline-block">
+        📂 Scegli file Excel clienti
+        <input type="file" accept=".xlsx,.xls" onchange="importaClienti(event)" style="display:none">
+      </label>
+      <span id="import-clienti-status" style="font-size:11px;color:var(--ink3);margin-left:8px"></span>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:.75rem">
+      <input class="form-ctrl" id="new-cliente" placeholder="Nome cliente / cantiere" style="flex:1;font-size:13px;padding:8px 10px">
+      <button class="btn btn-primary btn-sm" onclick="aggiungiCliente()">+ Aggiungi</button>
+    </div>
+    <div id="clienti-list-setup" style="max-height:150px;overflow-y:auto"></div>
+  </div>
+</div>
+</div>
+
+<!-- ════════ PIN MODAL ════════ -->
+<div class="modal-overlay" id="pin-modal" onclick="if(event.target===this)chiudiPin()">
+  <div class="modal" style="max-width:320px">
+    <div class="modal-header">
+      <span class="modal-title">🔒 Accesso Config</span>
+      <button class="modal-close" onclick="chiudiPin()">×</button>
+    </div>
+    <div class="modal-body" style="text-align:center;padding:1.5rem">
+      <p style="font-size:13px;color:var(--ink2);margin-bottom:1rem">Inserisci il PIN per accedere alla configurazione</p>
+      <input id="pin-input" type="password" inputmode="numeric" maxlength="6"
+        placeholder="● ● ● ●"
+        style="text-align:center;font-size:28px;font-weight:800;letter-spacing:.3em;width:100%;padding:12px;border:2px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font);outline:none"
+        onfocus="this.style.borderColor='var(--green)'"
+        onblur="this.style.borderColor='var(--border)'"
+        onkeydown="if(event.key==='Enter')verificaPin()">
+      <div id="pin-error" style="color:var(--red);font-size:12px;margin-top:8px;min-height:16px"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="chiudiPin()">Annulla</button>
+      <button class="btn btn-primary" onclick="verificaPin()">🔓 Accedi</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════════ AUTH OVERLAY — pagina iniziale login / registrazione ════════ -->
+<div class="auth-overlay" id="auth-overlay">
+  <div class="auth-page">
+    <div class="auth-brand-panel">
+      <i class="auth-brand-mark-lg"></i>
+      <h1>🚛 Tracker<br>Cassoni</h1>
+      <p>Centro Risorse S.p.A. — Gestione e tracciamento cassoni scarrabili, uscite, rientri e DDT in tempo reale.</p>
+    </div>
+    <div class="auth-form-panel">
+      <div class="auth-card">
+        <h2 id="auth-card-title">Bentornato</h2>
+        <p class="auth-sub" id="auth-card-sub">Accedi con il tuo account per continuare</p>
+        <div class="auth-tabs" id="auth-tabs">
+          <button class="auth-tab active" id="auth-tab-login" onclick="switchAuthTab('login')">Accedi</button>
+          <button class="auth-tab" id="auth-tab-register" onclick="switchAuthTab('register')">Registrati</button>
+        </div>
+        <div id="auth-pending-msg" style="display:none;text-align:center">
+          <p style="font-size:13px;color:var(--ink2);margin-bottom:1rem">
+            L'account <strong id="auth-pending-user"></strong> è stato creato ed è in attesa di approvazione
+            da parte di un amministratore. Riprova ad accedere più tardi.
+          </p>
+          <button class="btn btn-ghost" style="width:100%;justify-content:center" onclick="tornaAlLogin()">← Torna al login</button>
+        </div>
+        <div id="auth-login-form">
+      <div class="auth-form-row">
+        <label>Nome utente</label>
+        <input class="form-ctrl" id="auth-login-user" placeholder="es. mrossi" autocomplete="username"
+          onkeydown="if(event.key==='Enter')document.getElementById('auth-login-pin').focus()">
+      </div>
+      <div class="auth-form-row">
+        <label>PIN (4 cifre)</label>
+        <input class="form-ctrl" id="auth-login-pin" type="password" inputmode="numeric" maxlength="4"
+          placeholder="● ● ● ●" style="text-align:center;letter-spacing:.4em;font-size:18px" autocomplete="current-password"
+          onkeydown="if(event.key==='Enter')eseguiLogin()">
+      </div>
+      <div class="auth-error" id="auth-login-error"></div>
+      <button class="btn btn-primary" style="width:100%;justify-content:center;margin-top:.5rem" onclick="eseguiLogin()">🔓 Accedi</button>
+    </div>
+    <div id="auth-register-form" style="display:none">
+      <div class="auth-form-row">
+        <label>Nome utente</label>
+        <input class="form-ctrl" id="auth-reg-user" placeholder="es. mrossi" autocomplete="username"
+          onkeydown="if(event.key==='Enter')document.getElementById('auth-reg-pin').focus()">
+      </div>
+      <div class="auth-form-row">
+        <label>PIN (4 cifre)</label>
+        <input class="form-ctrl" id="auth-reg-pin" type="password" inputmode="numeric" maxlength="4"
+          placeholder="● ● ● ●" style="text-align:center;letter-spacing:.4em;font-size:18px" autocomplete="new-password"
+          onkeydown="if(event.key==='Enter')document.getElementById('auth-reg-pin2').focus()">
+      </div>
+      <div class="auth-form-row">
+        <label>Conferma PIN</label>
+        <input class="form-ctrl" id="auth-reg-pin2" type="password" inputmode="numeric" maxlength="4"
+          placeholder="● ● ● ●" style="text-align:center;letter-spacing:.4em;font-size:18px" autocomplete="new-password"
+          onkeydown="if(event.key==='Enter')eseguiRegistrazione()">
+      </div>
+        <div class="auth-error" id="auth-register-error"></div>
+        <button class="btn btn-primary" style="width:100%;justify-content:center;margin-top:.5rem" onclick="eseguiRegistrazione()">✓ Crea account</button>
+        </div>
+        <button class="btn btn-ghost" style="width:100%;justify-content:center;margin-top:1.25rem;font-size:11px" onclick="richiestaPin()">🔑 Sei amministratore? Sblocca con PIN</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════ MODAL SEGNALAZIONI ════════ -->
+<div class="modal-overlay" id="segn-modal" onclick="if(event.target===this)closeSegn()">
+  <div class="modal-box" style="max-width:420px">
+    <div class="modal-header">
+      <span class="modal-title">🔧 Segnalazioni manutenzione</span>
+      <button class="modal-close" onclick="closeSegn()">×</button>
+    </div>
+    <div class="modal-body" style="display:flex;flex-direction:column;gap:10px">
+      <div id="segn-cassone-label" style="font-size:13px;font-weight:600;color:var(--ink2)"></div>
+      <label style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--s2);border-radius:7px;border:1.5px solid var(--border);cursor:pointer;font-size:13px">
+        <input type="checkbox" id="segn-tag" style="width:16px;height:16px;accent-color:#c0392b"> 🏷️ Manca tag
+      </label>
+      <label style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--s2);border-radius:7px;border:1.5px solid var(--border);cursor:pointer;font-size:13px">
+        <input type="checkbox" id="segn-rotture" style="width:16px;height:16px;accent-color:#c0392b"> 🔧 Presenta rotture
+      </label>
+      <label style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--s2);border-radius:7px;border:1.5px solid var(--border);cursor:pointer;font-size:13px">
+        <input type="checkbox" id="segn-telo" style="width:16px;height:16px;accent-color:#c0392b"> 🪟 Telo danneggiato
+      </label>
+      <label style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--s2);border-radius:7px;border:1.5px solid var(--border);cursor:pointer;font-size:13px">
+        <input type="checkbox" id="segn-altro" onchange="document.getElementById('segn-altro-testo').style.display=this.checked?'block':'none'" style="width:16px;height:16px;accent-color:#c0392b"> ⚠️ Altro
+      </label>
+      <textarea id="segn-altro-testo" placeholder="Descrivi il problema..." rows="2"
+        style="display:none;font-family:inherit;font-size:13px;padding:8px 12px;border:1.5px solid var(--border);border-radius:7px;background:var(--s2);color:var(--ink);resize:vertical;outline:none"></textarea>
+      <input id="segn-note-libere" class="form-ctrl" placeholder="Note aggiuntive (opzionale)" style="font-size:13px">
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeSegn()">Annulla</button>
+      <button class="btn btn-primary" onclick="salvaSegnalazioni()">✓ Salva</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════════ POPUP NUOVA SEGNALAZIONE MEZZO ════════ -->
+<div class="modal-overlay" id="mezzo-notif-modal">
+  <div class="modal" style="max-width:380px">
+    <div class="modal-header">
+      <span class="modal-title">🚩 Nuova segnalazione mezzo</span>
+      <button class="modal-close" onclick="chiudiNotificaMezzo()">×</button>
+    </div>
+    <div class="modal-body" id="mezzo-notif-body" style="font-size:13px;line-height:1.9"></div>
+    <div class="modal-footer">
+      <button class="btn btn-primary" onclick="chiudiNotificaMezzo()">Ho visto ✓</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════════ POPUP OPZIONI CATEGORIA MEZZO ════════ -->
+<div class="modal-overlay" id="mezzo-cat-modal" onclick="if(event.target===this)chiudiCategoriaMezzoModal()">
+  <div class="modal" style="max-width:400px">
+    <div class="modal-header">
+      <span class="modal-title" id="mezzo-cat-modal-title">Categoria</span>
+      <button class="modal-close" onclick="chiudiCategoriaMezzoModal()">×</button>
+    </div>
+    <div class="modal-body" id="mezzo-cat-modal-body" style="display:flex;flex-direction:column;gap:8px;max-height:60vh;overflow-y:auto"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="chiudiCategoriaMezzoModal()">Annulla</button>
+      <button class="btn btn-primary" onclick="confermaCategoriaMezzo()">✓ Conferma</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════════ DDT MODAL ════════ -->
+<div class="modal-overlay" id="ddt-modal" onclick="if(event.target===this)closeDDT()">
+  <div class="modal" style="max-width:1100px;width:96vw">
+    <div class="modal-header">
+      <span class="modal-title" id="ddt-modal-title">DDT — Documento di Trasporto</span>
+      <button class="modal-close" onclick="closeDDT()">×</button>
+    </div>
+    <div class="modal-body" style="display:grid;grid-template-columns:300px 1fr;gap:1.25rem;max-height:80vh;overflow:hidden">
+
+      <!-- COLONNA SINISTRA: CAMPI EDITABILI -->
+      <div style="overflow-y:auto;padding-right:8px;display:flex;flex-direction:column;gap:12px">
+
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--ink3);border-bottom:1px solid var(--border);padding-bottom:6px">Dati documento</div>
+
+        <div>
+          <label class="ddt-lbl">N° DDT</label>
+          <input class="form-ctrl ddt-field" id="ddt-numero" placeholder="01/26" oninput="aggiornaDDTPreview()">
+        </div>
+        <div>
+          <label class="ddt-lbl">Data trasporto</label>
+          <input class="form-ctrl ddt-field" id="ddt-data" type="date" oninput="aggiornaDDTPreview()">
+        </div>
+        <div>
+          <label class="ddt-lbl">Luogo di destinazione</label>
+          <input class="form-ctrl ddt-field" id="ddt-dest-luogo" placeholder="es. CAFFARO S.r.l." oninput="aggiornaDDTPreview()">
+        </div>
+
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--ink3);border-bottom:1px solid var(--border);padding-bottom:6px;margin-top:4px">Destinatario</div>
+
+        <div>
+          <label class="ddt-lbl">Ragione sociale</label>
+          <input class="form-ctrl ddt-field" id="ddt-dest-nome" placeholder="Destinatario" oninput="aggiornaDDTPreview()">
+        </div>
+        <div>
+          <label class="ddt-lbl">Indirizzo destinatario</label>
+          <input class="form-ctrl ddt-field" id="ddt-dest-indirizzo" placeholder="Via, città" oninput="aggiornaDDTPreview()">
+        </div>
+
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--ink3);border-bottom:1px solid var(--border);padding-bottom:6px;margin-top:4px">Merce</div>
+
+        <div>
+          <label class="ddt-lbl">Descrizione cassone</label>
+          <input class="form-ctrl ddt-field" id="ddt-descrizione" placeholder="es. CASSONE COMPATTATORE 22 MC" oninput="aggiornaDDTPreview()">
+        </div>
+        <div>
+          <label class="ddt-lbl">Causale trasporto</label>
+          <select class="form-ctrl ddt-field" id="ddt-causale" onchange="aggiornaDDTPreview()">
+            <option value="POSIZIONAMENTO CASSONE">POSIZIONAMENTO CASSONE</option>
+            <option value="RITIRO CASSONE">RITIRO CASSONE</option>
+            <option value="ALTRO">ALTRO</option>
+          </select>
+        </div>
+        <div>
+          <label class="ddt-lbl">Note aggiuntive</label>
+          <textarea class="form-ctrl ddt-field" id="ddt-note-extra" rows="2" placeholder="Es. targa, riferimento..." oninput="aggiornaDDTPreview()" style="resize:vertical"></textarea>
+        </div>
+
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--ink3);border-bottom:1px solid var(--border);padding-bottom:6px;margin-top:4px">Trasportatore</div>
+
+        <div>
+          <label class="ddt-lbl">Ragione sociale</label>
+          <input class="form-ctrl ddt-field" id="ddt-trasportatore" placeholder="KEOMA S.R.L." oninput="aggiornaDDTPreview()">
+        </div>
+        <div>
+          <label class="ddt-lbl">Indirizzo trasportatore</label>
+          <input class="form-ctrl ddt-field" id="ddt-trasp-indirizzo" placeholder="Via Lazio 48 - 31045 - MOTTA DI LIVENZA (TV)" oninput="aggiornaDDTPreview()">
+        </div>
+        <div>
+          <label class="ddt-lbl">C.F. trasportatore</label>
+          <input class="form-ctrl ddt-field" id="ddt-trasp-cf" placeholder="00429860315" oninput="aggiornaDDTPreview()">
+        </div>
+        <div>
+          <label class="ddt-lbl">Targa</label>
+          <input class="form-ctrl ddt-field" id="ddt-targa" placeholder="________" oninput="aggiornaDDTPreview()">
+        </div>
+        <div>
+          <label class="ddt-lbl">Ora trasporto</label>
+          <input class="form-ctrl ddt-field" id="ddt-ora" type="time" oninput="aggiornaDDTPreview()">
+        </div>
+      </div>
+
+      <!-- COLONNA DESTRA: ANTEPRIMA -->
+      <div style="overflow-y:auto;border-left:1px solid var(--border);padding-left:1.25rem">
+        <div class="ddt-preview" id="ddt-preview" style="background:#fff;padding:1rem;font-size:11px"></div>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeDDT()">Annulla</button>
+      <button class="btn btn-ghost" onclick="stampaDDT()">🖨️ Stampa</button>
+      <button class="btn btn-primary" onclick="confermaDDT()">✓ Conferma emissione DDT</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+<script type="module">
+// ══════════════════════════════════════════════════
+//  FIREBASE INIT
+// ══════════════════════════════════════════════════
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getDatabase, ref, set, push, onValue, get, update, remove }
+  from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
+
+let db = null;
+window._logoDDT = "data:image/png;base64,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";
+let _unsubMovimenti = null;
+let _unsubCassoni   = null;
+
+// ── State ──────────────────────────────────────────
+let STATE = {
+  cassoni:    {},   // { id: { tipo, statoAttuale:'piazzale'|'fuori', lastMov, cliente } }
+  movimenti:  {},   // { id: { cassoneId, tipo:'USCITA'|'RIENTRO', ts, cliente, autista, note, ddtNumero, ddtTs } }
+  clienti:    [],
+  segnalazioniMezzi: {}, // { id: { targa, categorie:['motore'|'carrozzeria'|'spie'], dettagli:{motore:[...],carrozzeria:[...],spie:[...]}, posizione, autista, ts } }
+};
+
+// ── Config ─────────────────────────────────────────
+function loadConfig() {
+  try { return JSON.parse(localStorage.getItem('tracker_cfg_v1') || 'null'); } catch { return null; }
+}
+function saveConfig(cfg) {
+  localStorage.setItem('tracker_cfg_v1', JSON.stringify(cfg));
+}
+
+async function initFirebase(cfg) {
+  try {
+    const app = initializeApp(cfg, 'tracker-' + Date.now());
+    db = getDatabase(app);
+    document.getElementById('fb-dot').className = 'firebase-dot ok';
+    document.getElementById('fb-dot').title = 'Firebase: connesso';
+    subscribeAll();
+    return true;
+  } catch(e) {
+    document.getElementById('fb-dot').className = 'firebase-dot err';
+    document.getElementById('fb-dot').title = 'Firebase: errore — ' + e.message;
+    return false;
+  }
+}
+
+function subscribeAll() {
+  if (!db) return;
+  // Cassoni
+  const rCas = ref(db, 'cassoni');
+  onValue(rCas, snap => {
+    STATE.cassoni = snap.val() || {};
+    renderAll();
+  });
+  // Movimenti
+  const rMov = ref(db, 'movimenti');
+  onValue(rMov, snap => {
+    STATE.movimenti = snap.val() || {};
+    renderAll();
+  });
+  // Clienti
+  const rCli = ref(db, 'clienti');
+  onValue(rCli, snap => {
+    STATE.clienti = snap.val() || [];
+    renderClientiDatalist();
+  });
+}
+
+// ── Utility ────────────────────────────────────────
+function now() { return new Date().toISOString(); }
+function fmtDT(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  return d.toLocaleDateString('it-IT',{day:'2-digit',month:'2-digit',year:'2-digit'}) + ' ' +
+         d.toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'});
+}
+function fmtDate(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  return d.toLocaleDateString('it-IT',{day:'2-digit',month:'2-digit',year:'numeric'});
+}
+function isOggi(iso) {
+  if (!iso) return false;
+  const d = new Date(iso); const t = new Date();
+  return d.getDate()===t.getDate() && d.getMonth()===t.getMonth() && d.getFullYear()===t.getFullYear();
+}
+
+function toast(msg, type='') {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.className = 'toast show ' + (type?'toast-'+type:'');
+  clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove('show'), 2800);
+}
+
+// ── RENDER ALL ─────────────────────────────────────
+function renderAll() {
+  renderKPI();
+  renderPiazzale();
+  renderDDTAlerts();
+  renderDashMovimenti();
+  renderBollettazione();
+  renderManutenzione();
+  renderSegnalazioniMezzi();
+  renderCassoniSetup();
+}
+
+function renderKPI() {
+  const cas = Object.values(STATE.cassoni);
+  const piazzale = cas.filter(c => c.stato === 'piazzale').length;
+  const fuori    = cas.filter(c => c.stato === 'fuori').length;
+  const movs = Object.values(STATE.movimenti);
+  const ddtPend  = movs.filter(m => m.tipo === 'USCITA' && !m.ddtNumero).length;
+  const oggi     = movs.filter(m => isOggi(m.ts)).length;
+  document.getElementById('kpi-piazzale').textContent  = piazzale;
+  document.getElementById('kpi-fuori').textContent     = fuori;
+  document.getElementById('kpi-ddt-pend').textContent  = ddtPend;
+  document.getElementById('kpi-oggi').textContent      = oggi;
+  document.getElementById('last-update').textContent   = 'Aggiornato ' + new Date().toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'});
+}
+
+function renderPiazzale() {
+  const container = document.getElementById('piazzale-grouped');
+  const cas = Object.entries(STATE.cassoni);
+  if (!cas.length) {
+    container.innerHTML = '<span class="chip-empty">Nessun cassone nell\'anagrafica</span>';
+    return;
+  }
+
+  // Raggruppa per tipo (prima parola significativa)
+  const gruppi = {};
+  cas.forEach(([id, c]) => {
+    const tipo = (c.tipo || 'Altro').split('·')[0].trim();
+    if (!gruppi[tipo]) gruppi[tipo] = [];
+    gruppi[tipo].push({ id, ...c });
+  });
+
+  const tipiOrdinati = Object.keys(gruppi).sort();
+  container.innerHTML = tipiOrdinati.map(tipo => {
+    const lista = gruppi[tipo];
+    const inPiazzale = lista.filter(c => c.stato === 'piazzale').length;
+    const fuori      = lista.filter(c => c.stato === 'fuori').length;
+    const chips = lista
+      .sort((a,b) => a.id.localeCompare(b.id))
+      .map(c => {
+        const cls   = c.stato === 'piazzale' ? 'chip-piazzale' : 'chip-fuori';
+        const ico   = c.stato === 'piazzale' ? '✅' : '🔴';
+        const title = c.stato === 'fuori' && c.clienteAttuale ? ` → ${c.clienteAttuale}` : '';
+        return `<div class="cassone-chip ${cls}" title="${c.id}${title}">${ico} <strong>${c.id}</strong>${title ? `<span style="font-size:10px;opacity:.75"> ${title}</span>` : ''}</div>`;
+      }).join('');
+
+    return `<div style="margin-bottom:1.25rem">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;padding-bottom:5px;border-bottom:1px solid var(--border)">
+        <span style="font-size:12px;font-weight:700;color:var(--ink);flex:1">${tipo}</span>
+        <span style="font-size:11px;font-weight:600;background:var(--green-l);color:var(--green-d);padding:2px 8px;border-radius:10px">✅ ${inPiazzale}</span>
+        <span style="font-size:11px;font-weight:600;background:var(--red-l);color:var(--red);padding:2px 8px;border-radius:10px">🔴 ${fuori}</span>
+      </div>
+      <div class="piazzale-grid">${chips}</div>
+    </div>`;
+  }).join('');
+}
+
+window.cercaCassone = function(val) {
+  const result = document.getElementById('cerca-cassone-result');
+  val = val.trim().toUpperCase();
+  if (!val) { result.innerHTML = ''; return; }
+
+  const matches = Object.entries(STATE.cassoni)
+    .filter(([id]) => id.includes(val))
+    .sort((a,b) => a[0].localeCompare(b[0]))
+    .slice(0, 10);
+
+  if (!matches.length) {
+    result.innerHTML = `<div style="font-size:12px;color:var(--ink3);padding:6px 0">Nessun cassone trovato per "<strong>${val}</strong>"</div>`;
+    return;
+  }
+
+  result.innerHTML = matches.map(([id, c]) => {
+    const isOut = c.stato === 'fuori';
+    const movs  = Object.values(STATE.movimenti)
+      .filter(m => m.cassoneId === id)
+      .sort((a,b) => b.ts > a.ts ? 1 : -1);
+    const ultimo = movs[0];
+    return `<div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:var(--radius-sm);background:${isOut?'var(--red-l)':'var(--green-l)'};margin-bottom:5px;border:1px solid ${isOut?'#f0b8b3':'#a3ddd3'}">
+      <span style="font-size:16px">${isOut?'🔴':'✅'}</span>
+      <div style="flex:1">
+        <div style="font-size:14px;font-weight:800;color:var(--ink)">${id}</div>
+        <div style="font-size:11px;color:var(--ink2)">${c.tipo||'—'}</div>
+        ${ultimo ? `<div style="font-size:11px;color:var(--ink3)">${ultimo.tipo} · ${ultimo.cliente||'—'} · ${fmtDT(ultimo.ts)}</div>` : ''}
+      </div>
+      <span style="font-size:12px;font-weight:700;color:${isOut?'var(--red)':'var(--green-d)'}">${isOut?'FUORI':'PIAZZALE'}</span>
+    </div>`;
+  }).join('');
+};
+
+function renderDDTAlerts() {
+  const container = document.getElementById('ddt-alerts');
+  const movs = Object.entries(STATE.movimenti)
+    .filter(([,m]) => m.tipo === 'USCITA' && !m.ddtNumero)
+    .sort((a,b) => b[1].ts > a[1].ts ? 1 : -1)
+    .slice(0, 8);
+  if (!movs.length) {
+    container.innerHTML = '<span style="font-size:12px;color:var(--ink3)">✅ Nessun DDT in sospeso</span>';
+    return;
+  }
+  container.innerHTML = movs.map(([id, m]) =>
+    `<div class="alert-row ${m.tipo==='RIENTRO'?'alert-in':''}">
+      <span class="alert-icon">${m.tipo==='USCITA'?'📤':'📥'}</span>
+      <span class="alert-text">
+        <strong>${m.cassoneId}</strong> · ${m.tipo} · ${m.cliente||'—'}
+        <span style="color:var(--ink3);font-size:10px;display:block">${fmtDT(m.ts)}</span>
+      </span>
+      <button class="btn-ddt ${m.tipo==='USCITA'?'btn-ddt-out':'btn-ddt-in'}"
+        onclick="openDDT('${id}')">📄 DDT</button>
+    </div>`
+  ).join('');
+}
+
+function renderDashMovimenti() {
+  const container = document.getElementById('dash-movimenti');
+  const movs = Object.entries(STATE.movimenti)
+    .sort((a,b) => b[1].ts > a[1].ts ? 1 : -1)
+    .slice(0, 12);
+  if (!movs.length) { container.innerHTML = '<span style="font-size:12px;color:var(--ink3)">Nessun movimento</span>'; return; }
+  container.innerHTML = movs.map(([,m]) =>
+    `<div class="mov-row">
+      <span class="mov-badge ${m.tipo==='USCITA'?'badge-out':'badge-in'}">${m.tipo==='USCITA'?'↑ USCITA':'↓ RIENTRO'}</span>
+      <span class="mov-cassone">${m.cassoneId}</span>
+      <span class="mov-info">${m.cliente||'—'} ${m.autista?'· '+m.autista:''}</span>
+      <span class="mov-time">${fmtDT(m.ts)}</span>
+    </div>`
+  ).join('');
+}
+
+function renderBollettazione() {
+  const cerca = document.getElementById('filt-cerca').value.toLowerCase();
+  const tipo  = document.getElementById('filt-tipo').value;
+  const ddt   = document.getElementById('filt-ddt').value;
+  const data  = document.getElementById('filt-data').value;
+  let movs = Object.entries(STATE.movimenti)
+    .sort((a,b) => b[1].ts > a[1].ts ? 1 : -1);
+  if (tipo)  movs = movs.filter(([,m]) => m.tipo === tipo);
+  if (ddt === 'pend')   movs = movs.filter(([,m]) => m.tipo === 'USCITA' && !m.ddtNumero);
+  if (ddt === 'emesso') movs = movs.filter(([,m]) => !!m.ddtNumero);
+  if (data)  movs = movs.filter(([,m]) => m.ts && m.ts.startsWith(data));
+  if (cerca) movs = movs.filter(([,m]) =>
+    (m.cassoneId||'').toLowerCase().includes(cerca) ||
+    (m.cliente||'').toLowerCase().includes(cerca) ||
+    (m.autista||'').toLowerCase().includes(cerca) ||
+    (m.ddtNumero||'').toLowerCase().includes(cerca)
+  );
+  const tbody = document.getElementById('boll-tbody');
+  if (!movs.length) {
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--ink3);padding:1.5rem;font-size:13px">Nessun movimento trovato</td></tr>';
+    return;
+  }
+  tbody.innerHTML = movs.map(([id,m]) => {
+    const cas = STATE.cassoni[m.cassoneId] || {};
+    const isUscita = m.tipo === 'USCITA';
+    const ddtHtml = m.ddtNumero
+      ? `<span class="ddt-tag">${m.ddtNumero}</span>`
+      : isUscita
+        ? `<span class="ddt-tag pend">Da emettere</span>`
+        : `<span style="color:var(--ink3);font-size:12px">—</span>`;
+    const flagsAttuali = (STATE.movimenti[id]?.note||'').split(' | ').filter(p => ['Manca tag','Presenta rotture','Telo danneggiato'].some(f=>p.startsWith(f)) || p.startsWith('Altro'));
+    const flagBadge = flagsAttuali.filter(Boolean).length
+      ? `<span style="font-size:10px;background:#fef2f2;color:#c0392b;border:1px solid #fca5a5;border-radius:10px;padding:1px 5px;font-weight:700;vertical-align:middle">${flagsAttuali.filter(Boolean).length}</span>`
+      : '';
+    return `<tr>
+      <td style="white-space:nowrap;color:var(--ink2)">${fmtDT(m.ts)}</td>
+      <td><strong>${m.cassoneId}</strong></td>
+      <td style="color:var(--ink2)">${cas.tipo||'—'}</td>
+      <td><span class="status-pill ${isUscita?'pill-out':'pill-in'}" onclick="toggleTipoMovimento('${id}',this)" style="cursor:pointer;user-select:none" title="Clicca per cambiare tipo">${isUscita?'↑ Uscita':'↓ Rientro'}</span></td>
+      <td>${m.cliente||'—'}</td>
+      <td style="color:var(--ink2)">${m.autista||'—'}</td>
+      <td>${ddtHtml}</td>
+      <td style="white-space:nowrap">
+        ${isUscita ? `<button class="btn btn-ghost btn-sm" onclick="openDDT('${id}')">📄 ${m.ddtNumero?'Modifica':'DDT'}</button>` : ''}
+        ${isUscita && m.ddtNumero ? `<button class="btn btn-ghost btn-sm" onclick="stampaDDTDiretto('${id}')" style="margin-left:4px" title="Stampa">🖨️</button>` : ''}
+        <button class="btn btn-ghost btn-sm" onclick="openSegnalazioniModal('${id}')" style="margin-left:4px" title="Segnalazioni">🔧 ${flagBadge}</button>
+        <button class="btn btn-ghost btn-sm" onclick="eliminaMovimento('${id}')" style="color:var(--red,#c0392b);margin-left:4px" title="Elimina">🗑</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+let _segnMovId = null;
+
+function openSegnalazioniModal(movId) {
+  _segnMovId = movId;
+  const m = STATE.movimenti[movId];
+  if (!m) return;
+  const flags = estraiFlag(m.note);
+  const altroTesto = (m.note||'').match(/Altro: ([^|]+)/)?.[1]?.trim() || '';
+  const noteLibere = (m.note||'').split(' | ').filter(p => !FLAGS.some(f => p.startsWith(f))).join(' | ');
+
+  document.getElementById('segn-cassone-label').textContent = `Cassone ${m.cassoneId} — ${fmtDT(m.ts)}`;
+  document.getElementById('segn-tag').checked     = flags.includes('Manca tag');
+  document.getElementById('segn-rotture').checked = flags.includes('Presenta rotture');
+  document.getElementById('segn-telo').checked    = flags.includes('Telo danneggiato');
+  const hasAltro = flags.some(f => f.startsWith('Altro'));
+  document.getElementById('segn-altro').checked   = hasAltro;
+  document.getElementById('segn-altro-testo').value   = altroTesto;
+  document.getElementById('segn-altro-testo').style.display = hasAltro ? 'block' : 'none';
+  document.getElementById('segn-note-libere').value   = noteLibere;
+  document.getElementById('segn-modal').classList.add('open');
+}
+window.openSegnalazioniModal = openSegnalazioniModal;
+
+function closeSegn() {
+  document.getElementById('segn-modal').classList.remove('open');
+  _segnMovId = null;
+}
+window.closeSegn = closeSegn;
+
+async function salvaSegnalazioni() {
+  if (!_segnMovId || !db) return;
+  const segnalazioni = [];
+  if (document.getElementById('segn-tag').checked)     segnalazioni.push('Manca tag');
+  if (document.getElementById('segn-rotture').checked) segnalazioni.push('Presenta rotture');
+  if (document.getElementById('segn-telo').checked)    segnalazioni.push('Telo danneggiato');
+  if (document.getElementById('segn-altro').checked) {
+    const t = document.getElementById('segn-altro-testo').value.trim();
+    segnalazioni.push(t ? 'Altro: ' + t : 'Altro');
+  }
+  const noteLibere = document.getElementById('segn-note-libere').value.trim();
+  const nuovaNota  = [noteLibere, ...segnalazioni].filter(Boolean).join(' | ');
+  await update(ref(db, `movimenti/${_segnMovId}`), { note: nuovaNota });
+  toast('✓ Segnalazioni aggiornate', 'ok');
+  closeSegn();
+}
+window.salvaSegnalazioni = salvaSegnalazioni;
+
+async function eliminaMovimento(movId) {
+  if (!db) { toast('Firebase non connesso', 'err'); return; }
+  const mov = STATE.movimenti[movId];
+  if (!mov) { toast('Movimento non trovato', 'err'); return; }
+
+  const cassoneId = mov.cassoneId;
+  const tipoMov   = mov.tipo; // 'USCITA' o 'RIENTRO'
+  const data      = fmtDT(mov.ts);
+  const cliente   = mov.cliente || '—';
+
+  // Stato inverso: se era USCITA → torna in PIAZZALE, se era RIENTRO → torna FUORI
+  const statoRipristino = tipoMov === 'USCITA' ? 'piazzale' : 'fuori';
+  const labelRip = statoRipristino === 'piazzale' ? 'IN PIAZZALE' : 'FUORI';
+
+  const conferma = confirm(
+    `Eliminare questo movimento?\n\n` +
+    `Cassone: ${cassoneId}\n` +
+    `Tipo: ${tipoMov}\n` +
+    `Data: ${data}\n` +
+    `Cliente: ${cliente}\n\n` +
+    `Il cassone verrà ripristinato a "${labelRip}".`
+  );
+  if (!conferma) return;
+
+  const { remove: fbRemove } = { remove };
+
+  // Elimina il movimento
+  await fbRemove(ref(db, `movimenti/${movId}`));
+
+  // Ripristina stato cassone
+  const aggCassone = { stato: statoRipristino };
+  if (statoRipristino === 'piazzale') {
+    aggCassone.clienteAttuale = '';
+  } else {
+    aggCassone.clienteAttuale = mov.cliente || '';
+  }
+  await update(ref(db, `cassoni/${cassoneId}`), aggCassone);
+
+  toast(`✓ Movimento eliminato — ${cassoneId} → ${labelRip}`, 'ok');
+}
+window.eliminaMovimento = eliminaMovimento;
+
+function renderCassoniSetup() {
+  const el = document.getElementById('cassoni-list-setup');
+  const cas = Object.entries(STATE.cassoni);
+  if (!cas.length) { el.innerHTML = '<p style="font-size:12px;color:var(--ink3)">Nessun cassone</p>'; return; }
+  el.innerHTML = `<table style="width:100%;font-size:12px;border-collapse:collapse">
+    <thead><tr style="background:var(--surface2)"><th style="padding:5px 8px;text-align:left">Codice</th><th>Tipo</th><th>Stato</th><th></th></tr></thead>
+    <tbody>${cas.map(([id,c]) =>
+      `<tr style="border-bottom:1px solid var(--border)">
+        <td style="padding:5px 8px;font-weight:700">${id}</td>
+        <td style="padding:5px 8px">${c.tipo}</td>
+        <td style="padding:5px 8px"><span class="status-pill ${c.stato==='piazzale'?'pill-in':'pill-out'}">${c.stato}</span></td>
+        <td style="padding:5px 8px"><button class="btn btn-danger btn-sm" onclick="eliminaCassone('${id}')">🗑</button></td>
+      </tr>`
+    ).join('')}</tbody></table>`;
+}
+
+function renderClientiDatalist() {
+  const dl = document.getElementById('clienti-list');
+  if (dl) dl.innerHTML = STATE.clienti.map(c => `<option value="${c}">`).join('');
+  const elSetup = document.getElementById('clienti-list-setup');
+  if (elSetup) {
+    elSetup.innerHTML = STATE.clienti.map(c =>
+      `<div style="display:flex;align-items:center;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border);font-size:12px">
+        <span>${c}</span>
+        <button class="btn btn-danger btn-sm" onclick="eliminaCliente('${c}')">✕</button>
+      </div>`
+    ).join('') || '<p style="font-size:12px;color:var(--ink3)">Nessun cliente</p>';
+  }
+}
+
+// ══ TRASPORTATORE ══════════════════════════════════
+let _scanCassoneId = null;
+
+let _scanDropIdx = -1;
+
+function onScanInput(val) {
+  val = val.trim().toUpperCase();
+  _scanCassoneId = null;
+  _scanDropIdx = -1;
+  document.getElementById('cassone-found').classList.remove('visible');
+  document.getElementById('trasp-form').classList.remove('visible');
+  document.getElementById('btn-uscita').disabled = true;
+  document.getElementById('btn-rientro').disabled = true;
+
+  const drop = document.getElementById('scan-drop');
+
+  if (!val) { drop.style.display = 'none'; return; }
+
+  // Filtra cassoni che corrispondono (codice o tipo)
+  const matches = Object.entries(STATE.cassoni)
+    .filter(([id, c]) =>
+      id.toUpperCase().includes(val) ||
+      (c.tipo||'').toUpperCase().includes(val)
+    )
+    .sort((a, b) => {
+      // Priorità: inizia con il valore cercato
+      const aStart = a[0].startsWith(val) ? 0 : 1;
+      const bStart = b[0].startsWith(val) ? 0 : 1;
+      return aStart - bStart || a[0].localeCompare(b[0]);
+    })
+    .slice(0, 20);
+
+  if (!matches.length) { drop.style.display = 'none'; return; }
+
+  drop.innerHTML = matches.map(([id, c], i) => {
+    const statoCls = c.stato === 'piazzale' ? 'stato-piazzale' : 'stato-fuori';
+    const statoLbl = c.stato === 'piazzale' ? '✅ Piazzale' : '🔴 Fuori';
+    const tipo = (c.tipo||'').length > 40 ? c.tipo.slice(0,38)+'…' : (c.tipo||'');
+    return `<div class="scan-drop-item" data-id="${id}" onmousedown="selezionaDaCassone('${id}')">
+      <span class="scan-drop-code">${id}</span>
+      <span class="scan-drop-tipo">${tipo}</span>
+      <span class="scan-drop-stato ${statoCls}">${statoLbl}</span>
+    </div>`;
+  }).join('');
+  drop.style.display = 'block';
+
+  // Se esiste corrispondenza esatta → seleziona subito
+  if (STATE.cassoni[val]) selezionaDaCassone(val);
+}
+
+function onScanKeydown(e) {
+  const drop = document.getElementById('scan-drop');
+  const items = drop.querySelectorAll('.scan-drop-item');
+  if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    _scanDropIdx = Math.min(_scanDropIdx + 1, items.length - 1);
+    items.forEach((el,i) => el.classList.toggle('sdactive', i === _scanDropIdx));
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    _scanDropIdx = Math.max(_scanDropIdx - 1, 0);
+    items.forEach((el,i) => el.classList.toggle('sdactive', i === _scanDropIdx));
+  } else if (e.key === 'Enter') {
+    if (_scanDropIdx >= 0 && items[_scanDropIdx]) {
+      selezionaDaCassone(items[_scanDropIdx].dataset.id);
+    } else {
+      confermaScan();
+    }
+  } else if (e.key === 'Escape') {
+    drop.style.display = 'none';
+  }
+}
+
+function selezionaDaCassone(id) {
+  const drop = document.getElementById('scan-drop');
+  drop.style.display = 'none';
+  document.getElementById('scan-input').value = id;
+  confermaScan(id);
+}
+
+function confermaScan(val) {
+  val = val || document.getElementById('scan-input').value.trim().toUpperCase();
+  if (!val) return;
+  const cas = STATE.cassoni[val];
+  const foundEl = document.getElementById('cassone-found');
+  if (cas) {
+    _scanCassoneId = val;
+    document.getElementById('found-id').textContent = val;
+    document.getElementById('found-tipo').textContent = cas.tipo;
+    const stato = cas.stato === 'piazzale' ? '✅ In piazzale — pronto per uscita' : '🔴 Fuori piazzale — in attesa di rientro';
+    document.getElementById('found-status').textContent = stato;
+    foundEl.classList.add('visible');
+    document.getElementById('trasp-form').classList.add('visible');
+    document.getElementById('btn-uscita').disabled  = (cas.stato !== 'piazzale');
+    document.getElementById('btn-rientro').disabled = (cas.stato !== 'fuori');
+  } else {
+    document.getElementById('found-id').textContent = val;
+    document.getElementById('found-tipo').textContent = '⚠️ Cassone non trovato in anagrafica';
+    document.getElementById('found-status').textContent = '';
+    foundEl.classList.add('visible');
+  }
+}
+
+function aggiornaSegnalazioni() {
+  const altroCheck = document.getElementById('flag-altro');
+  const altroTesto = document.getElementById('flag-altro-testo');
+  if (altroTesto) altroTesto.style.display = altroCheck?.checked ? 'block' : 'none';
+}
+window.aggiornaSegnalazioni = aggiornaSegnalazioni;
+
+// ── Foto segnalazione (trasportatore) ──────────────
+let _traspFoto = []; // dataURL (JPEG compresso) delle foto scattate per la segnalazione corrente
+
+function comprimiFoto(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const maxDim = 1280;
+        let { width, height } = img;
+        if (width > maxDim || height > maxDim) {
+          const scale = maxDim / Math.max(width, height);
+          width = Math.round(width * scale);
+          height = Math.round(height * scale);
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width; canvas.height = height;
+        canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL('image/jpeg', 0.65));
+      };
+      img.onerror = reject;
+      img.src = e.target.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+async function onFotoSegnalazioneInput(event) {
+  const files = Array.from(event.target.files || []);
+  event.target.value = '';
+  for (const file of files) {
+    try { _traspFoto.push(await comprimiFoto(file)); }
+    catch { toast('Impossibile leggere la foto', 'err'); }
+  }
+  renderFotoThumbs();
+}
+window.onFotoSegnalazioneInput = onFotoSegnalazioneInput;
+
+function renderFotoThumbs() {
+  const row = document.getElementById('t-foto-row');
+  if (!row) return;
+  if (!_traspFoto.length) { row.style.display = 'none'; row.innerHTML = ''; return; }
+  row.style.display = 'flex';
+  row.innerHTML = _traspFoto.map((src, i) => `
+    <div style="position:relative;width:60px;height:60px">
+      <img src="${src}" style="width:100%;height:100%;object-fit:cover;border-radius:8px;border:1.5px solid var(--border,#d7e6e3)">
+      <button type="button" onclick="rimuoviFotoSegnalazione(${i})" title="Rimuovi foto"
+        style="position:absolute;top:-6px;right:-6px;width:20px;height:20px;border-radius:50%;background:#c0392b;color:#fff;border:2px solid #fff;font-size:12px;line-height:1;cursor:pointer;font-weight:700;padding:0">×</button>
+    </div>`).join('');
+}
+function rimuoviFotoSegnalazione(i) {
+  _traspFoto.splice(i, 1);
+  renderFotoThumbs();
+}
+window.rimuoviFotoSegnalazione = rimuoviFotoSegnalazione;
+
+async function registraMovimento(tipo) {
+  if (!db) { toast('Firebase non connesso', 'err'); return; }
+  if (!_scanCassoneId) { toast('Nessun cassone selezionato', 'err'); return; }
+  const cliente = document.getElementById('t-cliente').value.trim();
+  const autista = document.getElementById('t-autista').value.trim();
+  const note    = document.getElementById('t-note').value.trim();
+  const segnalazioni = [];
+  if (document.getElementById('flag-tag')?.checked)     segnalazioni.push('Manca tag');
+  if (document.getElementById('flag-rotture')?.checked) segnalazioni.push('Presenta rotture');
+  if (document.getElementById('flag-telo')?.checked)    segnalazioni.push('Telo danneggiato');
+  if (document.getElementById('flag-altro')?.checked) {
+    const alt = document.getElementById('flag-altro-testo')?.value.trim();
+    segnalazioni.push(alt ? 'Altro: ' + alt : 'Altro');
+  }
+  const noteManutenzione = [note, ...segnalazioni].filter(Boolean).join(' | ');
+  if (!cliente) { toast('Inserisci il cliente', 'err'); return; }
+
+  const movRef = ref(db, 'movimenti');
+  const nuovoMov = { cassoneId:_scanCassoneId, tipo, ts:now(), cliente, autista, note:noteManutenzione, ddtNumero:'', ddtTs:'' };
+  if (_traspFoto.length) nuovoMov.foto = _traspFoto.slice();
+  await push(movRef, nuovoMov);
+
+  // Aggiorna stato cassone
+  const casRef = ref(db, `cassoni/${_scanCassoneId}`);
+  await update(casRef, {
+    stato: tipo === 'USCITA' ? 'fuori' : 'piazzale',
+    clienteAttuale: tipo === 'USCITA' ? cliente : '',
+    lastMov: now()
+  });
+
+  toast(tipo === 'USCITA' ? '🔴 Uscita registrata — DDT da emettere' : '🟢 Rientro registrato', 'ok');
+
+  // Reset form
+  document.getElementById('scan-input').value = '';
+  document.getElementById('t-cliente').value = '';
+  document.getElementById('t-note').value = '';
+  // Reset segnalazioni
+  ['flag-tag','flag-rotture','flag-telo','flag-altro'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.checked = false;
+  });
+  const altroTesto = document.getElementById('flag-altro-testo');
+  if (altroTesto) { altroTesto.value = ''; altroTesto.style.display = 'none'; }
+  document.getElementById('cassone-found').classList.remove('visible');
+  document.getElementById('trasp-form').classList.remove('visible');
+  _scanCassoneId = null;
+  _traspFoto = [];
+  renderFotoThumbs();
+
+  // Aggiorna recenti trasportatore
+  renderTrasportatoreRecenti(autista);
+}
+
+function renderTrasportatoreRecenti(autistaNome) {
+  const movs = Object.values(STATE.movimenti)
+    .filter(m => !autistaNome || m.autista === autistaNome)
+    .sort((a,b) => b.ts > a.ts ? 1 : -1)
+    .slice(0, 5);
+  const el = document.getElementById('trasp-recenti-list');
+  if (!movs.length) { el.innerHTML = '<span style="font-size:12px;color:var(--ink3)">Nessuno ancora</span>'; return; }
+  el.innerHTML = movs.map(m =>
+    `<div class="trasp-rec-item">
+      <span class="mov-badge ${m.tipo==='USCITA'?'badge-out':'badge-in'}" style="font-size:9px">${m.tipo}</span>
+      <strong>${m.cassoneId}</strong>
+      <span style="color:var(--ink2);flex:1">${m.cliente||'—'}</span>
+      <span style="color:var(--ink3)">${fmtDT(m.ts)}</span>
+    </div>`
+  ).join('');
+}
+
+// ══ DDT ════════════════════════════════════════════
+let _ddtMovId = null;
+
+
+function stampaDDTDiretto(movId) {
+  const m = STATE.movimenti[movId];
+  if (!m) return;
+  const cas = STATE.cassoni[m.cassoneId] || {};
+  const isUscita = m.tipo === 'USCITA';
+  const dataFmt = ts => {
+    if (!ts) return new Date().toLocaleDateString('it-IT');
+    let d = typeof ts === 'string' ? new Date(ts) : new Date(ts < 1e10 ? ts*1000 : ts);
+    if (isNaN(d.getTime())) return '—';
+    return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear();
+  };
+  const dataMov = dataFmt(m.ts);
+  const destinatario = isUscita ? (m.cliente||'—') : 'CENTRO RISORSE S.p.A. — Via Lazio 48 - 31045 - MOTTA DI LIVENZA (TV)';
+  const causale = isUscita ? 'POSIZIONAMENTO CASSONE' : 'RITIRO CASSONE';
+  const ddtNum = m.ddtNumero || '____________________';
+  // Usa stesso logo base64 del modal
+  const logoSrc = document.querySelector('#ddt-print-area img')?.src ||
+    document.querySelector('[id^="ddt-"] img')?.src || '';
+
+  // Genera HTML temporaneo per la stampa
+  const tmpDiv = document.createElement('div');
+  tmpDiv.id = 'ddt-print-area';
+  tmpDiv.style.cssText = 'font-family:Arial,sans-serif;font-size:12px;color:#111;max-width:740px;margin:0 auto';
+
+  // Richiama openDDT per generare il contenuto, poi stampa
+  _ddtMovId = movId;
+  document.getElementById('ddt-numero').value = m.ddtNumero || '';
+  const defaultTrasp = new Date() < new Date('2026-08-01') ? 'KEOMA S.R.L.' : 'CENTRO RISORSE SPA';
+  document.getElementById('ddt-trasportatore').value = m.ddtNumero ? (m.autista || defaultTrasp) : defaultTrasp;
+  openDDT(movId);
+  setTimeout(() => {
+    stampaDDT();
+    setTimeout(() => closeDDT(), 500);
+  }, 150);
+}
+window.stampaDDTDiretto = stampaDDTDiretto;
+
+async function aggiornaTipoMovimento(movId, nuovoTipo) {
+  if (!db) return;
+  await update(ref(db, `movimenti/${movId}`), { tipo: nuovoTipo });
+  toast(`✓ Tipo aggiornato → ${nuovoTipo}`, 'ok');
+}
+window.aggiornaTipoMovimento = aggiornaTipoMovimento;
+
+async function toggleTipoMovimento(movId, el) {
+  if (!db) { toast('Firebase non connesso', 'err'); return; }
+  const mov = STATE.movimenti[movId];
+  if (!mov) return;
+  const nuovoTipo = mov.tipo === 'USCITA' ? 'RIENTRO' : 'USCITA';
+  // Aggiorna UI subito
+  el.className = 'status-pill ' + (nuovoTipo === 'USCITA' ? 'pill-out' : 'pill-in');
+  el.textContent = nuovoTipo === 'USCITA' ? '↑ Uscita' : '↓ Rientro';
+  el.setAttribute('onclick', `toggleTipoMovimento('${movId}',this)`);
+  // Salva su Firebase
+  await update(ref(db, `movimenti/${movId}`), { tipo: nuovoTipo });
+  toast(`✓ ${movId} → ${nuovoTipo}`, 'ok');
+}
+window.toggleTipoMovimento = toggleTipoMovimento;
+
+
+function calcolaProssimoNumero() {
+  const anno = new Date().getFullYear().toString().slice(-2);
+  const movs = Object.values(STATE.movimenti || {});
+  let maxNum = 0;
+  movs.forEach(m => {
+    if (m.ddtNumero) {
+      const match = m.ddtNumero.match(/^(\d+)\//);
+      if (match) {
+        const n = parseInt(match[1]);
+        if (n > maxNum) maxNum = n;
+      }
+    }
+  });
+  const prossimo = String(maxNum + 1).padStart(2, '0');
+  return `${prossimo}/${anno}`;
+}
+
+function openDDT(movId) {
+  _ddtMovId = movId;
+  const m = STATE.movimenti[movId];
+  if (!m) return;
+  const cas = STATE.cassoni[m.cassoneId] || {};
+  const isUscita = m.tipo === 'USCITA';
+
+  const oggi = new Date();
+  const defaultTrasp = oggi < new Date('2026-08-01') ? 'KEOMA S.R.L.' : 'CENTRO RISORSE SPA';
+  const dataFmt = ts => {
+    if (!ts) return '';
+    let d = typeof ts === 'string' ? new Date(ts) : new Date(ts < 1e10 ? ts*1000 : ts);
+    if (isNaN(d.getTime())) return '';
+    return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+  };
+
+  document.getElementById('ddt-modal-title').textContent = `DDT — ${m.cassoneId} — ${isUscita?'USCITA':'RIENTRO'}`;
+
+  // Estrai targa dalle note (es. "Fw361vj" o qualsiasi cosa prima di " | ")
+  const estraiTarga = note => {
+    if (!note) return '';
+    // Prende la prima parte delle note (prima del primo | ) se non è un flag
+    const FLAGS_KEYS = ['Manca tag','Presenta rotture','Telo danneggiato','Altro'];
+    const parti = note.split(' | ');
+    const notaLibera = parti.find(p => !FLAGS_KEYS.some(f => p.startsWith(f))) || '';
+    return notaLibera.trim();
+  };
+
+  // Se il DDT è già stato salvato, ricarica i valori salvati
+  document.getElementById('ddt-numero').value           = m.ddtNumero || calcolaProssimoNumero();
+  document.getElementById('ddt-data').value             = m.ddtData || dataFmt(m.ts);
+  document.getElementById('ddt-dest-nome').value        = m.ddtDestNome || (isUscita ? (m.cliente||'') : 'CENTRO RISORSE S.p.A.');
+  document.getElementById('ddt-dest-indirizzo').value   = m.ddtDestIndirizzo || (isUscita ? '' : 'Via Lazio 48 - 31045 - MOTTA DI LIVENZA (TV)');
+  document.getElementById('ddt-dest-luogo').value       = m.ddtDestLuogo || (isUscita ? (m.cliente||'') : 'CENTRO RISORSE S.p.A.');
+  document.getElementById('ddt-descrizione').value      = m.ddtDescrizione || (cas.tipo ? cas.tipo.toUpperCase() + ' SCARRABILE' : 'CASSONE SCARRABILE');
+  document.getElementById('ddt-causale').value          = m.ddtCausale || (isUscita ? 'POSIZIONAMENTO CASSONE' : 'RITIRO CASSONE');
+  document.getElementById('ddt-note-extra').value       = m.ddtNoteExtra !== undefined ? m.ddtNoteExtra : (m.note || '');
+  document.getElementById('ddt-trasportatore').value    = m.ddtTrasportatore || defaultTrasp;
+  document.getElementById('ddt-trasp-indirizzo').value  = m.ddtTruspIndirizzo || 'Via Lazio 48 - 31045 - MOTTA DI LIVENZA (TV)';
+  document.getElementById('ddt-trasp-cf').value         = m.ddtTruspCf || '00429860315';
+  document.getElementById('ddt-targa').value            = m.ddtTarga || estraiTarga(m.note);
+  document.getElementById('ddt-ora').value              = m.ddtOra || '';
+
+  aggiornaDDTPreview();
+  document.getElementById('ddt-modal').classList.add('open');
+}
+
+function getDDTValues() {
+  const dataVal = document.getElementById('ddt-data').value;
+  let dataMov = '—';
+  if (dataVal) {
+    const d = new Date(dataVal + 'T00:00:00');
+    dataMov = String(d.getDate()).padStart(2,'0') + '/' + String(d.getMonth()+1).padStart(2,'0') + '/' + d.getFullYear();
+  }
+  return {
+    numero:        document.getElementById('ddt-numero').value || '____________________',
+    data:          dataMov,
+    destNome:      document.getElementById('ddt-dest-nome').value || '—',
+    destIndirizzo: document.getElementById('ddt-dest-indirizzo').value,
+    destLuogo:     document.getElementById('ddt-dest-luogo').value || '—',
+    descrizione:   document.getElementById('ddt-descrizione').value || 'CASSONE SCARRABILE',
+    causale:       document.getElementById('ddt-causale').value,
+    noteExtra:     document.getElementById('ddt-note-extra').value,
+    trasportatore: document.getElementById('ddt-trasportatore').value || 'KEOMA S.R.L.',
+    traspIndirizzo:document.getElementById('ddt-trasp-indirizzo').value,
+    traspCf:       document.getElementById('ddt-trasp-cf').value,
+    targa:         document.getElementById('ddt-targa').value || '________',
+    ora:           document.getElementById('ddt-ora').value || '______',
+  };
+}
+
+function aggiornaDDTPreview() {
+  const m = _ddtMovId ? (STATE.movimenti[_ddtMovId] || {}) : {};
+  const v = getDDTValues();
+  const logoSrc = document.querySelector('#ddt-preview img')?.src || _logoDDT || '';
+
+  document.getElementById('ddt-preview').innerHTML = `
+<div id="ddt-print-area" style="font-family:Arial,sans-serif;font-size:11px;color:#111;max-width:720px;margin:0 auto">
+  <table style="width:100%;border-collapse:collapse;border:2px solid #111;margin-bottom:8px">
+    <tr>
+      <td style="width:28%;border-right:2px solid #111;border-bottom:2px solid #111;padding:8px 10px;vertical-align:middle;text-align:center">
+        ${logoSrc ? `<img src="${logoSrc}" alt="Itelyum" style="max-width:110px;max-height:55px;display:block;margin:0 auto 4px">` : '<div style="font-size:16px;font-weight:900;color:#003366">ITELYUM®</div>'}
+        <div style="font-size:10px;font-weight:700;text-align:center">DOCUMENTO DI TRASPORTO<br><span style="font-weight:400">(D.d.t.)</span></div>
+      </td>
+      <td style="border-bottom:2px solid #111;padding:6px 10px;vertical-align:top;font-size:11px">
+        <div style="font-weight:700">CENTRO RISORSE S.P.A.</div>
+        <div>Via Lazio 48 - 31045 - MOTTA DI LIVENZA (TV)</div>
+        <div>C.F.&nbsp;&nbsp;00584180269 &nbsp;&nbsp; P.IVA&nbsp;&nbsp;00584180269</div>
+        <div style="margin-top:5px"><em>Destinatario</em>&nbsp;&nbsp;<strong>${v.destNome}${v.destIndirizzo ? '<br><span style="font-weight:400">'+v.destIndirizzo+'</span>' : ''}</strong></div>
+      </td>
+    </tr>
+    <tr>
+      <td colspan="2" style="padding:4px 10px;font-size:11px">
+        <strong>Bolla N° <span id="ddt-num-preview">${v.numero}</span></strong>
+        &nbsp;&nbsp; del ${v.data}
+        &nbsp;&nbsp;&nbsp;&nbsp;
+        <strong>Luogo di destinazione</strong>&nbsp; ${v.destLuogo}
+      </td>
+    </tr>
+  </table>
+
+  <table style="width:100%;border-collapse:collapse;border:1.5px solid #111;margin-bottom:8px">
+    <thead><tr style="background:#eee">
+      <th style="border:1px solid #999;padding:4px 7px;text-align:left;width:10%">Codice</th>
+      <th style="border:1px solid #999;padding:4px 7px;text-align:left">Descrizione</th>
+      <th style="border:1px solid #999;padding:4px 7px;text-align:center;width:7%">Qta</th>
+      <th style="border:1px solid #999;padding:4px 7px;text-align:center;width:7%">U.M.</th>
+      <th style="border:1px solid #999;padding:4px 7px;text-align:left;width:30%">Note</th>
+    </tr></thead>
+    <tbody><tr>
+      <td style="border:1px solid #999;padding:5px 7px;font-weight:700;vertical-align:top">${m.cassoneId||'—'}</td>
+      <td style="border:1px solid #999;padding:5px 7px;vertical-align:top">${v.descrizione}</td>
+      <td style="border:1px solid #999;padding:5px 7px;text-align:center;vertical-align:top">1</td>
+      <td style="border:1px solid #999;padding:5px 7px;text-align:center;vertical-align:top">Nr.</td>
+      <td style="border:1px solid #999;padding:5px 7px;vertical-align:top;line-height:1.6">
+        <strong>PROPRIETARIO/COMMITTENTE/CARICATORE:<br>CENTRO RISORSE SPA</strong>
+        ${v.noteExtra ? '<br><br>' + v.noteExtra.replace(/\n/g,'<br>') : ''}
+      </td>
+    </tr></tbody>
+  </table>
+
+  <table style="width:100%;border-collapse:collapse;border:1.5px solid #111;margin-bottom:8px">
+    <thead><tr style="background:#eee">
+      <th style="border:1px solid #999;padding:4px 7px;text-align:center;width:8%">N.colli</th>
+      <th style="border:1px solid #999;padding:4px 7px;text-align:left">Aspetto esteriore</th>
+      <th style="border:1px solid #999;padding:4px 7px;text-align:left">Causale di trasporto</th>
+      <th style="border:1px solid #999;padding:4px 7px;text-align:left">Porto</th>
+      <th style="border:1px solid #999;padding:4px 7px;text-align:left">Trasporto a cura</th>
+    </tr></thead>
+    <tbody><tr>
+      <td style="border:1px solid #999;padding:5px 7px;text-align:center">1</td>
+      <td style="border:1px solid #999;padding:5px 7px">A VISTA</td>
+      <td style="border:1px solid #999;padding:5px 7px">${v.causale}</td>
+      <td style="border:1px solid #999;padding:5px 7px">PORTO FRANCO</td>
+      <td style="border:1px solid #999;padding:5px 7px">Vettore</td>
+    </tr></tbody>
+  </table>
+
+  <table style="width:100%;border-collapse:collapse;border:1.5px solid #111;margin-bottom:14px">
+    <thead><tr style="background:#eee">
+      <th style="border:1px solid #999;padding:4px 7px;text-align:left;width:50%">Trasportatore</th>
+      <th style="border:1px solid #999;padding:4px 7px;text-align:center;width:15%">Targa</th>
+      <th style="border:1px solid #999;padding:4px 7px;text-align:center;width:17%">Data trasporto</th>
+      <th style="border:1px solid #999;padding:4px 7px;text-align:center;width:18%">Ora trasporto</th>
+    </tr></thead>
+    <tbody><tr>
+      <td style="border:1px solid #999;padding:5px 7px;font-size:10px">${v.trasportatore}<br>${v.traspIndirizzo}<br>C.F. ${v.traspCf}</td>
+      <td style="border:1px solid #999;padding:5px 7px;text-align:center">${v.targa}</td>
+      <td style="border:1px solid #999;padding:5px 7px;text-align:center">${v.data}</td>
+      <td style="border:1px solid #999;padding:5px 7px;text-align:center">${v.ora}</td>
+    </tr></tbody>
+  </table>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:3rem;margin-top:1.5rem">
+    <div style="text-align:center"><div style="border-top:1px solid #111;padding-top:5px;font-size:10px">Firma destinatario</div></div>
+    <div style="text-align:center"><div style="border-top:1px solid #111;padding-top:5px;font-size:10px">Firma trasportatore</div></div>
+  </div>
+
+  <div style="margin-top:16px;border-top:1px solid #ccc;padding-top:6px;font-size:8px;color:#666;display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px">
+    <div>CENTRO RISORSE S.p.A. · Via Lazio 48 · 31045 Motta di Livenza (TV) Italy · T +39 0422 50 37 11 · F +39 0422 86 19 80 · info@centrorisorse.com</div>
+    <div>C.F. e P.IVA 00584180263 · REA TV 128757 · Capitale Sociale € 2.000.000</div>
+  </div>
+</div>`;
+
+  // Salva src logo per futuri refresh
+  const imgEl = document.querySelector('#ddt-preview img');
+  if (imgEl) window._logoDDT = imgEl.src;
+}
+window.aggiornaDDTPreview = aggiornaDDTPreview;
+
+function closeDDT() { document.getElementById('ddt-modal').classList.remove('open'); _ddtMovId = null; }
+
+async function confermaDDT() {
+  if (!_ddtMovId || !db) return;
+  const numero = document.getElementById('ddt-numero').value.trim();
+  if (!numero) { toast('Inserisci il numero DDT', 'err'); return; }
+  // Salva tutti i campi modificabili del DDT
+  const v = getDDTValues();
+  await update(ref(db, `movimenti/${_ddtMovId}`), {
+    ddtNumero:       numero,
+    ddtTs:           now(),
+    ddtData:         document.getElementById('ddt-data').value,
+    ddtDestNome:     v.destNome,
+    ddtDestIndirizzo:v.destIndirizzo,
+    ddtDestLuogo:    v.destLuogo,
+    ddtDescrizione:  v.descrizione,
+    ddtCausale:      v.causale,
+    ddtNoteExtra:    v.noteExtra,
+    ddtTrasportatore:v.trasportatore,
+    ddtTruspIndirizzo:v.traspIndirizzo,
+    ddtTruspCf:      v.traspCf,
+    ddtTarga:        document.getElementById('ddt-targa').value,
+    ddtOra:          document.getElementById('ddt-ora').value,
+  });
+  toast('✓ DDT ' + numero + ' registrato', 'ok');
+  closeDDT();
+}
+
+function stampaDDT() {
+  // Aggiorna numero e trasportatore nell'anteprima prima di stampare
+  const numEl = document.getElementById('ddt-num-preview');
+  if (numEl) numEl.textContent = document.getElementById('ddt-numero')?.value || '____________________';
+  const area = document.getElementById('ddt-print-area');
+  if (!area) return;
+  const w = window.open('', '_blank');
+  w.document.write('<!DOCTYPE html><html><head><title>DDT</title><style>@page{size:A4;margin:15mm}body{font-family:Arial,sans-serif;font-size:12px;color:#111;margin:0;padding:0}*{box-sizing:border-box}img{max-width:100%}</style></head><body>' + area.outerHTML + '</body></html>');
+  w.document.close();
+  setTimeout(() => w.print(), 400);
+}
+
+// ══ ANAGRAFICA CASSONI ═════════════════════════════
+async function aggiungiCassone() {
+  if (!db) { toast('Firebase non connesso', 'err'); return; }
+  const id   = document.getElementById('new-cas-id').value.trim().toUpperCase();
+  const tipo = document.getElementById('new-cas-tipo').value;
+  if (!id) { toast('Inserisci il codice', 'err'); return; }
+  if (STATE.cassoni[id]) { toast('Cassone già presente', 'err'); return; }
+  await set(ref(db, `cassoni/${id}`), { tipo, stato:'piazzale', clienteAttuale:'', lastMov:'' });
+  document.getElementById('new-cas-id').value = '';
+  toast('✓ Cassone ' + id + ' aggiunto', 'ok');
+}
+
+async function eliminaCassone(id) {
+  if (!confirm('Eliminare il cassone ' + id + '?')) return;
+  await set(ref(db, `cassoni/${id}`), null);
+  toast('Cassone eliminato', 'ok');
+}
+
+async function aggiungiCliente() {
+  if (!db) { toast('Firebase non connesso', 'err'); return; }
+  const nome = document.getElementById('new-cliente').value.trim();
+  if (!nome) return;
+  const lista = [...(STATE.clienti||[])];
+  if (!lista.includes(nome)) lista.push(nome);
+  await set(ref(db, 'clienti'), lista);
+  document.getElementById('new-cliente').value = '';
+  toast('✓ Cliente aggiunto', 'ok');
+}
+
+async function eliminaCliente(nome) {
+  const lista = (STATE.clienti||[]).filter(c => c !== nome);
+  await set(ref(db, 'clienti'), lista);
+}
+
+// ══ CSV ════════════════════════════════════════════
+function exportCSV() {
+  const rows = [['Data','Ora','Cassone','Tipo','Movimento','Cliente','Autista','Note','N° DDT','Data DDT']];
+  Object.values(STATE.movimenti).sort((a,b)=>b.ts>a.ts?1:-1).forEach(m => {
+    const d = new Date(m.ts);
+    rows.push([
+      d.toLocaleDateString('it-IT'), d.toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'}),
+      m.cassoneId, (STATE.cassoni[m.cassoneId]||{}).tipo||'', m.tipo,
+      m.cliente||'', m.autista||'', m.note||'', m.ddtNumero||'', m.ddtTs?fmtDate(m.ddtTs):''
+    ]);
+  });
+  const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(';')).join('\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8;'}));
+  a.download = 'movimenti_cassoni_' + new Date().toISOString().slice(0,10) + '.csv';
+  a.click();
+}
+
+// ══ NAV ════════════════════════════════════════════
+const FLAGS = ['Manca tag', 'Presenta rotture', 'Telo danneggiato', 'Altro'];
+const FLAG_ICONS = { 'Manca tag':'🏷️', 'Presenta rotture':'🔧', 'Telo danneggiato':'🪟' };
+
+function estraiFlag(note) {
+  if (!note) return [];
+  return FLAGS.filter(f => note.includes(f));
+}
+
+function renderManutenzione() {
+  const tbody    = document.getElementById('man-tbody');
+  const filtroF  = document.getElementById('man-filtro-flag')?.value || '';
+  const filtroS  = document.getElementById('man-filtro-stato')?.value || '';
+  const countEl  = document.getElementById('man-count');
+  if (!tbody) return;
+
+  // Raccoglie tutti i movimenti con almeno un flag
+  const movs = Object.entries(STATE.movimenti || {})
+    .filter(([,m]) => {
+      const flags = estraiFlag(m.note);
+      if (!flags.length) return false;
+      if (filtroF && !flags.some(f => f.startsWith(filtroF))) return false;
+      return true;
+    })
+    .sort((a,b) => (b[1].ts||0) - (a[1].ts||0));
+
+  // Filtra per stato cassone
+  const rows = movs.filter(([,m]) => {
+    const cas = STATE.cassoni[m.cassoneId] || {};
+    return !filtroS || cas.stato === filtroS;
+  });
+
+  if (countEl) countEl.textContent = rows.length
+    ? `${rows.length} segnalazion${rows.length===1?'e':'i'} trovate`
+    : 'Nessuna segnalazione';
+
+  if (!rows.length) {
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:2rem;color:var(--ink3);font-style:italic">Nessun cassone con segnalazioni${filtroF||filtroS?' per i filtri selezionati':''}</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = rows.map(([id,m]) => {
+    const cas   = STATE.cassoni[m.cassoneId] || {};
+    const flags = estraiFlag(m.note);
+    const noteLibera = (m.note||'').split(' | ')
+      .filter(p => !FLAGS.some(f => p.startsWith(f)))
+      .join(' | ');
+    const altroTesto = (m.note||'').match(/Altro: ([^|]+)/)?.[1]?.trim() || '';
+    const flagBadges = flags.map(f => {
+      const ico = f.startsWith('Altro') ? '⚠️' : (FLAG_ICONS[f]||'⚠️');
+      const label = f.startsWith('Altro') && altroTesto ? `Altro: ${altroTesto}` : f;
+      return `<span style="display:inline-block;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:700;background:#fef2f2;color:#c0392b;border:1px solid #fca5a5;margin:2px">${ico} ${label}</span>`;
+    }).join('');
+    const statoCls = cas.stato === 'piazzale' ? 'pill-in' : 'pill-out';
+    const statoLbl = cas.stato === 'piazzale' ? '🟢 Piazzale' : '🔴 Fuori';
+    const foto = Array.isArray(m.foto) ? m.foto : [];
+    const fotoThumbs = foto.length
+      ? `<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:5px">${
+          foto.map(src => `<img src="${src}" onclick="window.open(this.src,'_blank')" title="Apri foto a schermo intero" style="width:34px;height:34px;object-fit:cover;border-radius:5px;border:1px solid var(--border,#d7e6e3);cursor:zoom-in">`).join('')
+        }</div>`
+      : '';
+
+    // Prepara mailto
+    const subject = encodeURIComponent(`Segnalazione manutenzione cassone ${m.cassoneId}`);
+    const flagText = flags.join(', ');
+    const body = encodeURIComponent(
+      `Buongiorno,\n\nSi segnala il cassone ${m.cassoneId} (${cas.tipo||''}) per le seguenti problematiche:\n\n${flagText}${noteLibera ? '\n\nNote: ' + noteLibera : ''}\n\nData segnalazione: ${fmtDT(m.ts)}\nCliente: ${m.cliente||'—'}\nStato attuale: ${cas.stato||'—'}\n\nCordiali saluti`
+    );
+    const mailto = `mailto:massimo.pizzoli@itelyum.com;trasporti.centrorisorse@itelyum.com?subject=${subject}&body=${body}`;
+
+    const mailInviata = m.mailManutenzione;
+    const btnMail = mailInviata
+      ? `<div style="font-size:10px;color:var(--ink3);text-align:center;line-height:1.4">
+           <span style="display:block;font-weight:700;color:#16a34a">✓ Inviata</span>
+           ${mailInviata}
+         </div>`
+      : foto.length
+        ? `<button type="button" class="btn btn-ghost btn-sm" onclick="inviaSegnalazioneConFoto('${id}')" title="Invia segnalazione allegando le foto">📤 Invia con foto</button>`
+        : `<a href="${mailto}" class="btn btn-ghost btn-sm" style="text-decoration:none" title="Invia segnalazione per email"
+           onclick="segnaMailInviata('${id}')">✉️ Invia</a>`;
+
+    return `<tr>
+      <td style="white-space:nowrap;color:var(--ink2);font-size:12px">${fmtDT(m.ts)}</td>
+      <td><strong>${m.cassoneId}</strong></td>
+      <td style="color:var(--ink2);font-size:12px">${cas.tipo||'—'}</td>
+      <td><span class="status-pill ${statoCls}" style="font-size:11px">${statoLbl}</span></td>
+      <td style="font-size:12px">${m.cliente||'—'}</td>
+      <td style="min-width:180px">${flagBadges}${fotoThumbs}</td>
+      <td style="color:var(--ink2);font-size:12px">${noteLibera||'—'}</td>
+      <td style="white-space:nowrap;text-align:center;min-width:90px">
+        ${btnMail}
+      </td>
+    </tr>`;
+  }).join('');
+}
+async function segnaMailInviata(movId) {
+  if (!db) return;
+  // Piccolo delay per permettere al browser di aprire il client mail
+  setTimeout(async () => {
+    const ora = new Date();
+    const ts = String(ora.getDate()).padStart(2,'0') + '/' +
+               String(ora.getMonth()+1).padStart(2,'0') + '/' +
+               ora.getFullYear() + ' ' +
+               String(ora.getHours()).padStart(2,'0') + ':' +
+               String(ora.getMinutes()).padStart(2,'0');
+    await update(ref(db, `movimenti/${movId}`), { mailManutenzione: ts });
+    toast('✓ Segnalazione inviata registrata', 'ok');
+  }, 800);
+}
+window.segnaMailInviata = segnaMailInviata;
+
+// ── Invio segnalazione con foto: apre la mail preimpostata (destinatari,
+//    oggetto e testo già compilati) e scarica le foto pronte da allegare.
+//    Nota: il protocollo mailto non supporta allegati automatici in nessun
+//    browser/client di posta, quindi le foto vengono scaricate sul
+//    dispositivo e vanno trascinate/allegate nella mail già aperta.
+async function inviaSegnalazioneConFoto(movId) {
+  const m = STATE.movimenti[movId];
+  if (!m) return;
+  const cas = STATE.cassoni[m.cassoneId] || {};
+  const flags = estraiFlag(m.note);
+  const noteLibera = (m.note||'').split(' | ').filter(p => !FLAGS.some(f => p.startsWith(f))).join(' | ');
+  const foto = Array.isArray(m.foto) ? m.foto : [];
+
+  // Scarica le foto sul dispositivo, pronte da allegare
+  for (let i = 0; i < foto.length; i++) {
+    try {
+      const res = await fetch(foto[i]);
+      const blob = await res.blob();
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `segnalazione_${m.cassoneId}_${i+1}.jpg`;
+      document.body.appendChild(a); a.click(); a.remove();
+    } catch {}
+  }
+
+  const subject = encodeURIComponent(`Segnalazione manutenzione cassone ${m.cassoneId}`);
+  const body = encodeURIComponent(
+    `Buongiorno,\n\nSi segnala il cassone ${m.cassoneId} (${cas.tipo||''}) per le seguenti problematiche:\n\n`
+    + `${flags.join(', ')}${noteLibera ? '\n\nNote: ' + noteLibera : ''}\n\n`
+    + `Data segnalazione: ${fmtDT(m.ts)}\nCliente: ${m.cliente||'—'}\nStato attuale: ${cas.stato||'—'}`
+    + (foto.length ? `\n\n📎 Allega a questa mail ${foto.length} foto appena scaricat${foto.length===1?'a':'e'} sul dispositivo (cartella Download).` : '')
+    + `\n\nCordiali saluti`
+  );
+  window.location.href = `mailto:massimo.pizzoli@itelyum.com;trasporti.centrorisorse@itelyum.com?subject=${subject}&body=${body}`;
+  if (foto.length) toast('📥 Foto scaricate: allegale alla mail appena aperta', 'ok');
+  segnaMailInviata(movId);
+}
+window.inviaSegnalazioneConFoto = inviaSegnalazioneConFoto;
+
+window.renderManutenzione = renderManutenzione;
+
+// ── Segnalazione manutenzioni mezzi (targa / categoria anomalia / posizione) ──
+// Opzioni tarate su motrici/trattori stradali che trainano cassoni scarrabili e pianali.
+const CATEGORIE_MEZZO = {
+  motore: {
+    label: 'Motore', icon: '⚙️',
+    opzioni: [
+      'Spia motore accesa',
+      'Perdita olio',
+      'Perdita liquido di raffreddamento',
+      'Fumo di scarico anomalo',
+      'Rumore anomalo',
+      'Difficoltà di avviamento',
+      'Surriscaldamento',
+      'Perdita di potenza',
+      'Cinghie/tendicinghia usurati',
+      'Altro',
+    ],
+  },
+  carrozzeria: {
+    label: 'Carrozzeria', icon: '🚛',
+    opzioni: [
+      'Gancio traino / attacco scarrabile danneggiato',
+      'Impianto scarrabile (braccio/gru) malfunzionante',
+      'Pianale/telaio danneggiato',
+      'Danni alla cabina',
+      'Specchietti danneggiati',
+      'Paraurti danneggiato',
+      'Pneumatici usurati o forati',
+      'Sospensioni danneggiate',
+      'Freni (rumore o usura)',
+      'Ruggine / corrosione telaio',
+      'Luci, frecce o stop non funzionanti',
+      'Altro',
+    ],
+  },
+  spie: {
+    label: 'Spie accese', icon: '💡',
+    opzioni: [
+      'Spia motore (check engine)',
+      'Spia olio',
+      'Spia batteria / alternatore',
+      'Spia freni (ABS/EBS)',
+      'Spia liquido di raffreddamento',
+      'Spia pressione pneumatici',
+      'Spia airbag',
+      'Spia servosterzo',
+      'Spia AdBlue',
+      'Spia freno di stazionamento',
+      'Spia guasto generico',
+      'Altro',
+    ],
+  },
+};
+
+let _mezzoDettagli = {};
+Object.keys(CATEGORIE_MEZZO).forEach(cat => { _mezzoDettagli[cat] = new Set(); });
+
+let _mezzoCatCorrente = null;
+function apriCategoriaMezzoModal(cat) {
+  _mezzoCatCorrente = cat;
+  const def = CATEGORIE_MEZZO[cat];
+  const selezionate = _mezzoDettagli[cat];
+  document.getElementById('mezzo-cat-modal-title').textContent = `${def.icon} ${def.label}`;
+  document.getElementById('mezzo-cat-modal-body').innerHTML = def.opzioni.map(opt => `
+    <label style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--s2,#f2f8f7);border-radius:7px;border:1.5px solid var(--border,#d7e6e3);cursor:pointer;font-size:13px">
+      <input type="checkbox" data-opt="${opt}" ${selezionate.has(opt)?'checked':''} style="width:16px;height:16px;accent-color:var(--amber,#b45309);flex-shrink:0">
+      ${opt}
+    </label>
+  `).join('');
+  document.getElementById('mezzo-cat-modal').classList.add('open');
+}
+window.apriCategoriaMezzoModal = apriCategoriaMezzoModal;
+
+window.chiudiCategoriaMezzoModal = function() {
+  document.getElementById('mezzo-cat-modal').classList.remove('open');
+  _mezzoCatCorrente = null;
+};
+
+window.confermaCategoriaMezzo = function() {
+  if (!_mezzoCatCorrente) return;
+  const cat = _mezzoCatCorrente;
+  const checked = [...document.querySelectorAll('#mezzo-cat-modal-body input[type=checkbox]:checked')].map(el => el.dataset.opt);
+  _mezzoDettagli[cat] = new Set(checked);
+  aggiornaBottoneCategoriaMezzo(cat);
+  document.getElementById('mezzo-cat-modal').classList.remove('open');
+  _mezzoCatCorrente = null;
+};
+
+function aggiornaBottoneCategoriaMezzo(cat) {
+  const btn = document.getElementById('mezzo-cat-' + cat);
+  if (!btn) return;
+  const n = _mezzoDettagli[cat].size;
+  btn.classList.toggle('active', n > 0);
+  let badge = btn.querySelector('.mezzo-cat-badge');
+  if (n > 0) {
+    if (!badge) {
+      badge = document.createElement('span');
+      badge.className = 'mezzo-cat-badge';
+      btn.appendChild(badge);
+    }
+    badge.textContent = n;
+  } else if (badge) {
+    badge.remove();
+  }
+}
+
+async function inviaSegnalazioneMezzo() {
+  if (!db) { toast('Firebase non connesso', 'err'); return; }
+  const targa     = document.getElementById('mezzo-targa').value.trim().toUpperCase();
+  const posizione = document.getElementById('mezzo-posizione').value.trim();
+  const categorie = Object.keys(_mezzoDettagli).filter(cat => _mezzoDettagli[cat].size > 0);
+  if (!targa)            { toast('Inserisci la targa del mezzo', 'err'); return; }
+  if (!categorie.length) { toast('Seleziona almeno una categoria di anomalia', 'err'); return; }
+  const dettagli = {};
+  categorie.forEach(cat => { dettagli[cat] = [..._mezzoDettagli[cat]]; });
+  const autista = localStorage.getItem('tracker_auth_user') || '';
+
+  await push(ref(db, 'segnalazioniMezzi'), { targa, categorie, dettagli, posizione, autista, ts: now() });
+
+  toast('✓ Segnalazione mezzo inviata', 'ok');
+  document.getElementById('mezzo-targa').value = '';
+  document.getElementById('mezzo-posizione').value = '';
+  Object.keys(_mezzoDettagli).forEach(cat => { _mezzoDettagli[cat].clear(); aggiornaBottoneCategoriaMezzo(cat); });
+}
+window.inviaSegnalazioneMezzo = inviaSegnalazioneMezzo;
+
+function renderSegnalazioniMezzi() {
+  const container = document.getElementById('mezzi-groups');
+  const countEl    = document.getElementById('mezzi-count');
+  if (!container) return;
+  const all = Object.entries(STATE.segnalazioniMezzi || {})
+    .sort((a,b) => (b[1].ts||'') > (a[1].ts||'') ? 1 : -1);
+
+  if (countEl) countEl.textContent = all.length
+    ? `${all.length} segnalazion${all.length===1?'e':'i'}`
+    : 'Nessuna segnalazione';
+
+  if (!all.length) {
+    container.innerHTML = `<div style="text-align:center;padding:2rem;color:var(--ink3);font-style:italic">Nessuna segnalazione mezzi</div>`;
+    return;
+  }
+
+  container.innerHTML = Object.entries(CATEGORIE_MEZZO).map(([key, cat]) => {
+    const rows = all.filter(([, r]) => (r.categorie || []).includes(key));
+    return `
+      <div class="card" style="margin-bottom:1rem">
+        <div class="card-header">
+          <div class="card-title">${cat.icon} ${cat.label}</div>
+          <span style="font-size:11px;color:var(--ink3)">${rows.length}</span>
+        </div>
+        <div class="card-body" style="padding:0">
+          ${rows.length ? `<div style="overflow-x:auto"><table class="mov-table">
+            <thead><tr><th>Data</th><th>Targa</th><th>Dettaglio</th><th>Posizione</th><th>Segnalato da</th><th></th></tr></thead>
+            <tbody>${rows.map(([id, r]) => {
+              const dett = (r.dettagli && r.dettagli[key]) || [];
+              return `
+              <tr>
+                <td style="white-space:nowrap;color:var(--ink2);font-size:12px">${fmtDT(r.ts)}</td>
+                <td><strong>${r.targa||'—'}</strong></td>
+                <td style="color:var(--ink2);font-size:12px">${dett.length ? dett.map(d => `<span style="display:inline-block;padding:1px 7px;border-radius:10px;font-size:10px;font-weight:700;background:var(--amber-l);color:var(--amber);border:1px solid #fcd34d;margin:1px">${d}</span>`).join(' ') : '—'}</td>
+                <td style="color:var(--ink2);font-size:12px">${r.posizione||'—'}</td>
+                <td style="color:var(--ink2);font-size:12px">${r.autista||'—'}</td>
+                <td style="white-space:nowrap;text-align:center">
+                  <button class="btn btn-ghost btn-sm" onclick="eliminaSegnalazioneMezzo('${id}')" style="color:var(--red,#c0392b)" title="Elimina">🗑</button>
+                </td>
+              </tr>
+            `;
+            }).join('')}</tbody>
+          </table></div>` : `<div style="padding:1rem 1.25rem;color:var(--ink3);font-size:12px;font-style:italic">Nessuna segnalazione in questa categoria</div>`}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+window.renderSegnalazioniMezzi = renderSegnalazioniMezzi;
+
+async function eliminaSegnalazioneMezzo(id) {
+  if (!db) return;
+  if (!confirm('Eliminare questa segnalazione mezzo?')) return;
+  await remove(ref(db, `segnalazioniMezzi/${id}`));
+  toast('Segnalazione eliminata', '');
+}
+window.eliminaSegnalazioneMezzo = eliminaSegnalazioneMezzo;
+
+// ── Popup notifica nuova segnalazione mezzo ──
+let _mezziNotifQueue = [];
+function mostraNotificaMezzo(rec) {
+  _mezziNotifQueue.push(rec);
+  if (_mezziNotifQueue.length === 1) renderNotificaMezzo();
+}
+function renderNotificaMezzo() {
+  const rec = _mezziNotifQueue[0];
+  if (!rec) return;
+  const catBlocks = (rec.categorie || []).map(c => {
+    const def = CATEGORIE_MEZZO[c];
+    const dett = (rec.dettagli && rec.dettagli[c]) || [];
+    return `<div style="margin-bottom:4px"><strong>${def?def.icon+' '+def.label:c}:</strong> ${dett.length?dett.join(', '):'—'}</div>`;
+  }).join('');
+  document.getElementById('mezzo-notif-body').innerHTML = `
+    <div style="margin-bottom:4px"><strong>Targa:</strong> ${rec.targa||'—'}</div>
+    ${catBlocks}
+    <div style="margin-bottom:4px"><strong>Posizione:</strong> ${rec.posizione||'—'}</div>
+    <div style="color:var(--ink3);font-size:11px;margin-top:8px">Segnalato da ${rec.autista||'—'} — ${fmtDT(rec.ts)}</div>
+  `;
+  document.getElementById('mezzo-notif-modal').classList.add('open');
+}
+window.chiudiNotificaMezzo = function() {
+  document.getElementById('mezzo-notif-modal').classList.remove('open');
+  _mezziNotifQueue.shift();
+  if (_mezziNotifQueue.length) setTimeout(renderNotificaMezzo, 300);
+};
+
+let _mezziInizializzato = false;
+let _mezziIdVisti = new Set();
+function subscribeMezzi() {
+  if (!db) return;
+  onValue(ref(db, 'segnalazioniMezzi'), snap => {
+    const val = snap.val() || {};
+    STATE.segnalazioniMezzi = val;
+    const ids = Object.keys(val);
+    if (_mezziInizializzato) {
+      ids.forEach(id => {
+        if (!_mezziIdVisti.has(id)) mostraNotificaMezzo(val[id]);
+      });
+    }
+    _mezziIdVisti = new Set(ids);
+    _mezziInizializzato = true;
+    renderSegnalazioniMezzi();
+  });
+}
+
+const VISTE_PER_RUOLO = {
+  admin:         ['dashboard','bollettazione','manutenzione','mezzi','trasportatore'],
+  ufficio:       ['dashboard','bollettazione','manutenzione','mezzi'],
+  manutenzione:  ['manutenzione','mezzi'],
+  trasportatore: ['trasportatore'],
+};
+window.switchView = function(name) {
+  if (window._ruoloCorrente && name !== 'setup') {
+    const consentite = VISTE_PER_RUOLO[window._ruoloCorrente];
+    if (consentite && !consentite.includes(name)) return;
+  }
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('view-' + name)?.classList.add('active');
+  const tabs = [...document.querySelectorAll('.nav-tab')];
+  const map  = {dashboard:0, bollettazione:1, manutenzione:2, mezzi:3, trasportatore:4, setup:5};
+  if (tabs[map[name]]) tabs[map[name]].classList.add('active');
+  if (name === 'bollettazione') renderBollettazione();
+  if (name === 'manutenzione')  renderManutenzione();
+  if (name === 'mezzi')         renderSegnalazioniMezzi();
+};
+
+// ══ SETUP ══════════════════════════════════════════
+window.salvaConfig = async function() {
+  const cfg = {
+    apiKey:      document.getElementById('cfg-apikey').value.trim(),
+    authDomain:  document.getElementById('cfg-authdomain').value.trim(),
+    databaseURL: document.getElementById('cfg-dburl').value.trim(),
+    projectId:   document.getElementById('cfg-projectid').value.trim(),
+  };
+  if (!cfg.apiKey || !cfg.databaseURL) {
+    document.getElementById('cfg-status').textContent = '⚠️ Compila almeno API Key e Database URL';
+    return;
+  }
+  saveConfig(cfg);
+  const ok = await initFirebase(cfg);
+  document.getElementById('cfg-status').textContent = ok ? '✅ Connesso!' : '❌ Errore di connessione — controlla le credenziali';
+};
+
+window.testConnection = async function() {
+  const cfg = loadConfig();
+  if (!cfg) { document.getElementById('cfg-status').textContent = '⚠️ Nessuna config salvata'; return; }
+  document.getElementById('cfg-status').textContent = '🔄 Connessione in corso...';
+  const ok = await initFirebase(cfg);
+  document.getElementById('cfg-status').textContent = ok ? '✅ Firebase connesso e funzionante!' : '❌ Connessione fallita';
+};
+
+// Esponi funzioni globali
+window.openDDT         = openDDT;
+window.closeDDT        = closeDDT;
+window.confermaDDT     = confermaDDT;
+window.stampaDDT       = stampaDDT;
+window.aggiungiCassone = aggiungiCassone;
+window.eliminaCassone  = eliminaCassone;
+window.aggiungiCliente = aggiungiCliente;
+window.eliminaCliente  = eliminaCliente;
+window.registraMovimento = registraMovimento;
+window.renderBollettazione = renderBollettazione;
+window.exportCSV       = exportCSV;
+window.onScanInput      = onScanInput;
+window.onScanKeydown    = onScanKeydown;
+window.selezionaDaCassone = selezionaDaCassone;
+
+// ── Import Excel ────────────────────────────────────
+window.resetStatoCassoni = async function(stato) {
+  if (!db) { toast('Firebase non connesso', 'err'); return; }
+  const n = Object.keys(STATE.cassoni).length;
+  const lbl = stato === 'fuori' ? 'FUORI / IN GIRO' : 'IN PIAZZALE';
+  if (!confirm(`Impostare TUTTI i ${n} cassoni su "${lbl}"?\nQuesta operazione non può essere annullata.`)) return;
+  const statusEl = document.getElementById('reset-stato-status');
+  statusEl.textContent = '⏳ Aggiornamento in corso…';
+  const updates = {};
+  Object.keys(STATE.cassoni).forEach(id => {
+    updates[`cassoni/${id}/stato`] = stato;
+    updates[`cassoni/${id}/clienteAttuale`] = '';
+  });
+  const { update: fbUpdate } = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js');
+  await fbUpdate(ref(db, '/'), updates);
+  statusEl.textContent = `✅ ${n} cassoni impostati su "${lbl}"`;
+  toast(`✓ ${n} cassoni → ${lbl}`, 'ok');
+};
+
+window.importaClienti = async function(event) {
+  if (!file) return;
+  const statusEl = document.getElementById('import-clienti-status');
+  statusEl.textContent = '⏳ Lettura...';
+  const reader = new FileReader();
+  reader.onload = async function(e) {
+    try {
+      const wb   = XLSX.read(e.target.result, {type:'array'});
+      const ws   = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
+      const clientiNuovi = [];
+      rows.forEach(row => {
+        const v = String(row[0]||'').trim();
+        if (v && v.toLowerCase() !== 'ragione sociale' && v !== 'nan') clientiNuovi.push(v);
+      });
+      const uniq = [...new Set([...(STATE.clienti||[]), ...clientiNuovi])].sort();
+      await set(ref(db, 'clienti'), uniq);
+      statusEl.textContent = `✅ ${clientiNuovi.length} clienti importati`;
+      toast(`✓ ${clientiNuovi.length} clienti caricati`, 'ok');
+      event.target.value = '';
+    } catch(err) {
+      statusEl.textContent = '❌ ' + err.message;
+    }
+  };
+  reader.readAsArrayBuffer(file);
+};
+
+window.importaExcel = async function(event) {
+  if (!db) { toast('Firebase non connesso', 'err'); return; }
+  const file = event.target.files[0];
+  if (!file) return;
+  const statusEl = document.getElementById('import-status');
+  statusEl.textContent = '⏳ Lettura file...';
+
+  const reader = new FileReader();
+  reader.onload = async function(e) {
+    try {
+      const wb = XLSX.read(e.target.result, {type:'array'});
+      // Cerca il foglio "ELENCO UFFICIALE" o usa il primo
+      const sheetName = wb.SheetNames.find(n => n.toUpperCase().includes('UFFICIALE') || n.toUpperCase().includes('ELENCO')) || wb.SheetNames[0];
+      const ws  = wb.Sheets[sheetName];
+      const rows = XLSX.utils.sheet_to_json(ws, {defval:''});
+
+      let contatore = 0;
+      const updates = {};
+
+      rows.forEach(row => {
+        // Cerca colonne per nome (case-insensitive, spazi flessibili)
+        const keys = Object.keys(row);
+        const findVal = (...candidates) => {
+          for (const c of candidates) {
+            const k = keys.find(k => k.trim().toUpperCase().includes(c.toUpperCase()));
+            if (k && row[k] !== undefined && row[k] !== '') return String(row[k]).trim();
+          }
+          return '';
+        };
+        const codice = findVal('NR.INTERNO','INTERNO','CODICE').toUpperCase();
+        const desc   = findVal('DESCRIZIONE CESPITE','DESCRIZIONE','DESC');
+        const note   = findVal('NOTE MAX','NOTE','COPERCHIO');
+        const matr   = findVal('MATRICOLA','MATR');
+
+        if (!codice || codice === 'NAN') return;
+        let tipo = desc || 'Cassone';
+        if (note && !['', 'NAN', '???'].includes(note.toUpperCase())) tipo += ' · ' + note;
+
+        // Non sovrascrive cassoni già esistenti nel db
+        if (!STATE.cassoni[codice]) {
+          updates[`cassoni/${codice}`] = {
+            tipo, matricola: matr !== 'NAN' ? matr : '',
+            stato:'piazzale', clienteAttuale:'', lastMov:''
+          };
+          contatore++;
+        }
+      });
+
+      if (!contatore) {
+        statusEl.textContent = '⚠️ Nessun cassone nuovo da importare';
+        return;
+      }
+
+      // Scrivi su Firebase in batch
+      const { update: fbUpdate } = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js');
+      await fbUpdate(ref(db, '/'), updates);
+      statusEl.textContent = `✅ ${contatore} cassoni importati da "${sheetName}"`;
+      toast(`✓ ${contatore} cassoni importati`, 'ok');
+      event.target.value = '';
+    } catch(err) {
+      statusEl.textContent = '❌ Errore: ' + err.message;
+      console.error(err);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+};
+
+// ── FOTOCAMERA / QR SCANNER ────────────────────────
+// ── FOTOCAMERA QR — getUserMedia + BarcodeDetector ──
+let _qrStream   = null;
+let _qrRunning  = false;
+let _qrFacing   = 'environment';
+
+window.apriCamera = async function() {
+  document.getElementById('qr-modal').style.display = 'flex';
+  document.getElementById('qr-status').textContent = 'Avvio fotocamera…';
+  await _avviaQr(_qrFacing);
+};
+
+async function _avviaQr(facingMode) {
+  // Ferma stream precedente
+  if (_qrStream) { _qrStream.getTracks().forEach(t => t.stop()); _qrStream = null; }
+  _qrRunning = false;
+
+  const video = document.getElementById('qr-video');
+  video.style.display = 'block';
+
+  try {
+    _qrStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: facingMode }, width: { ideal: 1280 } }
+    });
+    video.srcObject = _qrStream;
+    video.setAttribute('playsinline', true);
+    await video.play();
+    _qrRunning = true;
+    document.getElementById('qr-status').textContent = 'Inquadra il QR code del cassone';
+    _qrDecode(video);
+  } catch(e) {
+    document.getElementById('qr-status').textContent = '❌ ' + e.message;
+  }
+}
+
+function _qrDecode(video) {
+  const canvas = document.createElement('canvas');
+  const ctx    = canvas.getContext('2d', { willReadFrequently: true });
+
+  // BarcodeDetector nativo (Chrome 83+, Android)
+  if (typeof BarcodeDetector !== 'undefined') {
+    const det = new BarcodeDetector({ formats: ['qr_code'] });
+    const scan = async () => {
+      if (!_qrRunning) return;
+      try {
+        if (video.readyState >= 2) {
+          const codes = await det.detect(video);
+          if (codes.length) { _qrHit(codes[0].rawValue); return; }
+        }
+      } catch(e) {}
+      requestAnimationFrame(scan);
+    };
+    requestAnimationFrame(scan);
+    return;
+  }
+
+  // Fallback jsQR (caricato inline come script)
+  if (typeof jsQR !== 'undefined') {
+    const scan = () => {
+      if (!_qrRunning) return;
+      if (video.readyState >= 2) {
+        canvas.width  = video.videoWidth;
+        canvas.height = video.videoHeight;
+        ctx.drawImage(video, 0, 0);
+        const img  = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const code = jsQR(img.data, img.width, img.height, { inversionAttempts: 'dontInvert' });
+        if (code) { _qrHit(code.data); return; }
+      }
+      setTimeout(scan, 150);
+    };
+    scan();
+    return;
+  }
+
+  document.getElementById('qr-status').textContent = '⚠️ Scanner non supportato — digita il codice manualmente';
+}
+
+function _qrHit(rawValue) {
+  if (!_qrRunning) return;
+  _qrRunning = false;
+  const codice = rawValue.trim().toUpperCase();
+  document.getElementById('qr-status').textContent = '✅ ' + codice;
+  if (navigator.vibrate) navigator.vibrate([80, 40, 80]);
+  setTimeout(() => {
+    chiudiCamera();
+    document.getElementById('scan-input').value = codice;
+    onScanInput(codice);
+    if (STATE.cassoni[codice]) selezionaDaCassone(codice);
+    else toast('Cassone ' + codice + ' non in anagrafica', 'err');
+  }, 400);
+}
+
+window.chiudiCamera = function() {
+  _qrRunning = false;
+  if (_qrStream) { _qrStream.getTracks().forEach(t => t.stop()); _qrStream = null; }
+  const video = document.getElementById('qr-video');
+  if (video) { video.srcObject = null; }
+  document.getElementById('qr-modal').style.display = 'none';
+};
+
+window.switchCamera = function() {
+  _qrFacing = _qrFacing === 'environment' ? 'user' : 'environment';
+  _avviaQr(_qrFacing);
+};
+
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') chiudiCamera();
+});
+
+// ── AUTENTICAZIONE UTENTI (nome utente + PIN a 4 cifre) ──
+async function sha256Hex(text) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+}
+function normalizzaUtente(u) {
+  return (u || '').trim().toLowerCase().replace(/[.#$/\[\]\s]/g, '_');
+}
+function aggiornaBadgeUtente(user) {
+  const navLabel = document.getElementById('auth-user-label');
+  const navBadge = document.getElementById('auth-user-badge');
+  if (navLabel && navBadge) { navLabel.textContent = '👤 ' + user; navBadge.style.display = 'flex'; }
+  const aLabel = document.getElementById('autista-user-label');
+  const aBar   = document.getElementById('autista-user-bar');
+  if (aLabel && aBar) { aLabel.textContent = '👤 ' + user; aBar.style.display = 'flex'; }
+}
+const RUOLI_LABEL = { admin:'Admin', ufficio:'Ufficio', manutenzione:'Manutenzione', trasportatore:'Trasportatore' };
+function applicaRuolo(ruolo) {
+  window._ruoloCorrente = ruolo;
+  const tabDash  = document.querySelector('.nav-tab[onclick*="dashboard"]');
+  const tabBoll  = document.querySelector('.nav-tab[onclick*="bollettazione"]');
+  const tabMan   = document.querySelector('.nav-tab[onclick*="manutenzione"]');
+  const tabMezzi = document.getElementById('nav-tab-mezzi');
+  const tabTra   = document.querySelector('.nav-tab[onclick*="trasportatore"]');
+  [tabDash, tabBoll, tabMan, tabMezzi, tabTra].forEach(t => t && (t.style.display = ''));
+  let vistaIniziale = 'dashboard';
+  if (ruolo === 'trasportatore') {
+    if (tabDash)  tabDash.style.display  = 'none';
+    if (tabBoll)  tabBoll.style.display  = 'none';
+    if (tabMan)   tabMan.style.display   = 'none';
+    if (tabMezzi) tabMezzi.style.display = 'none';
+    vistaIniziale = 'trasportatore';
+  } else if (ruolo === 'manutenzione') {
+    if (tabDash) tabDash.style.display = 'none';
+    if (tabBoll) tabBoll.style.display = 'none';
+    if (tabTra)  tabTra.style.display  = 'none';
+    vistaIniziale = 'manutenzione';
+  } else if (ruolo === 'ufficio') {
+    if (tabTra) tabTra.style.display = 'none';
+  } else if (ruolo === 'admin') {
+    document.getElementById('nav-tab-setup').style.display = '';
+    sessionStorage.setItem('admin_ok', '1');
+  }
+  switchView(vistaIniziale);
+}
+function completaLogin(user, ruolo) {
+  localStorage.setItem('tracker_auth_user', user);
+  localStorage.setItem('tracker_auth_role', ruolo || '');
+  document.getElementById('auth-overlay').classList.remove('open');
+  document.body.classList.remove('auth-locked');
+  aggiornaBadgeUtente(user);
+  applicaRuolo(ruolo);
+}
+window.switchAuthTab = function(tab) {
+  document.getElementById('auth-tab-login').classList.toggle('active', tab === 'login');
+  document.getElementById('auth-tab-register').classList.toggle('active', tab === 'register');
+  document.getElementById('auth-login-form').style.display    = tab === 'login'    ? 'block' : 'none';
+  document.getElementById('auth-register-form').style.display = tab === 'register' ? 'block' : 'none';
+  document.getElementById('auth-login-error').textContent = '';
+  document.getElementById('auth-register-error').textContent = '';
+  document.getElementById('auth-card-title').textContent = tab === 'login' ? 'Bentornato' : 'Crea il tuo account';
+  document.getElementById('auth-card-sub').textContent   = tab === 'login'
+    ? 'Accedi con il tuo account per continuare'
+    : 'Scegli un nome utente e un PIN a 4 cifre';
+};
+window.tornaAlLogin = function() {
+  document.getElementById('auth-pending-msg').style.display = 'none';
+  document.getElementById('auth-tabs').style.display = 'flex';
+  switchAuthTab('login');
+};
+window.eseguiLogin = async function() {
+  const errEl = document.getElementById('auth-login-error');
+  errEl.textContent = '';
+  const user = normalizzaUtente(document.getElementById('auth-login-user').value);
+  const pin  = document.getElementById('auth-login-pin').value;
+  if (!user || !/^\d{4}$/.test(pin)) { errEl.textContent = 'Inserisci nome utente e PIN a 4 cifre'; return; }
+  if (!db) { errEl.textContent = 'Connessione non disponibile, riprova'; return; }
+  try {
+    const snap = await get(ref(db, 'utenti/' + user));
+    const rec = snap.val();
+    const hash = await sha256Hex(pin);
+    if (!rec || rec.pin !== hash) { errEl.textContent = '❌ Nome utente o PIN errati'; return; }
+    if (rec.stato === 'rifiutato') { errEl.textContent = '❌ Registrazione rifiutata, contatta un amministratore'; return; }
+    if (rec.stato !== 'approvato') { errEl.textContent = '⏳ Account in attesa di approvazione da un amministratore'; return; }
+    completaLogin(user, rec.ruolo);
+  } catch(e) {
+    errEl.textContent = 'Errore di connessione, riprova';
+  }
+};
+window.eseguiRegistrazione = async function() {
+  const errEl = document.getElementById('auth-register-error');
+  errEl.textContent = '';
+  const user = normalizzaUtente(document.getElementById('auth-reg-user').value);
+  const pin  = document.getElementById('auth-reg-pin').value;
+  const pin2 = document.getElementById('auth-reg-pin2').value;
+  if (!user || user.length < 3) { errEl.textContent = 'Nome utente troppo corto (min. 3 caratteri)'; return; }
+  if (!/^\d{4}$/.test(pin)) { errEl.textContent = 'Il PIN deve essere di 4 cifre'; return; }
+  if (pin !== pin2) { errEl.textContent = 'I due PIN non coincidono'; return; }
+  if (!db) { errEl.textContent = 'Connessione non disponibile, riprova'; return; }
+  try {
+    const rRef = ref(db, 'utenti/' + user);
+    const snap = await get(rRef);
+    if (snap.exists()) { errEl.textContent = '❌ Nome utente già registrato'; return; }
+    await set(rRef, { pin: await sha256Hex(pin), createdAt: now(), stato: 'pending', ruolo: null });
+    document.getElementById('auth-register-form').style.display = 'none';
+    document.getElementById('auth-tabs').style.display = 'none';
+    document.getElementById('auth-pending-msg').style.display = 'block';
+    document.getElementById('auth-pending-user').textContent = user;
+    document.getElementById('auth-card-title').textContent = 'Richiesta inviata';
+    document.getElementById('auth-card-sub').textContent = 'In attesa di approvazione';
+  } catch(e) {
+    errEl.textContent = 'Errore durante la registrazione, riprova';
+  }
+};
+window.logoutUtente = function() {
+  localStorage.removeItem('tracker_auth_user');
+  localStorage.removeItem('tracker_auth_role');
+  location.reload();
+};
+async function verificaSessioneAuth() {
+  const overlay = document.getElementById('auth-overlay');
+  const user = localStorage.getItem('tracker_auth_user');
+  if (!user) { overlay.classList.add('open'); document.body.classList.add('auth-locked'); return; }
+  try {
+    const snap = await get(ref(db, 'utenti/' + user));
+    const rec = snap.val();
+    if (!rec || rec.stato !== 'approvato') {
+      localStorage.removeItem('tracker_auth_user');
+      localStorage.removeItem('tracker_auth_role');
+      overlay.classList.add('open');
+      document.body.classList.add('auth-locked');
+      return;
+    }
+    aggiornaBadgeUtente(user);
+    applicaRuolo(rec.ruolo);
+  } catch(e) {
+    // offline: mantieni la sessione locale senza bloccare l'app
+    aggiornaBadgeUtente(user);
+    applicaRuolo(localStorage.getItem('tracker_auth_role'));
+  }
+}
+window.approvaUtente = async function(user) {
+  const sel = document.getElementById('ruolo-select-' + user);
+  const ruolo = sel ? sel.value : 'ufficio';
+  try {
+    await update(ref(db, 'utenti/' + user), { stato: 'approvato', ruolo });
+    toast('✓ ' + user + ' approvato come ' + (RUOLI_LABEL[ruolo] || ruolo), 'ok');
+  } catch(e) {
+    toast('Errore durante l\'approvazione', 'err');
+  }
+};
+window.rifiutaUtente = async function(user) {
+  try {
+    await update(ref(db, 'utenti/' + user), { stato: 'rifiutato', ruolo: null });
+    toast('Registrazione di ' + user + ' rifiutata', '');
+  } catch(e) {
+    toast('Errore durante il rifiuto', 'err');
+  }
+};
+function renderApprovazioni(utenti) {
+  const list  = document.getElementById('approvazioni-list');
+  const empty = document.getElementById('approvazioni-empty');
+  if (!list) return;
+  const pending = Object.entries(utenti || {}).filter(([_, r]) => r && r.stato === 'pending');
+  const badge = document.getElementById('nav-notif-badge');
+  const btn   = document.getElementById('nav-notif-btn');
+  if (btn && badge) {
+    const puoVedere = window._ruoloCorrente === 'admin' || sessionStorage.getItem('admin_ok') === '1';
+    if (puoVedere && pending.length) { btn.style.display = 'flex'; badge.textContent = pending.length; }
+    else { btn.style.display = 'none'; }
+  }
+  if (!pending.length) { list.innerHTML = ''; empty.style.display = 'block'; return; }
+  empty.style.display = 'none';
+  list.innerHTML = pending.map(([user, rec]) => `
+    <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);flex-wrap:wrap">
+      <div style="flex:1;min-width:120px">
+        <div style="font-weight:700;font-size:13px">${user}</div>
+        <div style="font-size:11px;color:var(--ink3)">Richiesta il ${fmtDT(rec.createdAt)}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <select id="ruolo-select-${user}" style="font-family:var(--font);font-size:12px;padding:6px 8px;border:1.5px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--ink)">
+          <option value="admin">Admin</option>
+          <option value="ufficio" selected>Ufficio</option>
+          <option value="manutenzione">Manutenzione</option>
+          <option value="trasportatore">Trasportatore</option>
+        </select>
+        <button class="btn btn-primary btn-sm" onclick="approvaUtente('${user}')">✓ Approva</button>
+        <button class="btn btn-danger btn-sm" onclick="rifiutaUtente('${user}')">✕ Rifiuta</button>
+      </div>
+    </div>
+  `).join('');
+}
+let _ultimiUtenti = {};
+function subscribeUtenti() {
+  if (!db) return;
+  onValue(ref(db, 'utenti'), snap => { _ultimiUtenti = snap.val() || {}; renderApprovazioni(_ultimiUtenti); });
+}
+
+// ── PIN CONFIG ─────────────────────────────────────
+const CONFIG_PIN = '7575';
+
+window.richiestaPin = function() {
+  document.getElementById('pin-input').value = '';
+  document.getElementById('pin-error').textContent = '';
+  document.getElementById('pin-modal').classList.add('open');
+  setTimeout(() => document.getElementById('pin-input').focus(), 100);
+};
+
+window.chiudiPin = function() {
+  document.getElementById('pin-modal').classList.remove('open');
+};
+
+window.verificaPin = function() {
+  const pin = document.getElementById('pin-input').value;
+  if (pin === CONFIG_PIN) {
+    chiudiPin();
+    document.getElementById('nav-tab-setup').style.display = '';
+    sessionStorage.setItem('admin_ok', '1');
+    document.getElementById('auth-overlay').classList.remove('open');
+    document.body.classList.remove('auth-locked');
+    renderApprovazioni(_ultimiUtenti);
+    switchView('setup');
+  } else {
+    document.getElementById('pin-error').textContent = '❌ PIN errato';
+    document.getElementById('pin-input').value = '';
+    document.getElementById('pin-input').focus();
+  }
+};
+
+// Chiudi dropdown cassoni cliccando fuori
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('.scan-area')) {
+    var drop = document.getElementById('scan-drop');
+    if (drop) drop.style.display = 'none';
+  }
+});
+
+// ══ BOOT ═══════════════════════════════════════════
+(async function boot() {
+  // ── Favicon e link dinamici ─────────────────────
+  const baseUrl = window.location.origin + window.location.pathname;
+  const adminUrl   = baseUrl;
+  const autistaUrl = baseUrl + '?autista';
+
+  // Aggiorna link nel setup
+  const la = document.getElementById('link-admin');
+  const lu = document.getElementById('link-autista');
+  if (la) la.href = adminUrl;
+  if (lu) lu.href = autistaUrl;
+
+  // Favicon differenziata
+  const isAutista = new URLSearchParams(window.location.search).has('autista');
+  const faviconSvg = isAutista
+    ? `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'>
+        <rect width='64' height='64' rx='12' fill='%230a7c4e'/>
+        <rect x='4' y='28' width='44' height='20' rx='4' fill='%23fff' opacity='.95'/>
+        <rect x='36' y='18' width='20' height='18' rx='3' fill='%23fff' opacity='.85'/>
+        <circle cx='14' cy='50' r='6' fill='%230a7c4e' stroke='%23fff' stroke-width='2.5'/>
+        <circle cx='38' cy='50' r='6' fill='%230a7c4e' stroke='%23fff' stroke-width='2.5'/>
+        <rect x='4' y='24' width='44' height='6' rx='2' fill='%23fff' opacity='.4'/>
+      </svg>`
+    : `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'>
+        <rect width='64' height='64' rx='12' fill='%231a4f8a'/>
+        <rect x='12' y='16' width='40' height='28' rx='3' fill='%23fff' opacity='.9'/>
+        <rect x='16' y='20' width='32' height='4' rx='2' fill='%231a4f8a' opacity='.3'/>
+        <rect x='16' y='27' width='32' height='3' rx='1.5' fill='%231a4f8a' opacity='.3'/>
+        <rect x='16' y='33' width='20' height='3' rx='1.5' fill='%231a4f8a' opacity='.3'/>
+        <rect x='12' y='46' width='40' height='4' rx='2' fill='%23fff' opacity='.5'/>
+        <circle cx='20' cy='48' r='2' fill='%23fff'/>
+        <circle cx='44' cy='48' r='2' fill='%23fff'/>
+      </svg>`;
+
+  const encoded = 'data:image/svg+xml,' + faviconSvg.replace(/\s+/g,' ');
+  let favicon = document.querySelector("link[rel='icon']");
+  if (!favicon) { favicon = document.createElement('link'); favicon.rel = 'icon'; document.head.appendChild(favicon); }
+  favicon.href = encoded;
+  document.title = isAutista ? '🚛 Movimento Cassone' : '🖥️ Tracker Cassoni — Admin';
+
+  // ── Tab Config: visibile solo con click su brand 3 volte o PIN ──
+  let _brandClicks = 0;
+  document.querySelector('.nav-brand').addEventListener('click', () => {
+    _brandClicks++;
+    if (_brandClicks >= 3) {
+      _brandClicks = 0;
+      document.getElementById('nav-tab-setup').style.display = '';
+      richiestaPin();
+    }
+  });
+  // Mostra sempre il tab setup se in modalità autista=no e sessionStorage lo ricorda
+  if (sessionStorage.getItem('admin_ok') === '1') {
+    document.getElementById('nav-tab-setup').style.display = '';
+  }
+  const urlParams = new URLSearchParams(window.location.search);
+  const modoAutista = urlParams.has('autista');
+  if (modoAutista) {
+    document.body.classList.add('modo-autista');
+    // Mostra solo la schermata trasportatore, nascondi nav
+    document.querySelector('nav.nav').style.display = 'none';
+    switchView('trasportatore');
+    // Pulsante discreto per tornare alla versione completa (solo admin)
+    const backBtn = document.createElement('button');
+    backBtn.className = 'autista-back';
+    backBtn.textContent = '⚙️ Versione completa';
+    backBtn.style.display = 'block';
+    backBtn.onclick = () => { window.location.href = window.location.pathname; };
+    document.body.appendChild(backBtn);
+  }
+  const hardcodedCfg = {
+    apiKey:      'AIzaSyCixZmG-Pc2hbXc-sKeuCZXvknzC_Bo52k',
+    authDomain:  'cassoni-centrorisorse.firebaseapp.com',
+    databaseURL: 'https://cassoni-centrorisorse-default-rtdb.europe-west1.firebasedatabase.app',
+    projectId:   'cassoni-centrorisorse',
+  };
+  // Popola anche i campi Config (per riferimento)
+  document.getElementById('cfg-apikey').value     = hardcodedCfg.apiKey;
+  document.getElementById('cfg-authdomain').value = hardcodedCfg.authDomain;
+  document.getElementById('cfg-dburl').value      = hardcodedCfg.databaseURL;
+  document.getElementById('cfg-projectid').value  = hardcodedCfg.projectId;
+  saveConfig(hardcodedCfg);
+  await initFirebase(hardcodedCfg);
+  await verificaSessioneAuth();
+  subscribeUtenti();
+  subscribeMezzi();
+})();
+</script>
+</body>
+</html>
