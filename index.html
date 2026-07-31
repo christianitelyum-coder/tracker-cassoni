@@ -152,6 +152,18 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);min-height:10
 .btn-rientro:hover{background:var(--green-d)}
 .btn-uscita:disabled,.btn-rientro:disabled{opacity:.4;cursor:not-allowed}
 
+.mezzo-card{background:var(--surface);border-radius:var(--radius);padding:1.25rem;box-shadow:var(--shadow);border:1.5px solid #fcd34d;border-left:5px solid var(--amber);margin-bottom:1rem}
+.mezzo-title{font-size:13px;font-weight:800;letter-spacing:.02em;color:var(--amber);text-transform:uppercase;margin-bottom:.9rem}
+.btn-invia-mezzo{width:100%;margin-top:.4rem;background:var(--amber);color:#fff;padding:14px;font-size:14px;font-weight:800;border-radius:var(--radius-sm);border:none;cursor:pointer;font-family:var(--font);transition:all .15s;letter-spacing:.02em}
+.btn-invia-mezzo:hover{background:#92400e}
+.mezzo-cat-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:4px}
+.mezzo-cat-btn{position:relative;width:2cm;height:2cm;flex-shrink:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;background:var(--s2,#f2f8f7);border:1.5px solid var(--border,#d7e6e3);border-radius:9px;cursor:pointer;font-family:var(--font);transition:all .15s;padding:4px}
+.mezzo-cat-btn .mezzo-cat-icon{font-size:24px;line-height:1}
+.mezzo-cat-btn .mezzo-cat-lbl{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.02em;color:var(--ink2);text-align:center;line-height:1.15}
+.mezzo-cat-btn.active{background:var(--amber-l);border-color:var(--amber);box-shadow:0 0 0 1px var(--amber) inset}
+.mezzo-cat-btn.active .mezzo-cat-lbl{color:var(--amber)}
+.mezzo-cat-badge{position:absolute;top:-7px;right:-7px;background:var(--amber);color:#fff;font-size:10px;font-weight:800;border-radius:10px;min-width:17px;height:17px;line-height:17px;text-align:center;padding:0 4px;box-shadow:0 1px 3px rgba(0,0,0,.25)}
+
 .trasp-recenti{background:var(--surface);border-radius:var(--radius);padding:1.1rem;box-shadow:var(--shadow);border:1px solid var(--border)}
 .trasp-recenti h3{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ink3);margin-bottom:.75rem}
 .trasp-rec-item{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border);font-size:12px}
@@ -292,6 +304,7 @@ body.auth-locked{overflow:hidden}
     <button class="nav-tab active" onclick="switchView('dashboard')">📊 Dashboard</button>
     <button class="nav-tab" onclick="switchView('bollettazione')">📋 Bollettazione</button>
     <button class="nav-tab" onclick="switchView('manutenzione')">🔧 Manutenzione</button>
+    <button class="nav-tab" id="nav-tab-mezzi" onclick="switchView('mezzi')">🚩 Mezzi</button>
     <button class="nav-tab" onclick="switchView('trasportatore')">📱 Trasportatore</button>
     <button class="nav-tab" id="nav-tab-setup" onclick="richiestaPin()" style="display:none">⚙️ Config</button>
     <button class="nav-notif-btn" id="nav-notif-btn" onclick="switchView('setup')" style="display:none" title="Richieste di registrazione in attesa">
@@ -434,6 +447,15 @@ body.auth-locked{overflow:hidden}
 </div>
 </div>
 
+<!-- ════════ SEGNALAZIONE MANUTENZIONI MEZZI ════════ -->
+<div class="view" id="view-mezzi">
+<div class="boll-toolbar" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+  <h2 style="margin:0;font-size:16px;font-weight:800;letter-spacing:-.01em">🚩 Segnalazione Manutenzioni Mezzi</h2>
+</div>
+<div id="mezzi-count" style="font-size:13px;color:var(--ink3);margin:8px 0 4px"></div>
+<div id="mezzi-groups"></div>
+</div>
+
 <div class="view" id="view-trasportatore">
 <div class="trasp">
   <div class="trasp-hero">
@@ -531,6 +553,33 @@ body.auth-locked{overflow:hidden}
         🟢 RIENTRO
       </button>
     </div>
+  </div>
+
+  <div class="mezzo-card">
+    <div class="mezzo-title">🚩 Segnalazioni manutenzioni mezzi</div>
+    <div class="form-row">
+      <label class="form-lbl">Targa</label>
+      <input class="form-ctrl" id="mezzo-targa" placeholder="Es. AB123CD" autocapitalize="characters">
+    </div>
+    <div class="form-row">
+      <label class="form-lbl">Anomalia riscontrata</label>
+      <div class="mezzo-cat-row">
+        <button type="button" class="mezzo-cat-btn" id="mezzo-cat-motore" onclick="apriCategoriaMezzoModal('motore')">
+          <span class="mezzo-cat-icon">⚙️</span><span class="mezzo-cat-lbl">Motore</span>
+        </button>
+        <button type="button" class="mezzo-cat-btn" id="mezzo-cat-carrozzeria" onclick="apriCategoriaMezzoModal('carrozzeria')">
+          <span class="mezzo-cat-icon">🚛</span><span class="mezzo-cat-lbl">Carrozzeria</span>
+        </button>
+        <button type="button" class="mezzo-cat-btn" id="mezzo-cat-spie" onclick="apriCategoriaMezzoModal('spie')">
+          <span class="mezzo-cat-icon">💡</span><span class="mezzo-cat-lbl">Spie accese</span>
+        </button>
+      </div>
+    </div>
+    <div class="form-row" style="margin-bottom:0">
+      <label class="form-lbl">Posizione</label>
+      <input class="form-ctrl" id="mezzo-posizione" placeholder="Es. cantiere, via, piazzale...">
+    </div>
+    <button class="btn-invia-mezzo" onclick="inviaSegnalazioneMezzo()">📨 Invia segnalazione</button>
   </div>
 
   <div class="trasp-recenti">
@@ -766,6 +815,35 @@ body.auth-locked{overflow:hidden}
   </div>
 </div>
 
+<!-- ════════ POPUP NUOVA SEGNALAZIONE MEZZO ════════ -->
+<div class="modal-overlay" id="mezzo-notif-modal">
+  <div class="modal" style="max-width:380px">
+    <div class="modal-header">
+      <span class="modal-title">🚩 Nuova segnalazione mezzo</span>
+      <button class="modal-close" onclick="chiudiNotificaMezzo()">×</button>
+    </div>
+    <div class="modal-body" id="mezzo-notif-body" style="font-size:13px;line-height:1.9"></div>
+    <div class="modal-footer">
+      <button class="btn btn-primary" onclick="chiudiNotificaMezzo()">Ho visto ✓</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════════ POPUP OPZIONI CATEGORIA MEZZO ════════ -->
+<div class="modal-overlay" id="mezzo-cat-modal" onclick="if(event.target===this)chiudiCategoriaMezzoModal()">
+  <div class="modal" style="max-width:400px">
+    <div class="modal-header">
+      <span class="modal-title" id="mezzo-cat-modal-title">Categoria</span>
+      <button class="modal-close" onclick="chiudiCategoriaMezzoModal()">×</button>
+    </div>
+    <div class="modal-body" id="mezzo-cat-modal-body" style="display:flex;flex-direction:column;gap:8px;max-height:60vh;overflow-y:auto"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="chiudiCategoriaMezzoModal()">Annulla</button>
+      <button class="btn btn-primary" onclick="confermaCategoriaMezzo()">✓ Conferma</button>
+    </div>
+  </div>
+</div>
+
 <!-- ════════ DDT MODAL ════════ -->
 <div class="modal-overlay" id="ddt-modal" onclick="if(event.target===this)closeDDT()">
   <div class="modal" style="max-width:1100px;width:96vw">
@@ -883,6 +961,7 @@ let STATE = {
   cassoni:    {},   // { id: { tipo, statoAttuale:'piazzale'|'fuori', lastMov, cliente } }
   movimenti:  {},   // { id: { cassoneId, tipo:'USCITA'|'RIENTRO', ts, cliente, autista, note, ddtNumero, ddtTs } }
   clienti:    [],
+  segnalazioniMezzi: {}, // { id: { targa, categorie:['motore'|'carrozzeria'|'spie'], dettagli:{motore:[...],carrozzeria:[...],spie:[...]}, posizione, autista, ts } }
 };
 
 // ── Config ─────────────────────────────────────────
@@ -963,6 +1042,7 @@ function renderAll() {
   renderDashMovimenti();
   renderBollettazione();
   renderManutenzione();
+  renderSegnalazioniMezzi();
   renderCassoniSetup();
 }
 
@@ -1995,10 +2075,241 @@ window.inviaSegnalazioneConFoto = inviaSegnalazioneConFoto;
 
 window.renderManutenzione = renderManutenzione;
 
+// ── Segnalazione manutenzioni mezzi (targa / categoria anomalia / posizione) ──
+// Opzioni tarate su motrici/trattori stradali che trainano cassoni scarrabili e pianali.
+const CATEGORIE_MEZZO = {
+  motore: {
+    label: 'Motore', icon: '⚙️',
+    opzioni: [
+      'Spia motore accesa',
+      'Perdita olio',
+      'Perdita liquido di raffreddamento',
+      'Fumo di scarico anomalo',
+      'Rumore anomalo',
+      'Difficoltà di avviamento',
+      'Surriscaldamento',
+      'Perdita di potenza',
+      'Cinghie/tendicinghia usurati',
+      'Altro',
+    ],
+  },
+  carrozzeria: {
+    label: 'Carrozzeria', icon: '🚛',
+    opzioni: [
+      'Gancio traino / attacco scarrabile danneggiato',
+      'Impianto scarrabile (braccio/gru) malfunzionante',
+      'Pianale/telaio danneggiato',
+      'Danni alla cabina',
+      'Specchietti danneggiati',
+      'Paraurti danneggiato',
+      'Pneumatici usurati o forati',
+      'Sospensioni danneggiate',
+      'Freni (rumore o usura)',
+      'Ruggine / corrosione telaio',
+      'Luci, frecce o stop non funzionanti',
+      'Altro',
+    ],
+  },
+  spie: {
+    label: 'Spie accese', icon: '💡',
+    opzioni: [
+      'Spia motore (check engine)',
+      'Spia olio',
+      'Spia batteria / alternatore',
+      'Spia freni (ABS/EBS)',
+      'Spia liquido di raffreddamento',
+      'Spia pressione pneumatici',
+      'Spia airbag',
+      'Spia servosterzo',
+      'Spia AdBlue',
+      'Spia freno di stazionamento',
+      'Spia guasto generico',
+      'Altro',
+    ],
+  },
+};
+
+let _mezzoDettagli = {};
+Object.keys(CATEGORIE_MEZZO).forEach(cat => { _mezzoDettagli[cat] = new Set(); });
+
+let _mezzoCatCorrente = null;
+function apriCategoriaMezzoModal(cat) {
+  _mezzoCatCorrente = cat;
+  const def = CATEGORIE_MEZZO[cat];
+  const selezionate = _mezzoDettagli[cat];
+  document.getElementById('mezzo-cat-modal-title').textContent = `${def.icon} ${def.label}`;
+  document.getElementById('mezzo-cat-modal-body').innerHTML = def.opzioni.map(opt => `
+    <label style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--s2,#f2f8f7);border-radius:7px;border:1.5px solid var(--border,#d7e6e3);cursor:pointer;font-size:13px">
+      <input type="checkbox" data-opt="${opt}" ${selezionate.has(opt)?'checked':''} style="width:16px;height:16px;accent-color:var(--amber,#b45309);flex-shrink:0">
+      ${opt}
+    </label>
+  `).join('');
+  document.getElementById('mezzo-cat-modal').classList.add('open');
+}
+window.apriCategoriaMezzoModal = apriCategoriaMezzoModal;
+
+window.chiudiCategoriaMezzoModal = function() {
+  document.getElementById('mezzo-cat-modal').classList.remove('open');
+  _mezzoCatCorrente = null;
+};
+
+window.confermaCategoriaMezzo = function() {
+  if (!_mezzoCatCorrente) return;
+  const cat = _mezzoCatCorrente;
+  const checked = [...document.querySelectorAll('#mezzo-cat-modal-body input[type=checkbox]:checked')].map(el => el.dataset.opt);
+  _mezzoDettagli[cat] = new Set(checked);
+  aggiornaBottoneCategoriaMezzo(cat);
+  document.getElementById('mezzo-cat-modal').classList.remove('open');
+  _mezzoCatCorrente = null;
+};
+
+function aggiornaBottoneCategoriaMezzo(cat) {
+  const btn = document.getElementById('mezzo-cat-' + cat);
+  if (!btn) return;
+  const n = _mezzoDettagli[cat].size;
+  btn.classList.toggle('active', n > 0);
+  let badge = btn.querySelector('.mezzo-cat-badge');
+  if (n > 0) {
+    if (!badge) {
+      badge = document.createElement('span');
+      badge.className = 'mezzo-cat-badge';
+      btn.appendChild(badge);
+    }
+    badge.textContent = n;
+  } else if (badge) {
+    badge.remove();
+  }
+}
+
+async function inviaSegnalazioneMezzo() {
+  if (!db) { toast('Firebase non connesso', 'err'); return; }
+  const targa     = document.getElementById('mezzo-targa').value.trim().toUpperCase();
+  const posizione = document.getElementById('mezzo-posizione').value.trim();
+  const categorie = Object.keys(_mezzoDettagli).filter(cat => _mezzoDettagli[cat].size > 0);
+  if (!targa)            { toast('Inserisci la targa del mezzo', 'err'); return; }
+  if (!categorie.length) { toast('Seleziona almeno una categoria di anomalia', 'err'); return; }
+  const dettagli = {};
+  categorie.forEach(cat => { dettagli[cat] = [..._mezzoDettagli[cat]]; });
+  const autista = localStorage.getItem('tracker_auth_user') || '';
+
+  await push(ref(db, 'segnalazioniMezzi'), { targa, categorie, dettagli, posizione, autista, ts: now() });
+
+  toast('✓ Segnalazione mezzo inviata', 'ok');
+  document.getElementById('mezzo-targa').value = '';
+  document.getElementById('mezzo-posizione').value = '';
+  Object.keys(_mezzoDettagli).forEach(cat => { _mezzoDettagli[cat].clear(); aggiornaBottoneCategoriaMezzo(cat); });
+}
+window.inviaSegnalazioneMezzo = inviaSegnalazioneMezzo;
+
+function renderSegnalazioniMezzi() {
+  const container = document.getElementById('mezzi-groups');
+  const countEl    = document.getElementById('mezzi-count');
+  if (!container) return;
+  const all = Object.entries(STATE.segnalazioniMezzi || {})
+    .sort((a,b) => (b[1].ts||'') > (a[1].ts||'') ? 1 : -1);
+
+  if (countEl) countEl.textContent = all.length
+    ? `${all.length} segnalazion${all.length===1?'e':'i'}`
+    : 'Nessuna segnalazione';
+
+  if (!all.length) {
+    container.innerHTML = `<div style="text-align:center;padding:2rem;color:var(--ink3);font-style:italic">Nessuna segnalazione mezzi</div>`;
+    return;
+  }
+
+  container.innerHTML = Object.entries(CATEGORIE_MEZZO).map(([key, cat]) => {
+    const rows = all.filter(([, r]) => (r.categorie || []).includes(key));
+    return `
+      <div class="card" style="margin-bottom:1rem">
+        <div class="card-header">
+          <div class="card-title">${cat.icon} ${cat.label}</div>
+          <span style="font-size:11px;color:var(--ink3)">${rows.length}</span>
+        </div>
+        <div class="card-body" style="padding:0">
+          ${rows.length ? `<div style="overflow-x:auto"><table class="mov-table">
+            <thead><tr><th>Data</th><th>Targa</th><th>Dettaglio</th><th>Posizione</th><th>Segnalato da</th><th></th></tr></thead>
+            <tbody>${rows.map(([id, r]) => {
+              const dett = (r.dettagli && r.dettagli[key]) || [];
+              return `
+              <tr>
+                <td style="white-space:nowrap;color:var(--ink2);font-size:12px">${fmtDT(r.ts)}</td>
+                <td><strong>${r.targa||'—'}</strong></td>
+                <td style="color:var(--ink2);font-size:12px">${dett.length ? dett.map(d => `<span style="display:inline-block;padding:1px 7px;border-radius:10px;font-size:10px;font-weight:700;background:var(--amber-l);color:var(--amber);border:1px solid #fcd34d;margin:1px">${d}</span>`).join(' ') : '—'}</td>
+                <td style="color:var(--ink2);font-size:12px">${r.posizione||'—'}</td>
+                <td style="color:var(--ink2);font-size:12px">${r.autista||'—'}</td>
+                <td style="white-space:nowrap;text-align:center">
+                  <button class="btn btn-ghost btn-sm" onclick="eliminaSegnalazioneMezzo('${id}')" style="color:var(--red,#c0392b)" title="Elimina">🗑</button>
+                </td>
+              </tr>
+            `;
+            }).join('')}</tbody>
+          </table></div>` : `<div style="padding:1rem 1.25rem;color:var(--ink3);font-size:12px;font-style:italic">Nessuna segnalazione in questa categoria</div>`}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+window.renderSegnalazioniMezzi = renderSegnalazioniMezzi;
+
+async function eliminaSegnalazioneMezzo(id) {
+  if (!db) return;
+  if (!confirm('Eliminare questa segnalazione mezzo?')) return;
+  await remove(ref(db, `segnalazioniMezzi/${id}`));
+  toast('Segnalazione eliminata', '');
+}
+window.eliminaSegnalazioneMezzo = eliminaSegnalazioneMezzo;
+
+// ── Popup notifica nuova segnalazione mezzo ──
+let _mezziNotifQueue = [];
+function mostraNotificaMezzo(rec) {
+  _mezziNotifQueue.push(rec);
+  if (_mezziNotifQueue.length === 1) renderNotificaMezzo();
+}
+function renderNotificaMezzo() {
+  const rec = _mezziNotifQueue[0];
+  if (!rec) return;
+  const catBlocks = (rec.categorie || []).map(c => {
+    const def = CATEGORIE_MEZZO[c];
+    const dett = (rec.dettagli && rec.dettagli[c]) || [];
+    return `<div style="margin-bottom:4px"><strong>${def?def.icon+' '+def.label:c}:</strong> ${dett.length?dett.join(', '):'—'}</div>`;
+  }).join('');
+  document.getElementById('mezzo-notif-body').innerHTML = `
+    <div style="margin-bottom:4px"><strong>Targa:</strong> ${rec.targa||'—'}</div>
+    ${catBlocks}
+    <div style="margin-bottom:4px"><strong>Posizione:</strong> ${rec.posizione||'—'}</div>
+    <div style="color:var(--ink3);font-size:11px;margin-top:8px">Segnalato da ${rec.autista||'—'} — ${fmtDT(rec.ts)}</div>
+  `;
+  document.getElementById('mezzo-notif-modal').classList.add('open');
+}
+window.chiudiNotificaMezzo = function() {
+  document.getElementById('mezzo-notif-modal').classList.remove('open');
+  _mezziNotifQueue.shift();
+  if (_mezziNotifQueue.length) setTimeout(renderNotificaMezzo, 300);
+};
+
+let _mezziInizializzato = false;
+let _mezziIdVisti = new Set();
+function subscribeMezzi() {
+  if (!db) return;
+  onValue(ref(db, 'segnalazioniMezzi'), snap => {
+    const val = snap.val() || {};
+    STATE.segnalazioniMezzi = val;
+    const ids = Object.keys(val);
+    if (_mezziInizializzato) {
+      ids.forEach(id => {
+        if (!_mezziIdVisti.has(id)) mostraNotificaMezzo(val[id]);
+      });
+    }
+    _mezziIdVisti = new Set(ids);
+    _mezziInizializzato = true;
+    renderSegnalazioniMezzi();
+  });
+}
+
 const VISTE_PER_RUOLO = {
-  admin:         ['dashboard','bollettazione','manutenzione','trasportatore'],
-  ufficio:       ['dashboard','bollettazione','manutenzione'],
-  manutenzione:  ['manutenzione'],
+  admin:         ['dashboard','bollettazione','manutenzione','mezzi','trasportatore'],
+  ufficio:       ['dashboard','bollettazione','manutenzione','mezzi'],
+  manutenzione:  ['manutenzione','mezzi'],
   trasportatore: ['trasportatore'],
 };
 window.switchView = function(name) {
@@ -2010,10 +2321,11 @@ window.switchView = function(name) {
   document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
   document.getElementById('view-' + name)?.classList.add('active');
   const tabs = [...document.querySelectorAll('.nav-tab')];
-  const map  = {dashboard:0, bollettazione:1, manutenzione:2, trasportatore:3, setup:4};
+  const map  = {dashboard:0, bollettazione:1, manutenzione:2, mezzi:3, trasportatore:4, setup:5};
   if (tabs[map[name]]) tabs[map[name]].classList.add('active');
   if (name === 'bollettazione') renderBollettazione();
   if (name === 'manutenzione')  renderManutenzione();
+  if (name === 'mezzi')         renderSegnalazioniMezzi();
 };
 
 // ══ SETUP ══════════════════════════════════════════
@@ -2298,16 +2610,18 @@ function aggiornaBadgeUtente(user) {
 const RUOLI_LABEL = { admin:'Admin', ufficio:'Ufficio', manutenzione:'Manutenzione', trasportatore:'Trasportatore' };
 function applicaRuolo(ruolo) {
   window._ruoloCorrente = ruolo;
-  const tabDash = document.querySelector('.nav-tab[onclick*="dashboard"]');
-  const tabBoll = document.querySelector('.nav-tab[onclick*="bollettazione"]');
-  const tabMan  = document.querySelector('.nav-tab[onclick*="manutenzione"]');
-  const tabTra  = document.querySelector('.nav-tab[onclick*="trasportatore"]');
-  [tabDash, tabBoll, tabMan, tabTra].forEach(t => t && (t.style.display = ''));
+  const tabDash  = document.querySelector('.nav-tab[onclick*="dashboard"]');
+  const tabBoll  = document.querySelector('.nav-tab[onclick*="bollettazione"]');
+  const tabMan   = document.querySelector('.nav-tab[onclick*="manutenzione"]');
+  const tabMezzi = document.getElementById('nav-tab-mezzi');
+  const tabTra   = document.querySelector('.nav-tab[onclick*="trasportatore"]');
+  [tabDash, tabBoll, tabMan, tabMezzi, tabTra].forEach(t => t && (t.style.display = ''));
   let vistaIniziale = 'dashboard';
   if (ruolo === 'trasportatore') {
-    if (tabDash) tabDash.style.display = 'none';
-    if (tabBoll) tabBoll.style.display = 'none';
-    if (tabMan)  tabMan.style.display  = 'none';
+    if (tabDash)  tabDash.style.display  = 'none';
+    if (tabBoll)  tabBoll.style.display  = 'none';
+    if (tabMan)   tabMan.style.display   = 'none';
+    if (tabMezzi) tabMezzi.style.display = 'none';
     vistaIniziale = 'trasportatore';
   } else if (ruolo === 'manutenzione') {
     if (tabDash) tabDash.style.display = 'none';
@@ -2599,6 +2913,7 @@ document.addEventListener('click', function(e) {
   await initFirebase(hardcodedCfg);
   await verificaSessioneAuth();
   subscribeUtenti();
+  subscribeMezzi();
 })();
 </script>
 </body>
