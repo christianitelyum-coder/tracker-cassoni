@@ -6,15 +6,15 @@ on:
     - cron: '0 2 * * *'
   workflow_dispatch: {}  # permette anche l'avvio manuale dal tab "Actions" su GitHub
 
-permissions:
-  contents: write
-
 jobs:
   backup:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
+      - name: Checkout del repository privato dei backup
         uses: actions/checkout@v4
+        with:
+          repository: christianitelyum-coder/tracker-cassoni-backups
+          token: ${{ secrets.BACKUP_REPO_TOKEN }}
 
       - name: Scarica il database Firebase
         run: |
@@ -40,3 +40,4 @@ jobs:
             git commit -m "Backup automatico Firebase $(date -u +"%Y-%m-%d")"
             git push
           fi
+
