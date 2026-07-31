@@ -1908,7 +1908,7 @@ function renderManutenzione() {
     const subject = encodeURIComponent(`Segnalazione manutenzione cassone ${m.cassoneId}`);
     const flagText = flags.join(', ');
     const body = encodeURIComponent(
-      `Buongiorno,\n\nSi segnala il cassone ${m.cassoneId} (${cas.tipo||''}) per le seguenti problematiche:\n\n${flagText}${noteLibera ? '\n\nNote: ' + noteLibera : ''}\n\nData segnalazione: ${fmtDT(m.ts)}\nCliente: ${m.cliente||'—'}\nStato attuale: ${cas.stato||'—'}${foto.length ? '\n\n⚠️ Sono presenti ' + foto.length + ' foto allegate: usa il pulsante "Invia con foto" per allegarle automaticamente.' : ''}\n\nCordiali saluti`
+      `Buongiorno,\n\nSi segnala il cassone ${m.cassoneId} (${cas.tipo||''}) per le seguenti problematiche:\n\n${flagText}${noteLibera ? '\n\nNote: ' + noteLibera : ''}\n\nData segnalazione: ${fmtDT(m.ts)}\nCliente: ${m.cliente||'—'}\nStato attuale: ${cas.stato||'—'}\n\nCordiali saluti`
     );
     const mailto = `mailto:massimo.pizzoli@itelyum.com;trasporti.centrorisorse@itelyum.com?subject=${subject}&body=${body}`;
 
@@ -1953,7 +1953,11 @@ async function segnaMailInviata(movId) {
 }
 window.segnaMailInviata = segnaMailInviata;
 
-// ── Invio segnalazione con foto allegate (Web Share API, con fallback) ──
+// ── Invio segnalazione con foto: apre la mail preimpostata (destinatari,
+//    oggetto e testo già compilati) e scarica le foto pronte da allegare.
+//    Nota: il protocollo mailto non supporta allegati automatici in nessun
+//    browser/client di posta, quindi le foto vengono scaricate sul
+//    dispositivo e vanno trascinate/allegate nella mail già aperta.
 async function inviaSegnalazioneConFoto(movId) {
   const m = STATE.movimenti[movId];
   if (!m) return;
@@ -1961,42 +1965,29 @@ async function inviaSegnalazioneConFoto(movId) {
   const flags = estraiFlag(m.note);
   const noteLibera = (m.note||'').split(' | ').filter(p => !FLAGS.some(f => p.startsWith(f))).join(' | ');
   const foto = Array.isArray(m.foto) ? m.foto : [];
-  const testo = `Destinatari: massimo.pizzoli@itelyum.com, trasporti.centrorisorse@itelyum.com\n\n`
-    + `Buongiorno,\n\nSi segnala il cassone ${m.cassoneId} (${cas.tipo||''}) per le seguenti problematiche:\n\n`
-    + `${flags.join(', ')}${noteLibera ? '\n\nNote: ' + noteLibera : ''}\n\n`
-    + `Data segnalazione: ${fmtDT(m.ts)}\nCliente: ${m.cliente||'—'}\nStato attuale: ${cas.stato||'—'}\n\nCordiali saluti`;
 
-  let files = [];
-  try {
-    files = await Promise.all(foto.map(async (src, i) => {
-      const res = await fetch(src);
-      const blob = await res.blob();
-      return new File([blob], `segnalazione_${m.cassoneId}_${i+1}.jpg`, { type: 'image/jpeg' });
-    }));
-  } catch { files = []; }
-
-  if (files.length && navigator.canShare && navigator.canShare({ files })) {
+  // Scarica le foto sul dispositivo, pronte da allegare
+  for (let i = 0; i < foto.length; i++) {
     try {
-      await navigator.share({ title: `Segnalazione manutenzione cassone ${m.cassoneId}`, text: testo, files });
-      segnaMailInviata(movId);
-      return;
-    } catch (err) {
-      if (err && err.name === 'AbortError') return; // utente ha annullato la condivisione
-      // altrimenti prosegui con il fallback sotto
-    }
+      const res = await fetch(foto[i]);
+      const blob = await res.blob();
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `segnalazione_${m.cassoneId}_${i+1}.jpg`;
+      document.body.appendChild(a); a.click(); a.remove();
+    } catch {}
   }
 
-  // Fallback (es. desktop senza Web Share API con file): scarica le foto e apre la mail di testo
-  files.forEach((file, i) => {
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(file);
-    a.download = file.name;
-    document.body.appendChild(a); a.click(); a.remove();
-  });
   const subject = encodeURIComponent(`Segnalazione manutenzione cassone ${m.cassoneId}`);
-  const body = encodeURIComponent(testo + (foto.length ? `\n\n(${foto.length} foto scaricate sul dispositivo: allegale manualmente a questa mail)` : ''));
-  window.open(`mailto:massimo.pizzoli@itelyum.com;trasporti.centrorisorse@itelyum.com?subject=${subject}&body=${body}`, '_blank');
-  if (foto.length) toast('📥 Foto scaricate: allegale manualmente alla mail aperta', 'ok');
+  const body = encodeURIComponent(
+    `Buongiorno,\n\nSi segnala il cassone ${m.cassoneId} (${cas.tipo||''}) per le seguenti problematiche:\n\n`
+    + `${flags.join(', ')}${noteLibera ? '\n\nNote: ' + noteLibera : ''}\n\n`
+    + `Data segnalazione: ${fmtDT(m.ts)}\nCliente: ${m.cliente||'—'}\nStato attuale: ${cas.stato||'—'}`
+    + (foto.length ? `\n\n📎 Allega a questa mail ${foto.length} foto appena scaricat${foto.length===1?'a':'e'} sul dispositivo (cartella Download).` : '')
+    + `\n\nCordiali saluti`
+  );
+  window.location.href = `mailto:massimo.pizzoli@itelyum.com;trasporti.centrorisorse@itelyum.com?subject=${subject}&body=${body}`;
+  if (foto.length) toast('📥 Foto scaricate: allegale alla mail appena aperta', 'ok');
   segnaMailInviata(movId);
 }
 window.inviaSegnalazioneConFoto = inviaSegnalazioneConFoto;
