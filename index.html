@@ -599,6 +599,28 @@ body.auth-locked{overflow:hidden}
     <div id="approvazioni-list"></div>
   </div>
   <div class="setup-card">
+    <h2>👤 Gestione utenti</h2>
+    <p style="margin-bottom:.75rem">Crea nuovi utenti, oppure modifica nome utente, PIN e ruolo di quelli esistenti.</p>
+
+    <div style="background:var(--green-l);border:1.5px dashed #a3ddd3;border-radius:var(--radius-sm);padding:10px 14px;margin-bottom:1rem">
+      <div style="font-size:12px;font-weight:700;color:var(--green-d);margin-bottom:8px">+ Crea nuovo utente</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <input class="form-ctrl" id="nu-user" placeholder="Nome utente" style="flex:1;min-width:120px;font-size:13px;padding:8px 10px">
+        <input class="form-ctrl" id="nu-pin" type="password" inputmode="numeric" maxlength="4" placeholder="PIN 4 cifre" style="width:100px;font-size:13px;padding:8px 10px;text-align:center;letter-spacing:.2em">
+        <select class="form-ctrl" id="nu-ruolo" style="font-size:13px;padding:8px 10px;width:auto">
+          <option value="admin">Admin</option>
+          <option value="ufficio" selected>Ufficio</option>
+          <option value="manutenzione">Manutenzione</option>
+          <option value="trasportatore">Trasportatore</option>
+        </select>
+        <button class="btn btn-primary btn-sm" onclick="creaUtente()">+ Crea</button>
+      </div>
+      <div id="nu-status" style="font-size:11px;color:var(--ink3);margin-top:6px"></div>
+    </div>
+
+    <div id="utenti-list-setup" style="overflow-x:auto"></div>
+  </div>
+  <div class="setup-card">
     <h2>⚙️ Configurazione Firebase</h2>
     <p>Inserisci le credenziali del tuo Firebase Realtime Database. Le trovi su <strong>console.firebase.google.com</strong> → Impostazioni progetto → App web → Configurazione SDK.</p>
     <div class="setup-form-row">
@@ -2130,20 +2152,28 @@ const CATEGORIE_MEZZO = {
 };
 
 let _mezzoDettagli = {};
-Object.keys(CATEGORIE_MEZZO).forEach(cat => { _mezzoDettagli[cat] = new Set(); });
+let _mezzoAltroTesto = {};
+Object.keys(CATEGORIE_MEZZO).forEach(cat => { _mezzoDettagli[cat] = new Set(); _mezzoAltroTesto[cat] = ''; });
 
 let _mezzoCatCorrente = null;
 function apriCategoriaMezzoModal(cat) {
   _mezzoCatCorrente = cat;
   const def = CATEGORIE_MEZZO[cat];
   const selezionate = _mezzoDettagli[cat];
+  const altroSelezionato = [...selezionate].some(v => v === 'Altro' || v.startsWith('Altro:'));
   document.getElementById('mezzo-cat-modal-title').textContent = `${def.icon} ${def.label}`;
-  document.getElementById('mezzo-cat-modal-body').innerHTML = def.opzioni.map(opt => `
+  document.getElementById('mezzo-cat-modal-body').innerHTML = def.opzioni.map(opt => {
+    const isAltro = opt === 'Altro';
+    const checked = isAltro ? altroSelezionato : selezionate.has(opt);
+    return `
     <label style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--s2,#f2f8f7);border-radius:7px;border:1.5px solid var(--border,#d7e6e3);cursor:pointer;font-size:13px">
-      <input type="checkbox" data-opt="${opt}" ${selezionate.has(opt)?'checked':''} style="width:16px;height:16px;accent-color:var(--amber,#b45309);flex-shrink:0">
+      <input type="checkbox" data-opt="${opt}" ${isAltro ? `onchange="document.getElementById('mezzo-cat-altro-testo').style.display=this.checked?'block':'none'"` : ''} ${checked?'checked':''} style="width:16px;height:16px;accent-color:var(--amber,#b45309);flex-shrink:0">
       ${opt}
-    </label>
-  `).join('');
+    </label>`;
+  }).join('') + `
+    <textarea id="mezzo-cat-altro-testo" placeholder="Specifica il problema..." rows="2"
+      style="display:${altroSelezionato?'block':'none'};font-family:inherit;font-size:13px;padding:8px 12px;border:1.5px solid var(--border,#d7e6e3);border-radius:7px;background:var(--s2,#f2f8f7);color:var(--ink);resize:vertical;outline:none">${_mezzoAltroTesto[cat]||''}</textarea>
+  `;
   document.getElementById('mezzo-cat-modal').classList.add('open');
 }
 window.apriCategoriaMezzoModal = apriCategoriaMezzoModal;
@@ -2157,7 +2187,10 @@ window.confermaCategoriaMezzo = function() {
   if (!_mezzoCatCorrente) return;
   const cat = _mezzoCatCorrente;
   const checked = [...document.querySelectorAll('#mezzo-cat-modal-body input[type=checkbox]:checked')].map(el => el.dataset.opt);
-  _mezzoDettagli[cat] = new Set(checked);
+  const altroTesto = document.getElementById('mezzo-cat-altro-testo').value.trim();
+  const finale = checked.map(opt => opt === 'Altro' ? (altroTesto ? `Altro: ${altroTesto}` : 'Altro') : opt);
+  _mezzoDettagli[cat] = new Set(finale);
+  _mezzoAltroTesto[cat] = altroTesto;
   aggiornaBottoneCategoriaMezzo(cat);
   document.getElementById('mezzo-cat-modal').classList.remove('open');
   _mezzoCatCorrente = null;
@@ -2197,7 +2230,7 @@ async function inviaSegnalazioneMezzo() {
   toast('✓ Segnalazione mezzo inviata', 'ok');
   document.getElementById('mezzo-targa').value = '';
   document.getElementById('mezzo-posizione').value = '';
-  Object.keys(_mezzoDettagli).forEach(cat => { _mezzoDettagli[cat].clear(); aggiornaBottoneCategoriaMezzo(cat); });
+  Object.keys(_mezzoDettagli).forEach(cat => { _mezzoDettagli[cat].clear(); _mezzoAltroTesto[cat] = ''; aggiornaBottoneCategoriaMezzo(cat); });
 }
 window.inviaSegnalazioneMezzo = inviaSegnalazioneMezzo;
 
@@ -2786,8 +2819,103 @@ function renderApprovazioni(utenti) {
 let _ultimiUtenti = {};
 function subscribeUtenti() {
   if (!db) return;
-  onValue(ref(db, 'utenti'), snap => { _ultimiUtenti = snap.val() || {}; renderApprovazioni(_ultimiUtenti); });
+  onValue(ref(db, 'utenti'), snap => {
+    _ultimiUtenti = snap.val() || {};
+    renderApprovazioni(_ultimiUtenti);
+    renderUtentiGestione(_ultimiUtenti);
+  });
 }
+
+// ── Gestione utenti (crea / modifica nome, PIN, ruolo) ──
+function renderUtentiGestione(utenti) {
+  const el = document.getElementById('utenti-list-setup');
+  if (!el) return;
+  const entries = Object.entries(utenti || {}).sort((a, b) => a[0].localeCompare(b[0]));
+  if (!entries.length) { el.innerHTML = '<p style="font-size:12px;color:var(--ink3)">Nessun utente registrato</p>'; return; }
+  const statoLbl = { approvato: '✓ Approvato', pending: '⏳ In attesa', rifiutato: '✕ Rifiutato' };
+  const statoCls = { approvato: 'pill-in', pending: 'pill-pend', rifiutato: 'pill-out' };
+  el.innerHTML = `<table style="width:100%;font-size:12px;border-collapse:collapse">
+    <thead><tr style="background:var(--surface2)">
+      <th style="padding:6px 8px;text-align:left">Nome utente</th>
+      <th style="padding:6px 8px;text-align:left">Nuovo PIN</th>
+      <th style="padding:6px 8px;text-align:left">Ruolo</th>
+      <th style="padding:6px 8px;text-align:left">Stato</th>
+      <th style="padding:6px 8px"></th>
+    </tr></thead>
+    <tbody>${entries.map(([user, rec]) => `
+      <tr style="border-bottom:1px solid var(--border)">
+        <td style="padding:6px 8px">
+          <input class="form-ctrl" id="uu-user-${user}" value="${user}" style="font-size:12px;padding:5px 7px;width:120px">
+        </td>
+        <td style="padding:6px 8px">
+          <input class="form-ctrl" id="uu-pin-${user}" type="password" inputmode="numeric" maxlength="4" placeholder="invariato" style="font-size:12px;padding:5px 7px;width:80px;text-align:center;letter-spacing:.15em">
+        </td>
+        <td style="padding:6px 8px">
+          <select class="form-ctrl" id="uu-ruolo-${user}" style="font-size:12px;padding:5px 7px;width:auto">
+            <option value="admin" ${rec.ruolo==='admin'?'selected':''}>Admin</option>
+            <option value="ufficio" ${rec.ruolo==='ufficio'?'selected':''}>Ufficio</option>
+            <option value="manutenzione" ${rec.ruolo==='manutenzione'?'selected':''}>Manutenzione</option>
+            <option value="trasportatore" ${rec.ruolo==='trasportatore'?'selected':''}>Trasportatore</option>
+          </select>
+        </td>
+        <td style="padding:6px 8px">
+          <span class="status-pill ${statoCls[rec.stato]||'pill-out'}" style="font-size:10px">${statoLbl[rec.stato]||rec.stato||'—'}</span>
+        </td>
+        <td style="padding:6px 8px;white-space:nowrap">
+          <button class="btn btn-primary btn-sm" onclick="salvaModificheUtente('${user}')">💾 Salva</button>
+        </td>
+      </tr>
+    `).join('')}</tbody>
+  </table>`;
+}
+window.renderUtentiGestione = renderUtentiGestione;
+
+window.creaUtente = async function() {
+  if (!db) { toast('Firebase non connesso', 'err'); return; }
+  const statusEl = document.getElementById('nu-status');
+  const user  = normalizzaUtente(document.getElementById('nu-user').value);
+  const pin   = document.getElementById('nu-pin').value;
+  const ruolo = document.getElementById('nu-ruolo').value;
+  if (!user || user.length < 3) { statusEl.textContent = '❌ Nome utente troppo corto (min. 3 caratteri)'; return; }
+  if (!/^\d{4}$/.test(pin)) { statusEl.textContent = '❌ Il PIN deve essere di 4 cifre'; return; }
+
+  const rRef = ref(db, 'utenti/' + user);
+  const snap = await get(rRef);
+  if (snap.exists()) { statusEl.textContent = '❌ Nome utente già registrato'; return; }
+
+  await set(rRef, { pin: await sha256Hex(pin), createdAt: now(), stato: 'approvato', ruolo });
+  statusEl.textContent = `✅ Utente "${user}" creato come ${RUOLI_LABEL[ruolo]||ruolo}`;
+  toast(`✓ Utente "${user}" creato`, 'ok');
+  document.getElementById('nu-user').value = '';
+  document.getElementById('nu-pin').value = '';
+};
+
+window.salvaModificheUtente = async function(oldUser) {
+  if (!db) { toast('Firebase non connesso', 'err'); return; }
+  const rec = _ultimiUtenti[oldUser];
+  if (!rec) { toast('Utente non trovato', 'err'); return; }
+
+  const newUser  = normalizzaUtente(document.getElementById(`uu-user-${oldUser}`).value);
+  const newPin   = document.getElementById(`uu-pin-${oldUser}`).value;
+  const newRuolo = document.getElementById(`uu-ruolo-${oldUser}`).value;
+
+  if (!newUser || newUser.length < 3) { toast('Nome utente non valido', 'err'); return; }
+  if (newPin && !/^\d{4}$/.test(newPin)) { toast('Il PIN deve essere di 4 cifre', 'err'); return; }
+
+  const nuovoRecord = { ...rec, ruolo: newRuolo };
+  if (newPin) nuovoRecord.pin = await sha256Hex(newPin);
+
+  if (newUser !== oldUser) {
+    const snapCheck = await get(ref(db, 'utenti/' + newUser));
+    if (snapCheck.exists()) { toast('Nome utente già in uso', 'err'); return; }
+    await set(ref(db, 'utenti/' + newUser), nuovoRecord);
+    await remove(ref(db, 'utenti/' + oldUser));
+    toast(`✓ Utente rinominato in "${newUser}" e aggiornato`, 'ok');
+  } else {
+    await update(ref(db, 'utenti/' + oldUser), nuovoRecord);
+    toast('✓ Utente aggiornato', 'ok');
+  }
+};
 
 // ── PIN CONFIG ─────────────────────────────────────
 const CONFIG_PIN = '7575';
