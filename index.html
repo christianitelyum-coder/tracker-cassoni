@@ -2422,6 +2422,7 @@ window.resetStatoCassoni = async function(stato) {
 };
 
 window.importaClienti = async function(event) {
+  const file = event.target.files[0];
   if (!file) return;
   const statusEl = document.getElementById('import-clienti-status');
   statusEl.textContent = '⏳ Lettura...';
