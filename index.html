@@ -306,7 +306,7 @@ body.auth-locked{overflow:hidden}
     <button class="nav-tab" onclick="switchView('manutenzione')">🔧 Manutenzione</button>
     <button class="nav-tab" id="nav-tab-mezzi" onclick="switchView('mezzi')">🚩 Mezzi</button>
     <button class="nav-tab" onclick="switchView('trasportatore')">📱 Trasportatore</button>
-    <button class="nav-tab" id="nav-tab-setup" onclick="richiestaPin()" style="display:none">⚙️ Config</button>
+    <button class="nav-tab" id="nav-tab-setup" onclick="switchView('setup')" style="display:none">⚙️ Config</button>
     <button class="nav-notif-btn" id="nav-notif-btn" onclick="switchView('setup')" style="display:none" title="Richieste di registrazione in attesa">
       🔔<span id="nav-notif-badge"></span>
     </button>
@@ -593,33 +593,9 @@ body.auth-locked{overflow:hidden}
 <!-- ════════ SETUP ════════ -->
 <div class="view" id="view-setup">
 <div class="setup">
-  <div class="setup-card" id="approvazioni-card">
-    <h2>🔔 Richieste di registrazione</h2>
-    <p style="margin-bottom:.75rem">Approva una richiesta assegnando un ruolo, oppure rifiutala.</p>
-    <p id="approvazioni-empty" style="font-size:13px;color:var(--ink3);margin-bottom:0">Nessuna richiesta in attesa</p>
-    <div id="approvazioni-list"></div>
-  </div>
   <div class="setup-card">
-    <h2>👤 Gestione utenti</h2>
-    <p style="margin-bottom:.75rem">Crea nuovi utenti, oppure modifica nome utente, PIN e ruolo di quelli esistenti.</p>
-
-    <div style="background:var(--green-l);border:1.5px dashed #a3ddd3;border-radius:var(--radius-sm);padding:10px 14px;margin-bottom:1rem">
-      <div style="font-size:12px;font-weight:700;color:var(--green-d);margin-bottom:8px">+ Crea nuovo utente</div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-        <input class="form-ctrl" id="nu-user" placeholder="Nome utente" style="flex:1;min-width:120px;font-size:13px;padding:8px 10px">
-        <input class="form-ctrl" id="nu-pin" type="password" inputmode="numeric" maxlength="4" placeholder="PIN 4 cifre" style="width:100px;font-size:13px;padding:8px 10px;text-align:center;letter-spacing:.2em">
-        <select class="form-ctrl" id="nu-ruolo" style="font-size:13px;padding:8px 10px;width:auto">
-          <option value="admin">Admin</option>
-          <option value="ufficio" selected>Ufficio</option>
-          <option value="manutenzione">Manutenzione</option>
-          <option value="trasportatore">Trasportatore</option>
-        </select>
-        <button class="btn btn-primary btn-sm" onclick="creaUtente()">+ Crea</button>
-      </div>
-      <div id="nu-status" style="font-size:11px;color:var(--ink3);margin-top:6px"></div>
-    </div>
-
-    <div id="utenti-list-setup" style="overflow-x:auto"></div>
+    <h2>👤 Utenti Firebase</h2>
+    <p style="margin-bottom:0">Gli account vengono autenticati da Firebase. I ruoli autorizzati sono <strong>admin</strong>, <strong>ufficio</strong>, <strong>manutenzione</strong> e <strong>trasportatore</strong>.</p>
   </div>
   <div class="setup-card">
     <h2>⚙️ Configurazione Firebase</h2>
@@ -717,30 +693,6 @@ body.auth-locked{overflow:hidden}
 </div>
 </div>
 
-<!-- ════════ PIN MODAL ════════ -->
-<div class="modal-overlay" id="pin-modal" onclick="if(event.target===this)chiudiPin()">
-  <div class="modal" style="max-width:320px">
-    <div class="modal-header">
-      <span class="modal-title">🔒 Accesso Config</span>
-      <button class="modal-close" onclick="chiudiPin()">×</button>
-    </div>
-    <div class="modal-body" style="text-align:center;padding:1.5rem">
-      <p style="font-size:13px;color:var(--ink2);margin-bottom:1rem">Inserisci il PIN per accedere alla configurazione</p>
-      <input id="pin-input" type="password" inputmode="numeric" maxlength="6"
-        placeholder="● ● ● ●"
-        style="text-align:center;font-size:28px;font-weight:800;letter-spacing:.3em;width:100%;padding:12px;border:2px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font);outline:none"
-        onfocus="this.style.borderColor='var(--green)'"
-        onblur="this.style.borderColor='var(--border)'"
-        onkeydown="if(event.key==='Enter')verificaPin()">
-      <div id="pin-error" style="color:var(--red);font-size:12px;margin-top:8px;min-height:16px"></div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-ghost" onclick="chiudiPin()">Annulla</button>
-      <button class="btn btn-primary" onclick="verificaPin()">🔓 Accedi</button>
-    </div>
-  </div>
-</div>
-
 <!-- ════════ AUTH OVERLAY — pagina iniziale login / registrazione ════════ -->
 <div class="auth-overlay" id="auth-overlay">
   <div class="auth-page">
@@ -772,18 +724,26 @@ body.auth-locked{overflow:hidden}
       </div>
       <div class="auth-form-row">
         <label>Password</label>
-        <input class="form-ctrl" id="auth-login-password" type="password" placeholder="Password Firebase" autocomplete="current-password"
+        <input class="form-ctrl" id="auth-login-password" type="password" placeholder="Password" autocomplete="current-password"
           onkeydown="if(event.key==='Enter')eseguiLogin()">
       </div>
       <div class="auth-error" id="auth-login-error"></div>
       <button class="btn btn-primary" style="width:100%;justify-content:center;margin-top:.5rem" onclick="eseguiLogin()">🔓 Accedi</button>
       <button class="btn btn-ghost" style="width:100%;justify-content:center;margin-top:.6rem" onclick="accediConGoogle()">G&nbsp; Accedi con Google</button>
-      <details style="margin-top:1rem;font-size:11px;color:var(--ink3)">
-        <summary style="cursor:pointer">Accesso precedente di emergenza</summary>
-        <div class="auth-form-row" style="margin-top:.7rem"><input class="form-ctrl" id="auth-login-user" placeholder="Nome utente precedente"></div>
-        <div class="auth-form-row"><input class="form-ctrl" id="auth-login-pin" type="password" inputmode="numeric" maxlength="4" placeholder="PIN 4 cifre"></div>
-        <button class="btn btn-ghost btn-sm" style="width:100%;justify-content:center" onclick="eseguiLoginLegacy()">Accedi temporaneamente</button>
-      </details>
+      <div style="display:flex;align-items:center;gap:8px;margin:1.1rem 0;color:var(--ink3);font-size:10px;text-transform:uppercase;letter-spacing:.08em">
+        <span style="height:1px;background:var(--border);flex:1"></span>Accesso autisti<span style="height:1px;background:var(--border);flex:1"></span>
+      </div>
+      <div class="auth-form-row">
+        <label>Nome utente autista</label>
+        <input class="form-ctrl" id="autista-login-user" placeholder="es. Simone_f" autocomplete="username"
+          onkeydown="if(event.key==='Enter')document.getElementById('autista-login-password').focus()">
+      </div>
+      <div class="auth-form-row">
+        <label>Password</label>
+        <input class="form-ctrl" id="autista-login-password" type="password" placeholder="Password" autocomplete="current-password"
+          onkeydown="if(event.key==='Enter')accediAutista()">
+      </div>
+      <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="accediAutista()">🚛 Accedi come autista</button>
     </div>
     <div id="auth-register-form" style="display:none">
       <div class="auth-form-row">
@@ -807,6 +767,20 @@ body.auth-locked{overflow:hidden}
         <div style="margin-top:1rem;font-size:11px;color:var(--ink3);text-align:center">I nuovi account devono ricevere un ruolo dall'amministratore.</div>
       </div>
     </div>
+  </div>
+</div>
+
+<!-- Cambio password obbligatorio al primo accesso -->
+<div class="modal-overlay" id="password-change-modal">
+  <div class="modal" style="max-width:390px">
+    <div class="modal-header"><span class="modal-title">🔐 Scegli una nuova password</span></div>
+    <div class="modal-body">
+      <p style="font-size:13px;color:var(--ink2);margin-bottom:1rem;line-height:1.5">La password temporanea deve essere cambiata prima di utilizzare il Tracker.</p>
+      <div class="auth-form-row"><label>Nuova password</label><input class="form-ctrl" id="first-password" type="password" minlength="8" autocomplete="new-password"></div>
+      <div class="auth-form-row"><label>Conferma password</label><input class="form-ctrl" id="first-password2" type="password" minlength="8" autocomplete="new-password" onkeydown="if(event.key==='Enter')confermaNuovaPassword()"></div>
+      <div class="auth-error" id="first-password-error"></div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-primary" onclick="confermaNuovaPassword()">✓ Salva nuova password</button></div>
   </div>
 </div>
 
@@ -978,7 +952,7 @@ import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/fireba
 import { getDatabase, ref, set, push, onValue, get, update, remove }
   from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword,
-  GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged }
+  GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, updatePassword }
   from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
 
 let db = null;
@@ -1045,7 +1019,6 @@ function avviaSubscriptions(ruolo) {
   _subscriptionsAvviate = true;
   subscribeAll();
   subscribeMezzi();
-  if (ruolo === 'admin') subscribeUtenti();
 }
 
 // ── Utility ────────────────────────────────────────
@@ -2441,7 +2414,7 @@ window.switchView = function(name) {
   if (name === 'bollettazione') renderBollettazione();
   if (name === 'manutenzione')  renderManutenzione();
   if (name === 'mezzi')         renderSegnalazioniMezzi();
-  if (name === 'setup') { renderCassoniSetup(); renderClientiDatalist(); renderApprovazioni(_ultimiUtenti); renderUtentiGestione(_ultimiUtenti); }
+  if (name === 'setup') { renderCassoniSetup(); renderClientiDatalist(); }
 };
 
 // ══ SETUP ══════════════════════════════════════════
@@ -2753,13 +2726,15 @@ function applicaRuolo(ruolo) {
   }
   switchView(vistaIniziale);
 }
-function completaLogin(user, ruolo) {
-  localStorage.setItem('tracker_auth_user', user);
-  localStorage.setItem('tracker_auth_role', ruolo || '');
+let _accessoDopoCambio = null;
+function finalizzaAccessoFirebase(firebaseUser, ruolo) {
+  avviaSubscriptions(ruolo);
   document.getElementById('auth-overlay').classList.remove('open');
   document.body.classList.remove('auth-locked');
-  avviaSubscriptions(ruolo);
-  aggiornaBadgeUtente(user);
+  const nome = firebaseUser.email?.endsWith('@tracker-cassoni.test')
+    ? firebaseUser.email.split('@')[0]
+    : (firebaseUser.email || firebaseUser.displayName || firebaseUser.uid);
+  aggiornaBadgeUtente(nome);
   applicaRuolo(ruolo);
 }
 async function completaLoginFirebase(firebaseUser) {
@@ -2771,11 +2746,21 @@ async function completaLoginFirebase(firebaseUser) {
   }
   localStorage.removeItem('tracker_auth_user');
   localStorage.removeItem('tracker_auth_role');
-  avviaSubscriptions(ruolo);
-  document.getElementById('auth-overlay').classList.remove('open');
-  document.body.classList.remove('auth-locked');
-  aggiornaBadgeUtente(firebaseUser.email || firebaseUser.displayName || firebaseUser.uid);
-  applicaRuolo(ruolo);
+  let cambioObbligatorio = false;
+  try {
+    const cambioSnap = await get(ref(db, `password_change_required/${firebaseUser.uid}`));
+    cambioObbligatorio = cambioSnap.val() === true;
+  } catch (_) { /* compatibilità durante l'aggiornamento delle regole */ }
+  if (cambioObbligatorio) {
+    _accessoDopoCambio = { firebaseUser, ruolo };
+    document.getElementById('auth-overlay').classList.remove('open');
+    document.getElementById('password-change-modal').classList.add('open');
+    document.getElementById('first-password').value = '';
+    document.getElementById('first-password2').value = '';
+    document.getElementById('first-password-error').textContent = '';
+    return;
+  }
+  finalizzaAccessoFirebase(firebaseUser, ruolo);
 }
 window.switchAuthTab = function(tab) {
   document.getElementById('auth-tab-login').classList.toggle('active', tab === 'login');
@@ -2827,23 +2812,43 @@ window.accediConGoogle = async function() {
     }
   }
 };
-window.eseguiLoginLegacy = async function() {
+window.accediAutista = async function() {
   const errEl = document.getElementById('auth-login-error');
   errEl.textContent = '';
-  const user = normalizzaUtente(document.getElementById('auth-login-user').value);
-  const pin  = document.getElementById('auth-login-pin').value;
-  if (!user || !/^\d{4}$/.test(pin)) { errEl.textContent = 'Inserisci nome utente e PIN a 4 cifre'; return; }
-  if (!db) { errEl.textContent = 'Connessione non disponibile, riprova'; return; }
+  const user = document.getElementById('autista-login-user').value.trim().toLowerCase();
+  const password = document.getElementById('autista-login-password').value;
+  if (!/^[a-z0-9_]{3,30}$/.test(user) || !password) {
+    errEl.textContent = 'Inserisci nome utente autista e password'; return;
+  }
   try {
-    const snap = await get(ref(db, 'utenti/' + user));
-    const rec = snap.val();
-    const hash = await sha256Hex(pin);
-    if (!rec || rec.pin !== hash) { errEl.textContent = '❌ Nome utente o PIN errati'; return; }
-    if (rec.stato === 'rifiutato') { errEl.textContent = '❌ Registrazione rifiutata, contatta un amministratore'; return; }
-    if (rec.stato !== 'approvato') { errEl.textContent = '⏳ Account in attesa di approvazione da un amministratore'; return; }
-    completaLogin(user, rec.ruolo);
+    const cred = await signInWithEmailAndPassword(auth, `${user}@tracker-cassoni.test`, password);
+    await completaLoginFirebase(cred.user);
   } catch(e) {
-    errEl.textContent = 'Errore di connessione, riprova';
+    if (e.message === 'ACCOUNT_SENZA_RUOLO') {
+      await signOut(auth); errEl.textContent = 'Account non ancora autorizzato';
+    } else {
+      errEl.textContent = 'Nome utente o password non corretti';
+    }
+  }
+};
+window.confermaNuovaPassword = async function() {
+  const errEl = document.getElementById('first-password-error');
+  const p1 = document.getElementById('first-password').value;
+  const p2 = document.getElementById('first-password2').value;
+  errEl.textContent = '';
+  if (p1.length < 8) { errEl.textContent = 'Usa almeno 8 caratteri'; return; }
+  if (p1 !== p2) { errEl.textContent = 'Le password non coincidono'; return; }
+  if (!_accessoDopoCambio || !auth.currentUser) { errEl.textContent = 'Sessione scaduta: ripeti l’accesso'; return; }
+  try {
+    await updatePassword(auth.currentUser, p1);
+    await set(ref(db, `password_change_required/${auth.currentUser.uid}`), false);
+    const { firebaseUser, ruolo } = _accessoDopoCambio;
+    _accessoDopoCambio = null;
+    document.getElementById('password-change-modal').classList.remove('open');
+    finalizzaAccessoFirebase(firebaseUser, ruolo);
+    toast('✓ Password aggiornata', 'ok');
+  } catch(e) {
+    errEl.textContent = 'Cambio password non riuscito. Riprova.';
   }
 };
 window.eseguiRegistrazione = async function() {
@@ -2885,25 +2890,10 @@ async function verificaSessioneAuth() {
       catch { await signOut(auth); }
     }
   }
-  const user = localStorage.getItem('tracker_auth_user');
-  if (!user) { overlay.classList.add('open'); document.body.classList.add('auth-locked'); return; }
-  try {
-    const snap = await get(ref(db, 'utenti/' + user));
-    const rec = snap.val();
-    if (!rec || rec.stato !== 'approvato') {
-      localStorage.removeItem('tracker_auth_user');
-      localStorage.removeItem('tracker_auth_role');
-      overlay.classList.add('open');
-      document.body.classList.add('auth-locked');
-      return;
-    }
-    aggiornaBadgeUtente(user);
-    applicaRuolo(rec.ruolo);
-  } catch(e) {
-    // offline: mantieni la sessione locale senza bloccare l'app
-    aggiornaBadgeUtente(user);
-    applicaRuolo(localStorage.getItem('tracker_auth_role'));
-  }
+  localStorage.removeItem('tracker_auth_user');
+  localStorage.removeItem('tracker_auth_role');
+  overlay.classList.add('open');
+  document.body.classList.add('auth-locked');
 }
 window.approvaUtente = async function(user) {
   const sel = document.getElementById('ruolo-select-' + user);
@@ -3057,37 +3047,6 @@ window.salvaModificheUtente = async function(oldUser) {
   }
 };
 
-// ── PIN CONFIG ─────────────────────────────────────
-const CONFIG_PIN = '7575';
-
-window.richiestaPin = function() {
-  document.getElementById('pin-input').value = '';
-  document.getElementById('pin-error').textContent = '';
-  document.getElementById('pin-modal').classList.add('open');
-  setTimeout(() => document.getElementById('pin-input').focus(), 100);
-};
-
-window.chiudiPin = function() {
-  document.getElementById('pin-modal').classList.remove('open');
-};
-
-window.verificaPin = function() {
-  const pin = document.getElementById('pin-input').value;
-  if (pin === CONFIG_PIN) {
-    chiudiPin();
-    document.getElementById('nav-tab-setup').style.display = '';
-    sessionStorage.setItem('admin_ok', '1');
-    document.getElementById('auth-overlay').classList.remove('open');
-    document.body.classList.remove('auth-locked');
-    renderApprovazioni(_ultimiUtenti);
-    switchView('setup');
-  } else {
-    document.getElementById('pin-error').textContent = '❌ PIN errato';
-    document.getElementById('pin-input').value = '';
-    document.getElementById('pin-input').focus();
-  }
-};
-
 // Chiudi dropdown cassoni cliccando fuori
 document.addEventListener('click', function(e) {
   if (!e.target.closest('.scan-area')) {
@@ -3137,20 +3096,6 @@ document.addEventListener('click', function(e) {
   favicon.href = encoded;
   document.title = isAutista ? '🚛 Movimento Cassone' : '🖥️ Tracker Cassoni — Admin';
 
-  // ── Tab Config: visibile solo con click su brand 3 volte o PIN ──
-  let _brandClicks = 0;
-  document.querySelector('.nav-brand').addEventListener('click', () => {
-    _brandClicks++;
-    if (_brandClicks >= 3) {
-      _brandClicks = 0;
-      document.getElementById('nav-tab-setup').style.display = '';
-      richiestaPin();
-    }
-  });
-  // Mostra sempre il tab setup se in modalità autista=no e sessionStorage lo ricorda
-  if (sessionStorage.getItem('admin_ok') === '1') {
-    document.getElementById('nav-tab-setup').style.display = '';
-  }
   const urlParams = new URLSearchParams(window.location.search);
   const modoAutista = urlParams.has('autista');
   if (modoAutista) {
