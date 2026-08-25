@@ -1010,7 +1010,6 @@ async function initFirebase(cfg) {
     auth = getAuth(app);
     document.getElementById('fb-dot').className = 'firebase-dot ok';
     document.getElementById('fb-dot').title = 'Firebase: connesso';
-    subscribeAll();
     return true;
   } catch(e) {
     document.getElementById('fb-dot').className = 'firebase-dot err';
@@ -1039,6 +1038,14 @@ function subscribeAll() {
     STATE.clienti = snap.val() || [];
     renderClientiDatalist();
   });
+}
+let _subscriptionsAvviate = false;
+function avviaSubscriptions(ruolo) {
+  if (_subscriptionsAvviate || !db) return;
+  _subscriptionsAvviate = true;
+  subscribeAll();
+  subscribeMezzi();
+  if (ruolo === 'admin') subscribeUtenti();
 }
 
 // ── Utility ────────────────────────────────────────
@@ -2751,6 +2758,7 @@ function completaLogin(user, ruolo) {
   localStorage.setItem('tracker_auth_role', ruolo || '');
   document.getElementById('auth-overlay').classList.remove('open');
   document.body.classList.remove('auth-locked');
+  avviaSubscriptions(ruolo);
   aggiornaBadgeUtente(user);
   applicaRuolo(ruolo);
 }
@@ -2763,6 +2771,7 @@ async function completaLoginFirebase(firebaseUser) {
   }
   localStorage.removeItem('tracker_auth_user');
   localStorage.removeItem('tracker_auth_role');
+  avviaSubscriptions(ruolo);
   document.getElementById('auth-overlay').classList.remove('open');
   document.body.classList.remove('auth-locked');
   aggiornaBadgeUtente(firebaseUser.email || firebaseUser.displayName || firebaseUser.uid);
@@ -3171,8 +3180,6 @@ document.addEventListener('click', function(e) {
   saveConfig(hardcodedCfg);
   await initFirebase(hardcodedCfg);
   await verificaSessioneAuth();
-  subscribeUtenti();
-  subscribeMezzi();
 })();
 </script>
 </body>
