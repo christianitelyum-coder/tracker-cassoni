@@ -130,7 +130,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);min-height:10
 .ddt-tag.pend{background:var(--amber-l);color:var(--amber);border-color:#fcd34d}
 
 /* ── MANUTENZIONE ────────────────────────────────── */
-.man-page{max-width:1280px;margin:0 auto;padding:1.5rem}
+.man-page{width:100%;max-width:none;margin:0 auto;padding:1.25rem clamp(.75rem,1.5vw,1.75rem)}
 .man-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:1rem}
 .man-head h2{font-size:19px;font-weight:800;letter-spacing:-.02em;margin:0}
 .man-head p{font-size:12px;color:var(--ink3);margin-top:4px}
@@ -141,23 +141,35 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);min-height:10
 .man-kpi.carico strong{color:var(--blue)}.man-kpi.lavoro strong{color:var(--amber)}.man-kpi.ok strong{color:var(--green-d)}
 .man-filters{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:1rem;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:10px}
 .man-filters select{font-family:var(--font);font-size:13px;padding:8px 10px;border:1.5px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--ink);outline:none}
-.man-progress{display:flex;align-items:center;min-width:290px}
+.man-page .card{width:100%;overflow:hidden!important}
+.man-page .mov-table{width:100%;table-layout:fixed;font-size:12px}
+.man-page .mov-table th,.man-page .mov-table td{padding:8px 9px;overflow-wrap:anywhere}
+.man-page .mov-table th:nth-child(1){width:10%}
+.man-page .mov-table th:nth-child(2){width:8%}
+.man-page .mov-table th:nth-child(3){width:7%}
+.man-page .mov-table th:nth-child(4){width:16%}
+.man-page .mov-table th:nth-child(5){width:22%}
+.man-page .mov-table th:nth-child(6){width:20%}
+.man-page .mov-table th:nth-child(7){width:17%}
+.man-progress{display:flex;align-items:center;width:100%;min-width:0}
 .man-step{display:flex;align-items:center;flex:1;min-width:0}
 .man-step:last-child{flex:0 0 auto}
-.man-step-dot{width:25px;height:25px;border-radius:50%;display:grid;place-items:center;background:#e8eef1;color:var(--ink3);font-size:11px;font-weight:800;border:2px solid #d5e0e5;flex-shrink:0}
+.man-step-dot{width:23px;height:23px;border-radius:50%;display:grid;place-items:center;background:#e8eef1;color:var(--ink3);font-size:10px;font-weight:800;border:2px solid #d5e0e5;flex-shrink:0}
 .man-step-line{height:3px;background:#d5e0e5;flex:1;min-width:14px}
 .man-step.done .man-step-dot{background:var(--green);border-color:var(--green);color:#fff}
 .man-step.done .man-step-line{background:var(--green)}
 .man-progress-label{font-size:11px;font-weight:800;margin-top:5px;color:var(--ink2)}
-.man-state-actions{display:flex;gap:5px;flex-wrap:wrap;min-width:230px}
-.man-state-btn{border:1.5px solid var(--border);background:var(--surface);color:var(--ink2);border-radius:6px;padding:6px 8px;font:700 10px var(--font);cursor:pointer;white-space:nowrap}
+.man-state-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px;width:100%;min-width:0}
+.man-state-btn{border:1.5px solid var(--border);background:var(--surface);color:var(--ink2);border-radius:6px;padding:6px 5px;font:700 9px var(--font);cursor:pointer;white-space:normal;line-height:1.15}
 .man-state-btn:hover{border-color:var(--green);color:var(--green-d)}
 .man-state-btn.active{background:var(--ink);border-color:var(--ink);color:#fff}
 .man-state-btn:disabled{opacity:.55;cursor:wait}
-.man-mail-btn{background:var(--green-d);color:#fff;border:none;border-radius:6px;padding:7px 10px;font:700 11px var(--font);cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
+.man-mail-btn{background:var(--green-d);color:#fff;border:none;border-radius:6px;padding:7px 8px;font:700 10px var(--font);cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:5px;white-space:normal;line-height:1.2;width:100%}
 .man-mail-btn:hover{background:var(--green)}
 .man-mail-wait{font-size:10px;color:var(--ink3);line-height:1.35;display:block;max-width:120px}
-@media(max-width:720px){.man-page{padding:1rem}.man-kpis{grid-template-columns:1fr}.man-filters select{width:100%}.man-progress{min-width:250px}.man-state-actions{min-width:210px}}
+@media(max-width:1400px){.man-page .mov-table{font-size:11px}.man-page .mov-table th,.man-page .mov-table td{padding:7px 6px}.man-state-btn{font-size:8.5px;padding:5px 3px}.man-progress-label{font-size:10px}}
+@media(max-width:900px){.man-page{padding:1rem}.man-kpis{grid-template-columns:repeat(3,1fr)}.man-page .card{overflow-x:auto!important}.man-page .mov-table{min-width:860px}.man-filters select{flex:1;min-width:170px}}
+@media(max-width:620px){.man-kpis{grid-template-columns:1fr}.man-filters select{width:100%;min-width:100%}}
 
 /* ── TRASPORTATORE (mobile) ──────────────────────── */
 .trasp{max-width:420px;margin:0 auto;padding:1rem}
@@ -2389,8 +2401,8 @@ function renderManutenzione() {
       <td style="white-space:nowrap;color:var(--ink2);font-size:12px">${fmtDT(m.ts)}<br><span style="font-size:10px;color:var(--ink3)">${escapeHTML(m.cliente||'—')}</span></td>
       <td><strong>${escapeHTML(m.cassoneId)}</strong><br><span style="font-size:10px;color:var(--ink3)">${escapeHTML(cas.tipo||'—')}</span></td>
       <td><span class="status-pill ${statoCls}" style="font-size:11px">${statoLbl}</span></td>
-      <td style="min-width:190px">${flagBadges}${fotoThumbs}${noteLibera?`<div style="color:var(--ink2);font-size:11px;margin-top:5px">${escapeHTML(noteLibera)}</div>`:''}</td>
-      <td style="min-width:300px">${progress}</td>
+      <td>${flagBadges}${fotoThumbs}${noteLibera?`<div style="color:var(--ink2);font-size:11px;margin-top:5px">${escapeHTML(noteLibera)}</div>`:''}</td>
+      <td>${progress}</td>
       <td><div class="man-state-actions">${stateButtons}</div></td>
       <td style="text-align:center">${btnMail}</td>
     </tr>`;
