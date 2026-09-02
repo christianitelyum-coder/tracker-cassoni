@@ -28,7 +28,8 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);min-height:10
 .nav-brand{font-size:15px;font-weight:800;letter-spacing:-.01em;margin-right:auto;display:flex;align-items:center;gap:8px}
 .nav-brand span{background:#2fae9e;padding:3px 8px;border-radius:5px;font-size:11px;font-weight:800;letter-spacing:.06em}
 .brand-mark{display:inline-block;width:0;height:0;border-top:7px solid transparent;border-bottom:7px solid transparent;border-left:9px solid var(--green);transform:skewY(-10deg);flex-shrink:0}
-.nav-tabs{display:flex;height:100%}
+.nav-tabs{display:flex;height:100%;min-width:0;overflow-x:auto;scrollbar-width:none}
+.nav-tabs::-webkit-scrollbar{display:none}
 .nav-tab{padding:0 18px;height:100%;display:flex;align-items:center;font-size:13px;font-weight:500;color:rgba(255,255,255,.55);cursor:pointer;border:none;background:none;border-bottom:3px solid transparent;transition:all .15s;letter-spacing:.01em}
 .nav-tab.active{color:#fff;border-bottom-color:#2fae9e}
 .nav-tab:hover:not(.active){color:rgba(255,255,255,.85)}
@@ -39,6 +40,22 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);min-height:10
 /* ── VIEWS ───────────────────────────────────────── */
 .view{display:none;min-height:calc(100vh - 52px)}
 .view.active{display:block}
+
+/* ── NUOVO CASSONE ───────────────────────────────── */
+.nuovo-cassone{max-width:760px;margin:0 auto;padding:1.5rem}
+.nuovo-cassone-head{display:flex;align-items:center;gap:12px;margin-bottom:1.25rem}
+.nuovo-cassone-head h2{font-size:18px;font-weight:800;margin:0}
+.nuovo-cassone-head p{font-size:12px;color:var(--ink3);margin-top:3px}
+.nuovo-cassone-form{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+.nuovo-cassone-form .full{grid-column:1/-1}
+.nuovo-cassone-field label{display:block;font-size:12px;font-weight:700;color:var(--ink2);margin-bottom:6px}
+.nuovo-cassone-field input,.nuovo-cassone-field select{width:100%;font-family:var(--font);font-size:14px;padding:11px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--ink);outline:none}
+.nuovo-cassone-field input:focus,.nuovo-cassone-field select:focus{border-color:var(--green);box-shadow:0 0 0 3px rgba(47,174,158,.12)}
+.nuovo-cassone-actions{display:flex;justify-content:flex-end;gap:8px;padding-top:.25rem}
+.nuovo-cassone-feedback{display:none;padding:10px 12px;border-radius:var(--radius-sm);font-size:13px;font-weight:600}
+.nuovo-cassone-feedback.ok{display:block;background:var(--green-l);color:var(--green-d);border:1px solid #a3ddd3}
+.nuovo-cassone-feedback.err{display:block;background:var(--red-l);color:var(--red);border:1px solid #f0b8b3}
+@media(max-width:620px){.nuovo-cassone{padding:1rem}.nuovo-cassone-form{grid-template-columns:1fr}.nuovo-cassone-form .full{grid-column:auto}.nuovo-cassone-actions{flex-direction:column-reverse}.nuovo-cassone-actions .btn{justify-content:center;width:100%}}
 
 /* ── DASHBOARD ───────────────────────────────────── */
 .dash{max-width:1200px;margin:0 auto;padding:1.5rem}
@@ -303,9 +320,11 @@ body.auth-locked{overflow:hidden}
   <div class="nav-tabs">
     <button class="nav-tab active" onclick="switchView('dashboard')">📊 Dashboard</button>
     <button class="nav-tab" onclick="switchView('bollettazione')">📋 Bollettazione</button>
+    <button class="nav-tab" id="nav-tab-archivio" onclick="switchView('archivio')">📁 Archivio DDT</button>
     <button class="nav-tab" onclick="switchView('manutenzione')">🔧 Manutenzione</button>
     <button class="nav-tab" id="nav-tab-mezzi" onclick="switchView('mezzi')">🚩 Mezzi</button>
     <button class="nav-tab" onclick="switchView('trasportatore')">📱 Trasportatore</button>
+    <button class="nav-tab" id="nav-tab-nuovo-cassone" onclick="switchView('nuovo-cassone')" style="display:none">➕ Nuovo cassone</button>
     <button class="nav-tab" id="nav-tab-setup" onclick="switchView('setup')" style="display:none">⚙️ Config</button>
     <button class="nav-notif-btn" id="nav-notif-btn" onclick="switchView('setup')" style="display:none" title="Richieste di registrazione in attesa">
       🔔<span id="nav-notif-badge"></span>
@@ -404,6 +423,31 @@ body.auth-locked{overflow:hidden}
       <tbody id="boll-tbody"></tbody>
     </table>
     <div id="boll-pagination" style="display:flex;align-items:center;justify-content:center;gap:10px;padding:12px;border-top:1px solid var(--border);flex-wrap:wrap"></div>
+  </div>
+</div>
+</div>
+
+<!-- ════════ ARCHIVIO DDT ════════ -->
+<div class="view" id="view-archivio">
+<div class="boll">
+  <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:1rem">
+    <div>
+      <h2 style="font-size:18px;font-weight:800;margin:0">📁 Archivio DDT</h2>
+      <p style="font-size:12px;color:var(--ink3);margin-top:3px">Visualizza, stampa o scarica i DDT emessi</p>
+    </div>
+    <span id="archivio-count" class="status-pill pill-in" style="margin-left:auto">0 documenti</span>
+  </div>
+  <div class="boll-filters">
+    <input type="text" id="archivio-cerca" placeholder="🔍 Numero, cassone, cliente, targa…" oninput="programmaArchivio()" style="flex:1;min-width:240px">
+    <input type="date" id="archivio-da" onchange="renderArchivio()" title="Data iniziale">
+    <input type="date" id="archivio-a" onchange="renderArchivio()" title="Data finale">
+    <button class="btn btn-ghost btn-sm" onclick="resetArchivio()">✕ Reset</button>
+  </div>
+  <div class="card" style="overflow-x:auto">
+    <table class="mov-table">
+      <thead><tr><th>DDT</th><th>Data</th><th>Cassone</th><th>Cliente / Destinatario</th><th>Targa</th><th>Trasportatore</th><th></th></tr></thead>
+      <tbody id="archivio-tbody"></tbody>
+    </table>
   </div>
 </div>
 </div>
@@ -588,6 +632,56 @@ body.auth-locked{overflow:hidden}
     <div id="trasp-recenti-list"><span style="font-size:12px;color:var(--ink3)">Nessuno ancora</span></div>
   </div>
 </div>
+</div>
+
+<!-- ════════ NUOVO CASSONE ════════ -->
+<div class="view" id="view-nuovo-cassone">
+  <div class="nuovo-cassone">
+    <div class="nuovo-cassone-head">
+      <div>
+        <h2>➕ Aggiungi un cassone</h2>
+        <p>Registra un cassone non ancora presente nell’elenco.</p>
+      </div>
+    </div>
+    <div class="card">
+      <form class="card-body nuovo-cassone-form" id="nuovo-cassone-form" onsubmit="salvaNuovoCassone(event)">
+        <div class="nuovo-cassone-field">
+          <label for="nuovo-cas-id">Codice cassone *</label>
+          <input id="nuovo-cas-id" required maxlength="40" placeholder="Es. ER002" autocomplete="off" autocapitalize="characters" oninput="verificaCodiceNuovoCassone(this.value)">
+        </div>
+        <div class="nuovo-cassone-field">
+          <label for="nuovo-cas-tipo">Tipologia *</label>
+          <select id="nuovo-cas-tipo" required>
+            <option value="Scarrabile">Scarrabile</option>
+            <option value="Vasca">Vasca</option>
+            <option value="Pianale">Pianale</option>
+            <option value="Centinato">Centinato</option>
+            <option value="Altro">Altro</option>
+          </select>
+        </div>
+        <div class="nuovo-cassone-field">
+          <label for="nuovo-cas-matricola">Matricola</label>
+          <input id="nuovo-cas-matricola" maxlength="60" placeholder="Matricola del cespite" autocomplete="off">
+        </div>
+        <div class="nuovo-cassone-field">
+          <label for="nuovo-cas-stato">Stato iniziale *</label>
+          <select id="nuovo-cas-stato" required>
+            <option value="piazzale">In piazzale</option>
+            <option value="fuori">Fuori / in giro</option>
+          </select>
+        </div>
+        <div class="nuovo-cassone-field full">
+          <label for="nuovo-cas-note">Descrizione / note</label>
+          <input id="nuovo-cas-note" maxlength="160" placeholder="Es. caratteristiche, copertura o indicazioni utili" autocomplete="off">
+        </div>
+        <div class="nuovo-cassone-feedback full" id="nuovo-cassone-feedback" role="status" aria-live="polite"></div>
+        <div class="nuovo-cassone-actions full">
+          <button type="button" class="btn btn-ghost" onclick="resetNuovoCassoneForm()">Pulisci</button>
+          <button type="submit" class="btn btn-primary" id="btn-salva-nuovo-cassone">✓ Salva cassone</button>
+        </div>
+      </form>
+    </div>
+  </div>
 </div>
 
 <!-- ════════ SETUP ════════ -->
@@ -944,6 +1038,7 @@ body.auth-locked{overflow:hidden}
 
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.2/dist/html2pdf.bundle.min.js"></script>
 <script type="module">
 // ══════════════════════════════════════════════════
 //  FIREBASE INIT
@@ -1059,6 +1154,8 @@ function renderAll() {
     renderPiazzale(); renderDDTAlerts(); renderDashMovimenti();
   } else if (vista === 'view-bollettazione') {
     renderBollettazione();
+  } else if (vista === 'view-archivio') {
+    renderArchivio();
   } else if (vista === 'view-manutenzione') {
     renderManutenzione();
   } else if (vista === 'view-mezzi') {
@@ -1276,6 +1373,95 @@ function renderBollettazione() {
     </tr>`;
   }).join('');
 }
+
+// ══ ARCHIVIO DDT ══════════════════════════════════
+let _archivioTimer = null;
+window.programmaArchivio = function() {
+  clearTimeout(_archivioTimer);
+  _archivioTimer = setTimeout(renderArchivio, 250);
+};
+window.resetArchivio = function() {
+  document.getElementById('archivio-cerca').value = '';
+  document.getElementById('archivio-da').value = '';
+  document.getElementById('archivio-a').value = '';
+  renderArchivio();
+};
+function renderArchivio() {
+  const tbody = document.getElementById('archivio-tbody');
+  if (!tbody) return;
+  const cerca = (document.getElementById('archivio-cerca')?.value || '').trim().toLowerCase();
+  const da = document.getElementById('archivio-da')?.value || '';
+  const a = document.getElementById('archivio-a')?.value || '';
+  let docs = Object.entries(STATE.movimenti)
+    .filter(([,m]) => !!m.ddtNumero)
+    .filter(([,m]) => {
+      const data = m.ddtData || String(m.ts || '').slice(0,10);
+      if (da && data < da) return false;
+      if (a && data > a) return false;
+      if (!cerca) return true;
+      return [m.ddtNumero,m.cassoneId,m.cliente,m.ddtDestNome,m.ddtTarga,m.ddtTrasportatore]
+        .some(v => String(v || '').toLowerCase().includes(cerca));
+    })
+    .sort((x,y) => String(y[1].ddtData || y[1].ddtTs || y[1].ts || '').localeCompare(String(x[1].ddtData || x[1].ddtTs || x[1].ts || '')));
+  const count = document.getElementById('archivio-count');
+  if (count) count.textContent = `${docs.length} ${docs.length === 1 ? 'documento' : 'documenti'}`;
+  if (!docs.length) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--ink3);padding:2rem">Nessun DDT trovato</td></tr>';
+    return;
+  }
+  tbody.innerHTML = docs.map(([id,m]) => `<tr>
+    <td><span class="ddt-tag">${escapeHTML(m.ddtNumero)}</span></td>
+    <td style="white-space:nowrap">${fmtDate(m.ddtData || m.ddtTs || m.ts)}</td>
+    <td><strong>${escapeHTML(m.cassoneId || '—')}</strong></td>
+    <td>${escapeHTML(m.ddtDestNome || m.cliente || '—')}<div style="font-size:10px;color:var(--ink3)">${escapeHTML(m.ddtDestLuogo || '')}</div></td>
+    <td>${escapeHTML(m.ddtTarga || '—')}</td>
+    <td style="font-size:12px">${escapeHTML(m.ddtTrasportatore || '—')}</td>
+    <td style="white-space:nowrap">
+      <button class="btn btn-ghost btn-sm" onclick="openDDT('${id}')" title="Visualizza">👁 Visualizza</button>
+      <button class="btn btn-ghost btn-sm" onclick="stampaDDTArchivio('${id}')" title="Stampa">🖨️</button>
+      <button class="btn btn-primary btn-sm" onclick="scaricaPDFDDT('${id}')" title="Scarica PDF">⬇ PDF</button>
+    </td>
+  </tr>`).join('');
+}
+window.renderArchivio = renderArchivio;
+
+window.stampaDDTArchivio = function(movId) {
+  openDDT(movId);
+  setTimeout(() => stampaDDT(), 180);
+};
+
+window.scaricaPDFDDT = async function(movId) {
+  const m = STATE.movimenti[movId];
+  if (!m) return;
+  if (typeof html2pdf === 'undefined') { toast('Generatore PDF non disponibile. Ricarica la pagina.', 'err'); return; }
+  try {
+    toast('Preparazione PDF…');
+    openDDT(movId);
+    await new Promise(resolve => setTimeout(resolve, 250));
+    const area = document.getElementById('ddt-print-area');
+    if (!area) throw new Error('DDT non disponibile');
+    const clone = area.cloneNode(true);
+    clone.style.width = '720px';
+    clone.style.maxWidth = '720px';
+    clone.style.background = '#fff';
+    clone.style.padding = '0';
+    const numero = String(m.ddtNumero || 'senza-numero').replace(/[^a-zA-Z0-9_-]+/g,'-');
+    const cassone = String(m.cassoneId || 'cassone').replace(/[^a-zA-Z0-9_-]+/g,'-');
+    await html2pdf().set({
+      margin: [8,8,8,8],
+      filename: `DDT_${numero}_${cassone}.pdf`,
+      image: { type:'jpeg', quality:0.98 },
+      html2canvas: { scale:2, useCORS:true, backgroundColor:'#ffffff' },
+      jsPDF: { unit:'mm', format:'a4', orientation:'portrait' },
+      pagebreak: { mode:['avoid-all','css','legacy'] }
+    }).from(clone).save();
+    toast('✓ PDF scaricato', 'ok');
+    closeDDT();
+  } catch(e) {
+    console.error('Errore generazione PDF', e);
+    toast('Impossibile generare il PDF', 'err');
+  }
+};
 
 let _segnMovId = null;
 
@@ -1959,6 +2145,66 @@ async function aggiungiCassone() {
   toast('✓ Cassone ' + id + ' aggiunto', 'ok');
 }
 
+function setNuovoCassoneFeedback(messaggio, tipo) {
+  const el = document.getElementById('nuovo-cassone-feedback');
+  if (!el) return;
+  el.textContent = messaggio || '';
+  el.className = 'nuovo-cassone-feedback' + (tipo ? ' ' + tipo : '');
+}
+
+window.verificaCodiceNuovoCassone = function(valore) {
+  const id = String(valore || '').trim().toUpperCase();
+  if (!id) { setNuovoCassoneFeedback('', ''); return; }
+  if (/[.#$\[\]\/]/.test(id)) {
+    setNuovoCassoneFeedback('Il codice non può contenere . # $ [ ] /', 'err');
+  } else if (STATE.cassoni[id]) {
+    setNuovoCassoneFeedback('Questo cassone è già presente nell’elenco.', 'err');
+  } else {
+    setNuovoCassoneFeedback('Codice disponibile.', 'ok');
+  }
+};
+
+window.resetNuovoCassoneForm = function() {
+  document.getElementById('nuovo-cassone-form')?.reset();
+  setNuovoCassoneFeedback('', '');
+  document.getElementById('nuovo-cas-id')?.focus();
+};
+
+window.salvaNuovoCassone = async function(event) {
+  event?.preventDefault();
+  if (!db) { setNuovoCassoneFeedback('Database non connesso. Riprova tra qualche secondo.', 'err'); return; }
+  if (window._ruoloCorrente !== 'admin') { setNuovoCassoneFeedback('Operazione riservata all’amministratore.', 'err'); return; }
+
+  const id = document.getElementById('nuovo-cas-id').value.trim().toUpperCase();
+  const tipo = document.getElementById('nuovo-cas-tipo').value;
+  const matricola = document.getElementById('nuovo-cas-matricola').value.trim();
+  const stato = document.getElementById('nuovo-cas-stato').value;
+  const note = document.getElementById('nuovo-cas-note').value.trim();
+  if (!id) { setNuovoCassoneFeedback('Inserisci il codice del cassone.', 'err'); return; }
+  if (/[.#$\[\]\/]/.test(id)) { setNuovoCassoneFeedback('Il codice non può contenere . # $ [ ] /', 'err'); return; }
+  if (STATE.cassoni[id]) { setNuovoCassoneFeedback('Questo cassone è già presente nell’elenco.', 'err'); return; }
+
+  const btn = document.getElementById('btn-salva-nuovo-cassone');
+  btn.disabled = true;
+  btn.textContent = 'Salvataggio…';
+  try {
+    await set(ref(db, `cassoni/${id}`), {
+      tipo, matricola, note, stato,
+      clienteAttuale:'', lastMov:'',
+      creatoIl:new Date().toISOString()
+    });
+    document.getElementById('nuovo-cassone-form').reset();
+    setNuovoCassoneFeedback(`Cassone ${id} aggiunto correttamente all’elenco.`, 'ok');
+    toast(`✓ Cassone ${id} aggiunto`, 'ok');
+  } catch (err) {
+    console.error(err);
+    setNuovoCassoneFeedback('Impossibile salvare il cassone. Controlla la connessione e riprova.', 'err');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '✓ Salva cassone';
+  }
+};
+
 async function eliminaCassone(id) {
   if (!confirm('Eliminare il cassone ' + id + '?')) return;
   await set(ref(db, `cassoni/${id}`), null);
@@ -2394,8 +2640,8 @@ function subscribeMezzi() {
 }
 
 const VISTE_PER_RUOLO = {
-  admin:         ['dashboard','bollettazione','manutenzione','mezzi','trasportatore'],
-  ufficio:       ['dashboard','bollettazione','manutenzione','mezzi'],
+  admin:         ['dashboard','bollettazione','archivio','manutenzione','mezzi','trasportatore','nuovo-cassone'],
+  ufficio:       ['dashboard','bollettazione','archivio','manutenzione','mezzi'],
   manutenzione:  ['manutenzione','mezzi'],
   trasportatore: ['trasportatore'],
 };
@@ -2407,13 +2653,14 @@ window.switchView = function(name) {
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
   document.getElementById('view-' + name)?.classList.add('active');
-  const tabs = [...document.querySelectorAll('.nav-tab')];
-  const map  = {dashboard:0, bollettazione:1, manutenzione:2, mezzi:3, trasportatore:4, setup:5};
-  if (tabs[map[name]]) tabs[map[name]].classList.add('active');
+  const tabAttivo = document.querySelector(`.nav-tab[onclick*="'${name}'"]`);
+  if (tabAttivo) tabAttivo.classList.add('active');
   if (name === 'dashboard') { renderKPI(); renderPiazzale(); renderDDTAlerts(); renderDashMovimenti(); }
   if (name === 'bollettazione') renderBollettazione();
+  if (name === 'archivio')      renderArchivio();
   if (name === 'manutenzione')  renderManutenzione();
   if (name === 'mezzi')         renderSegnalazioniMezzi();
+  if (name === 'nuovo-cassone') { setNuovoCassoneFeedback('', ''); setTimeout(() => document.getElementById('nuovo-cas-id')?.focus(), 0); }
   if (name === 'setup') { renderCassoniSetup(); renderClientiDatalist(); }
 };
 
@@ -2702,25 +2949,31 @@ function applicaRuolo(ruolo) {
   window._ruoloCorrente = ruolo;
   const tabDash  = document.querySelector('.nav-tab[onclick*="dashboard"]');
   const tabBoll  = document.querySelector('.nav-tab[onclick*="bollettazione"]');
+  const tabArch  = document.getElementById('nav-tab-archivio');
   const tabMan   = document.querySelector('.nav-tab[onclick*="manutenzione"]');
   const tabMezzi = document.getElementById('nav-tab-mezzi');
   const tabTra   = document.querySelector('.nav-tab[onclick*="trasportatore"]');
-  [tabDash, tabBoll, tabMan, tabMezzi, tabTra].forEach(t => t && (t.style.display = ''));
+  const tabNuovo = document.getElementById('nav-tab-nuovo-cassone');
+  [tabDash, tabBoll, tabArch, tabMan, tabMezzi, tabTra].forEach(t => t && (t.style.display = ''));
+  if (tabNuovo) tabNuovo.style.display = 'none';
   let vistaIniziale = 'dashboard';
   if (ruolo === 'trasportatore') {
     if (tabDash)  tabDash.style.display  = 'none';
     if (tabBoll)  tabBoll.style.display  = 'none';
+    if (tabArch)  tabArch.style.display  = 'none';
     if (tabMan)   tabMan.style.display   = 'none';
     if (tabMezzi) tabMezzi.style.display = 'none';
     vistaIniziale = 'trasportatore';
   } else if (ruolo === 'manutenzione') {
     if (tabDash) tabDash.style.display = 'none';
     if (tabBoll) tabBoll.style.display = 'none';
+    if (tabArch) tabArch.style.display = 'none';
     if (tabTra)  tabTra.style.display  = 'none';
     vistaIniziale = 'manutenzione';
   } else if (ruolo === 'ufficio') {
     if (tabTra) tabTra.style.display = 'none';
   } else if (ruolo === 'admin') {
+    if (tabNuovo) tabNuovo.style.display = '';
     document.getElementById('nav-tab-setup').style.display = '';
     sessionStorage.setItem('admin_ok', '1');
   }
