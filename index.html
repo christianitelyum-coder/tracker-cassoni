@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="tracker-version" content="18">
+<meta name="tracker-version" content="19">
 <title>Tracker Cassoni</title>
 <style>
 /* ── RESET & BASE ──────────────────────────────── */
@@ -1108,7 +1108,7 @@ body.auth-locked{overflow:hidden}
 </div>
 
 <div class="toast" id="toast"></div>
-<div class="app-version" aria-label="Versione applicazione">Versione 18</div>
+<div class="app-version" aria-label="Versione applicazione">Versione 19</div>
 
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
@@ -2409,7 +2409,7 @@ function renderManutenzione() {
     const progress = `<div class="man-progress" aria-label="Stato: ${avanzamentoLabel}">
       ${['0','1','2','3'].map((n,i) => `<div class="man-step phase-${i} ${i<=stepIndex?'done':''}"><span class="man-step-dot">${i<stepIndex?'✓':n}</span>${i<3?'<span class="man-step-line"></span>':''}</div>`).join('')}
     </div><div class="man-progress-label">${avanzamentoLabel}${m.manutenzioneAggiornatoIl ? ` · ${fmtDT(m.manutenzioneAggiornatoIl)}` : ''}</div>`;
-    const stateButtons = window._ruoloCorrente === 'manutenzione' ? [
+    const stateButtons = ['admin','manutenzione'].includes(window._ruoloCorrente) ? [
       ['presa_carico','Presa in carico'],['in_manutenzione','In manutenzione'],['ripristinato','Ripristinato']
     ].map(([value,label]) => {
       const ordine = {segnalata:0,presa_carico:1,in_manutenzione:2,ripristinato:3};
@@ -2417,7 +2417,7 @@ function renderManutenzione() {
       const disabilitato = bloccato;
       const title = bloccato ? 'Segui le fasi in ordine' : `Imposta: ${label}`;
       return `<button type="button" class="man-state-btn state-${value} ${avanzamento===value?'active':''}" onclick="cambiaStatoManutenzione('${id}','${value}',this)" title="${title}" ${disabilitato?'disabled':''}>${label}</button>`;
-    }).join('') : '<span class="man-mail-wait">Avanzamenti gestiti dalla manutenzione</span>';
+    }).join('') : '<span class="man-mail-wait">Avanzamenti gestiti da amministratore e manutenzione</span>';
 
     const subjectFine = encodeURIComponent(`Lavoro ultimato – cassone ${m.cassoneId}`);
     const bodyFine = encodeURIComponent(`Buongiorno,\n\nsi conferma che l’intervento sul cassone ${m.cassoneId} (${cas.tipo||'tipo non indicato'}) è stato ultimato.\n\nProblema segnalato: ${flags.join(', ') || '—'}${noteLibera ? '\nNote: ' + noteLibera : ''}\nData segnalazione: ${fmtDT(m.ts)}\nData ripristino: ${fmtDT(m.manutenzioneAggiornatoIl)}\nOperatore: ${m.manutenzioneOperatore || window._nomeUtenteCorrente || '—'}\n\nIl cassone risulta ripristinato.\n\nCordiali saluti`);
@@ -2459,7 +2459,7 @@ window.resetFiltriManutenzione = function() {
 
 window.cambiaStatoManutenzione = async function(movId, nuovoStato, button) {
   const consentiti = ['presa_carico','in_manutenzione','ripristinato'];
-  const ruoliAbilitati = ['manutenzione'];
+  const ruoliAbilitati = ['admin','manutenzione'];
   if (!db || !consentiti.includes(nuovoStato) || !ruoliAbilitati.includes(window._ruoloCorrente)) {
     toast('Operazione non consentita', 'err'); return;
   }
