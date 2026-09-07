@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="tracker-version" content="22">
+<meta name="tracker-version" content="23">
 <title>Tracker Cassoni</title>
 <style>
 /* ── RESET & BASE ──────────────────────────────── */
@@ -381,6 +381,7 @@ body.auth-locked{overflow:hidden}
   <p>Centro Risorse S.p.A. — Registra uscita o rientro</p>
   <div class="autista-user-bar" id="autista-user-bar">
     <span id="autista-user-label"></span>
+    <button onclick="apriCambioPasswordUtente()">🔐 Cambia password</button>
     <button onclick="logoutUtente()">Esci</button>
   </div>
 </div>
@@ -404,6 +405,7 @@ body.auth-locked{overflow:hidden}
   <div class="firebase-dot" id="fb-dot" title="Firebase: non connesso"></div>
   <div class="auth-user-badge" id="auth-user-badge">
     <span id="auth-user-label"></span>
+    <button onclick="apriCambioPasswordUtente()" title="Cambia password" aria-label="Cambia password">🔐</button>
     <button onclick="logoutUtente()" title="Esci">⎋</button>
   </div>
 </nav>
@@ -990,6 +992,27 @@ body.auth-locked{overflow:hidden}
   </div>
 </div>
 
+<!-- Cambio password volontario dall'area utente -->
+<div class="modal-overlay" id="user-password-modal" onclick="if(event.target===this)chiudiCambioPasswordUtente()">
+  <div class="modal" style="max-width:410px">
+    <div class="modal-header">
+      <span class="modal-title">🔐 Cambia password</span>
+      <button class="modal-close" onclick="chiudiCambioPasswordUtente()" aria-label="Chiudi">×</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:13px;color:var(--ink2);margin-bottom:1rem;line-height:1.5">Inserisci la password attuale e scegli una nuova password di almeno 8 caratteri.</p>
+      <div class="auth-form-row"><label>Password attuale</label><input class="form-ctrl" id="user-password-current" type="password" autocomplete="current-password"></div>
+      <div class="auth-form-row"><label>Nuova password</label><input class="form-ctrl" id="user-password-new" type="password" minlength="8" autocomplete="new-password"></div>
+      <div class="auth-form-row"><label>Conferma nuova password</label><input class="form-ctrl" id="user-password-confirm" type="password" minlength="8" autocomplete="new-password" onkeydown="if(event.key==='Enter')salvaCambioPasswordUtente()"></div>
+      <div class="auth-error" id="user-password-error" role="alert"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="chiudiCambioPasswordUtente()">Annulla</button>
+      <button class="btn btn-primary" id="user-password-save" onclick="salvaCambioPasswordUtente()">✓ Aggiorna password</button>
+    </div>
+  </div>
+</div>
+
 <!-- ════════ MODAL SEGNALAZIONI ════════ -->
 <div class="modal-overlay" id="segn-modal" onclick="if(event.target===this)closeSegn()">
   <div class="modal-box" style="max-width:420px">
@@ -1162,7 +1185,7 @@ body.auth-locked{overflow:hidden}
 </div>
 
 <div class="toast" id="toast"></div>
-<div class="app-version" aria-label="Versione applicazione">Versione 22</div>
+<div class="app-version" aria-label="Versione applicazione">Versione 23</div>
 
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
@@ -1175,7 +1198,8 @@ import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/fireba
 import { getDatabase, ref, set, push, onValue, get, update, remove }
   from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword,
-  GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, updatePassword }
+  GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, updatePassword,
+  EmailAuthProvider, reauthenticateWithCredential }
   from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
 
 let db = null;
@@ -3545,6 +3569,71 @@ window.confermaNuovaPassword = async function() {
     errEl.textContent = 'Cambio password non riuscito. Riprova.';
   }
 };
+
+window.apriCambioPasswordUtente = function() {
+  const user = auth?.currentUser;
+  const errEl = document.getElementById('user-password-error');
+  if (!user) { toast('Sessione non disponibile: esegui nuovamente l’accesso', 'err'); return; }
+  const usaPassword = (user.providerData || []).some(p => p.providerId === 'password');
+  if (!usaPassword) {
+    toast('Questo account usa l’accesso Google: la password si modifica dall’Account Google', 'err');
+    return;
+  }
+  ['user-password-current','user-password-new','user-password-confirm'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.value = '';
+  });
+  errEl.textContent = '';
+  document.getElementById('user-password-modal').classList.add('open');
+  setTimeout(() => document.getElementById('user-password-current')?.focus(), 0);
+};
+
+window.chiudiCambioPasswordUtente = function() {
+  document.getElementById('user-password-modal').classList.remove('open');
+  ['user-password-current','user-password-new','user-password-confirm'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.value = '';
+  });
+  document.getElementById('user-password-error').textContent = '';
+};
+
+window.salvaCambioPasswordUtente = async function() {
+  const user = auth?.currentUser;
+  const attuale = document.getElementById('user-password-current').value;
+  const nuova = document.getElementById('user-password-new').value;
+  const conferma = document.getElementById('user-password-confirm').value;
+  const errEl = document.getElementById('user-password-error');
+  const btn = document.getElementById('user-password-save');
+  errEl.textContent = '';
+  if (!user?.email) { errEl.textContent = 'Sessione scaduta: ripeti l’accesso.'; return; }
+  if (!attuale) { errEl.textContent = 'Inserisci la password attuale.'; return; }
+  if (nuova.length < 8) { errEl.textContent = 'La nuova password deve avere almeno 8 caratteri.'; return; }
+  if (nuova !== conferma) { errEl.textContent = 'Le nuove password non coincidono.'; return; }
+  if (attuale === nuova) { errEl.textContent = 'La nuova password deve essere diversa da quella attuale.'; return; }
+  btn.disabled = true;
+  btn.textContent = 'Aggiornamento…';
+  try {
+    const credenziale = EmailAuthProvider.credential(user.email, attuale);
+    await reauthenticateWithCredential(user, credenziale);
+    await updatePassword(user, nuova);
+    try { await set(ref(db, `password_change_required/${user.uid}`), false); } catch (_) {}
+    window.chiudiCambioPasswordUtente();
+    toast('✓ Password aggiornata correttamente', 'ok');
+  } catch(e) {
+    console.error(e);
+    if (['auth/invalid-credential','auth/wrong-password'].includes(e.code)) {
+      errEl.textContent = 'La password attuale non è corretta.';
+    } else if (e.code === 'auth/weak-password') {
+      errEl.textContent = 'La nuova password non è abbastanza sicura.';
+    } else if (e.code === 'auth/too-many-requests') {
+      errEl.textContent = 'Troppi tentativi. Attendi qualche minuto e riprova.';
+    } else {
+      errEl.textContent = 'Cambio password non riuscito. Riprova.';
+    }
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '✓ Aggiorna password';
+  }
+};
+
 window.eseguiRegistrazione = async function() {
   const errEl = document.getElementById('auth-register-error');
   errEl.textContent = '';
