@@ -140,7 +140,8 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);min-height:10
 .man-kpi span{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--ink3)}
 .man-kpi.carico strong{color:var(--blue)}.man-kpi.lavoro strong{color:var(--amber)}.man-kpi.ok strong{color:var(--green-d)}
 .man-filters{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:1rem;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:10px}
-.man-filters select{font-family:var(--font);font-size:13px;padding:8px 10px;border:1.5px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--ink);outline:none}
+.man-filters select,.man-filters input{font-family:var(--font);font-size:13px;padding:8px 10px;border:1.5px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--ink);outline:none}
+.man-filters input{flex:1;min-width:230px}
 .man-page .card{width:100%;overflow:hidden!important}
 .man-page .mov-table{width:100%;table-layout:fixed;font-size:12px}
 .man-page .mov-table th,.man-page .mov-table td{padding:8px 9px;overflow-wrap:anywhere}
@@ -154,7 +155,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);min-height:10
 .man-progress{display:flex;align-items:center;width:100%;min-width:0}
 .man-step{display:flex;align-items:center;flex:1;min-width:0}
 .man-step:last-child{flex:0 0 auto}
-.man-step-dot{width:23px;height:23px;border-radius:50%;display:grid;place-items:center;background:#e8eef1;color:var(--ink3);font-size:10px;font-weight:800;border:2px solid #d5e0e5;flex-shrink:0}
+.man-step-dot{width:23px;height:23px;border-radius:50%;display:grid;place-items:center;background:#fff;color:var(--ink3);font-size:10px;font-weight:800;border:2px solid #d5e0e5;flex-shrink:0}
 .man-step-line{height:3px;background:#d5e0e5;flex:1;min-width:14px}
 .man-step.done .man-step-dot{background:var(--green);border-color:var(--green);color:#fff}
 .man-step.done .man-step-line{background:var(--green)}
@@ -163,13 +164,13 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);min-height:10
 .man-state-btn{border:1.5px solid var(--border);background:var(--surface);color:var(--ink2);border-radius:6px;padding:6px 5px;font:700 9px var(--font);cursor:pointer;white-space:normal;line-height:1.15}
 .man-state-btn:hover{border-color:var(--green);color:var(--green-d)}
 .man-state-btn.active{background:var(--ink);border-color:var(--ink);color:#fff}
-.man-state-btn:disabled{opacity:.55;cursor:wait}
+.man-state-btn:disabled{opacity:.55;cursor:not-allowed}
 .man-mail-btn{background:var(--green-d);color:#fff;border:none;border-radius:6px;padding:7px 8px;font:700 10px var(--font);cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:5px;white-space:normal;line-height:1.2;width:100%}
 .man-mail-btn:hover{background:var(--green)}
 .man-mail-wait{font-size:10px;color:var(--ink3);line-height:1.35;display:block;max-width:120px}
 @media(max-width:1400px){.man-page .mov-table{font-size:11px}.man-page .mov-table th,.man-page .mov-table td{padding:7px 6px}.man-state-btn{font-size:8.5px;padding:5px 3px}.man-progress-label{font-size:10px}}
 @media(max-width:900px){.man-page{padding:1rem}.man-kpis{grid-template-columns:repeat(3,1fr)}.man-page .card{overflow-x:auto!important}.man-page .mov-table{min-width:860px}.man-filters select{flex:1;min-width:170px}}
-@media(max-width:620px){.man-kpis{grid-template-columns:1fr}.man-filters select{width:100%;min-width:100%}}
+@media(max-width:620px){.man-kpis{grid-template-columns:1fr}.man-filters select,.man-filters input{width:100%;min-width:100%}}
 
 /* ── TRASPORTATORE (mobile) ──────────────────────── */
 .trasp{max-width:420px;margin:0 auto;padding:1rem}
@@ -511,8 +512,10 @@ body.auth-locked{overflow:hidden}
     <div class="man-kpi ok"><strong id="man-kpi-ripristinato">0</strong><span>Ripristinato</span></div>
   </div>
   <div class="man-filters">
+    <input id="man-cerca" type="search" placeholder="🔍 Cerca cassone, cliente, problema, note…" oninput="renderManutenzione()" aria-label="Cerca nelle segnalazioni di manutenzione">
     <select id="man-filtro-avanzamento" onchange="renderManutenzione()" aria-label="Filtra per avanzamento intervento">
       <option value="">Tutti gli avanzamenti</option>
+      <option value="segnalata">Punto 0 · Segnalata</option>
       <option value="presa_carico">Presa in carico</option>
       <option value="in_manutenzione">In manutenzione</option>
       <option value="ripristinato">Ripristinato</option>
@@ -1839,6 +1842,11 @@ async function registraMovimento(tipo) {
     const ts = now();
     const movRef = push(ref(db, 'movimenti'));
     const nuovoMov = { cassoneId:_scanCassoneId, tipo, ts, cliente, autista, note:noteManutenzione, ddtNumero:'', ddtTs:'' };
+    if (segnalazioni.length) {
+      nuovoMov.manutenzioneStato = 'segnalata';
+      nuovoMov.manutenzioneAggiornatoIl = ts;
+      nuovoMov.manutenzioneTimeline = { segnalata: ts };
+    }
     if (_traspFoto.length) nuovoMov.foto = _traspFoto.slice();
 
     // Movimento e stato cassone vengono salvati insieme: o riescono entrambi o nessuno.
@@ -2314,6 +2322,7 @@ function estraiFlag(note) {
 
 function renderManutenzione() {
   const tbody    = document.getElementById('man-tbody');
+  const ricerca  = (document.getElementById('man-cerca')?.value || '').trim().toLowerCase();
   const filtroF  = document.getElementById('man-filtro-flag')?.value || '';
   const filtroS  = document.getElementById('man-filtro-stato')?.value || '';
   const filtroA  = document.getElementById('man-filtro-avanzamento')?.value || '';
@@ -2326,26 +2335,33 @@ function renderManutenzione() {
       const flags = estraiFlag(m.note);
       if (!flags.length) return false;
       if (filtroF && !flags.some(f => f.startsWith(filtroF))) return false;
+      if (ricerca) {
+        const cas = STATE.cassoni[m.cassoneId] || {};
+        const testo = [m.cassoneId, m.cliente, m.autista, m.note, m.manutenzioneOperatore, cas.tipo, cas.stato]
+          .filter(Boolean).join(' ').toLowerCase();
+        if (!testo.includes(ricerca)) return false;
+      }
       return true;
     })
-    .sort((a,b) => (b[1].ts||0) - (a[1].ts||0));
+    .sort((a,b) => new Date(b[1].ts || 0).getTime() - new Date(a[1].ts || 0).getTime());
 
   // Filtra per stato cassone
   const tutteLeRows = movs.filter(([,m]) => {
     const cas = STATE.cassoni[m.cassoneId] || {};
     return !filtroS || cas.stato === filtroS;
   });
-  const statoIntervento = m => m.manutenzioneStato || 'presa_carico';
+  // Le segnalazioni inserite dal trasportatore partono dal punto 0.
+  const statoIntervento = m => m.manutenzioneStato || 'segnalata';
   const rows = tutteLeRows.filter(([,m]) => !filtroA || statoIntervento(m) === filtroA);
 
-  const conteggi = { presa_carico:0, in_manutenzione:0, ripristinato:0 };
+  const conteggi = { segnalata:0, presa_carico:0, in_manutenzione:0, ripristinato:0 };
   movs.forEach(([,m]) => { conteggi[statoIntervento(m)] = (conteggi[statoIntervento(m)] || 0) + 1; });
   document.getElementById('man-kpi-carico').textContent = conteggi.presa_carico || 0;
   document.getElementById('man-kpi-lavoro').textContent = conteggi.in_manutenzione || 0;
   document.getElementById('man-kpi-ripristinato').textContent = conteggi.ripristinato || 0;
 
   if (countEl) countEl.textContent = rows.length
-    ? `${rows.length} segnalazion${rows.length===1?'e':'i'} trovate`
+    ? `${rows.length} segnalazion${rows.length===1?'e':'i'} trovate${conteggi.segnalata ? ` · ${conteggi.segnalata} al punto 0` : ''}`
     : 'Nessuna segnalazione';
 
   if (!rows.length) {
@@ -2375,27 +2391,39 @@ function renderManutenzione() {
       : '';
 
     const avanzamento = statoIntervento(m);
-    const stepIndex = {presa_carico:0,in_manutenzione:1,ripristinato:2}[avanzamento] ?? 0;
-    const avanzamentoLabel = {presa_carico:'Presa in carico',in_manutenzione:'In manutenzione',ripristinato:'Ripristinato'}[avanzamento];
+    const stepIndex = {segnalata:0,presa_carico:1,in_manutenzione:2,ripristinato:3}[avanzamento] ?? 0;
+    const avanzamentoLabel = {segnalata:'Punto 0 · Segnalata',presa_carico:'Presa in carico',in_manutenzione:'In manutenzione',ripristinato:'Ripristinato'}[avanzamento];
     const progress = `<div class="man-progress" aria-label="Stato: ${avanzamentoLabel}">
-      ${['1','2','3'].map((n,i) => `<div class="man-step ${i<=stepIndex?'done':''}"><span class="man-step-dot">${i<stepIndex?'✓':n}</span>${i<2?'<span class="man-step-line"></span>':''}</div>`).join('')}
+      ${['0','1','2','3'].map((n,i) => `<div class="man-step ${i<=stepIndex?'done':''}"><span class="man-step-dot">${i<stepIndex?'✓':n}</span>${i<3?'<span class="man-step-line"></span>':''}</div>`).join('')}
     </div><div class="man-progress-label">${avanzamentoLabel}${m.manutenzioneAggiornatoIl ? ` · ${fmtDT(m.manutenzioneAggiornatoIl)}` : ''}</div>`;
-    const stateButtons = [
+    const stateButtons = window._ruoloCorrente === 'manutenzione' ? [
       ['presa_carico','Presa in carico'],['in_manutenzione','In manutenzione'],['ripristinato','Ripristinato']
-    ].map(([value,label]) => `<button type="button" class="man-state-btn ${avanzamento===value?'active':''}" onclick="cambiaStatoManutenzione('${id}','${value}',this)" ${avanzamento===value?'disabled':''}>${label}</button>`).join('');
+    ].map(([value,label]) => {
+      const ordine = {segnalata:0,presa_carico:1,in_manutenzione:2,ripristinato:3};
+      const bloccato = ordine[value] !== ordine[avanzamento] + 1;
+      const disabilitato = bloccato;
+      const title = bloccato ? 'Segui le fasi in ordine' : `Imposta: ${label}`;
+      return `<button type="button" class="man-state-btn ${avanzamento===value?'active':''}" onclick="cambiaStatoManutenzione('${id}','${value}',this)" title="${title}" ${disabilitato?'disabled':''}>${label}</button>`;
+    }).join('') : '<span class="man-mail-wait">Avanzamenti gestiti dalla manutenzione</span>';
 
     const subjectFine = encodeURIComponent(`Lavoro ultimato – cassone ${m.cassoneId}`);
     const bodyFine = encodeURIComponent(`Buongiorno,\n\nsi conferma che l’intervento sul cassone ${m.cassoneId} (${cas.tipo||'tipo non indicato'}) è stato ultimato.\n\nProblema segnalato: ${flags.join(', ') || '—'}${noteLibera ? '\nNote: ' + noteLibera : ''}\nData segnalazione: ${fmtDT(m.ts)}\nData ripristino: ${fmtDT(m.manutenzioneAggiornatoIl)}\nOperatore: ${m.manutenzioneOperatore || window._nomeUtenteCorrente || '—'}\n\nIl cassone risulta ripristinato.\n\nCordiali saluti`);
     const mailtoFine = `mailto:trasporti.centrorisorse@itelyum.com?subject=${subjectFine}&body=${bodyFine}`;
     const mailFineInviata = m.mailRipristino;
-    const btnMail = mailFineInviata
+    const btnChiusura = mailFineInviata
       ? `<div style="font-size:10px;color:var(--ink3);text-align:center;line-height:1.4">
-           <span style="display:block;font-weight:700;color:#16a34a">✓ Conferma preparata</span>
+           <span style="display:block;font-weight:700;color:#16a34a">✓ Segnalazione chiusa</span>
            ${escapeHTML(mailFineInviata)}
          </div>`
       : avanzamento === 'ripristinato'
         ? `<a href="${mailtoFine}" class="man-mail-btn" onclick="segnaMailRipristinoInviata('${id}')">✉️ Conferma lavoro ultimato</a>`
         : `<span class="man-mail-wait">Disponibile dopo il ripristino</span>`;
+    const btnInvioAdmin = m.mailManutenzione
+      ? `<div style="font-size:10px;color:var(--ink3);text-align:center;line-height:1.4"><span style="display:block;font-weight:700;color:var(--blue)">✓ Segnalazione inviata</span>${escapeHTML(m.mailManutenzione)}</div>`
+      : `<button type="button" class="man-mail-btn" onclick="inviaSegnalazioneConFoto('${id}')">✉️ Invia segnalazione</button>`;
+    const comunicazione = window._ruoloCorrente === 'admin' && avanzamento === 'segnalata'
+      ? btnInvioAdmin
+      : btnChiusura;
 
     return `<tr>
       <td style="white-space:nowrap;color:var(--ink2);font-size:12px">${fmtDT(m.ts)}<br><span style="font-size:10px;color:var(--ink3)">${escapeHTML(m.cliente||'—')}</span></td>
@@ -2404,13 +2432,13 @@ function renderManutenzione() {
       <td>${flagBadges}${fotoThumbs}${noteLibera?`<div style="color:var(--ink2);font-size:11px;margin-top:5px">${escapeHTML(noteLibera)}</div>`:''}</td>
       <td>${progress}</td>
       <td><div class="man-state-actions">${stateButtons}</div></td>
-      <td style="text-align:center">${btnMail}</td>
+      <td style="text-align:center">${comunicazione}</td>
     </tr>`;
   }).join('');
 }
 
 window.resetFiltriManutenzione = function() {
-  ['man-filtro-avanzamento','man-filtro-flag','man-filtro-stato'].forEach(id => {
+  ['man-cerca','man-filtro-avanzamento','man-filtro-flag','man-filtro-stato'].forEach(id => {
     const el = document.getElementById(id); if (el) el.value = '';
   });
   renderManutenzione();
@@ -2418,12 +2446,17 @@ window.resetFiltriManutenzione = function() {
 
 window.cambiaStatoManutenzione = async function(movId, nuovoStato, button) {
   const consentiti = ['presa_carico','in_manutenzione','ripristinato'];
-  const ruoliAbilitati = ['admin','ufficio','manutenzione'];
+  const ruoliAbilitati = ['manutenzione'];
   if (!db || !consentiti.includes(nuovoStato) || !ruoliAbilitati.includes(window._ruoloCorrente)) {
     toast('Operazione non consentita', 'err'); return;
   }
   const m = STATE.movimenti[movId];
   if (!m) return;
+  const statoAttuale = m.manutenzioneStato || 'segnalata';
+  const ordine = {segnalata:0,presa_carico:1,in_manutenzione:2,ripristinato:3};
+  if (ordine[nuovoStato] !== ordine[statoAttuale] + 1) {
+    toast('Segui le fasi di avanzamento in ordine', 'err'); return;
+  }
   const etichetta = {presa_carico:'Presa in carico',in_manutenzione:'In manutenzione',ripristinato:'Ripristinato'}[nuovoStato];
   if (!confirm(`Impostare l’intervento sul cassone ${m.cassoneId} come “${etichetta}”?`)) return;
   if (button) button.disabled = true;
@@ -3141,7 +3174,7 @@ window.switchAuthTab = function(tab) {
   document.getElementById('auth-card-title').textContent = tab === 'login' ? 'Bentornato' : 'Crea il tuo account';
   document.getElementById('auth-card-sub').textContent   = tab === 'login'
     ? 'Accedi con il tuo account per continuare'
-    : 'Crea un account Firebase con la tua email';
+    : 'Crea un account con la tua mail Itelyum.';
 };
 window.tornaAlLogin = function() {
   document.getElementById('auth-pending-msg').style.display = 'none';
