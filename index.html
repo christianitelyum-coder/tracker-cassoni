@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="tracker-version" content="19">
+<meta name="tracker-version" content="22">
 <title>Tracker Cassoni</title>
 <style>
 /* ── RESET & BASE ──────────────────────────────── */
@@ -76,6 +76,11 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);min-height:10
 .card-header{padding:.9rem 1.25rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
 .card-title{font-size:13px;font-weight:800;letter-spacing:-.01em;color:var(--ink);display:flex;align-items:center;gap:7px}
 .card-body{padding:1.1rem 1.25rem}
+.excel-cassoni-card{grid-column:1/-1;border-left:4px solid var(--green)}
+.excel-cassoni-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.excel-cassoni-help{font-size:11px;color:var(--ink2);line-height:1.55;margin-bottom:12px}
+.excel-cassoni-status{font-size:11px;color:var(--ink3);font-weight:600;flex:1;min-width:190px}
+@media(max-width:620px){.excel-cassoni-actions>.btn,.excel-cassoni-actions>label{width:100%;justify-content:center}.excel-cassoni-status{width:100%;min-width:0}}
 
 /* Piazzale live */
 .piazzale-grid{display:flex;flex-wrap:wrap;gap:8px}
@@ -180,6 +185,17 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);min-height:10
 .man-mail-btn{background:var(--green-d);color:#fff;border:none;border-radius:6px;padding:7px 8px;font:700 10px var(--font);cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:5px;white-space:normal;line-height:1.2;width:100%}
 .man-mail-btn:hover{background:var(--green)}
 .man-mail-wait{font-size:10px;color:var(--ink3);line-height:1.35;display:block;max-width:120px}
+.man-photo-thumb{width:42px;height:42px;object-fit:cover;border-radius:6px;border:2px solid var(--border,#d7e6e3);cursor:pointer;background:#fff;padding:0;transition:transform .15s,border-color .15s,box-shadow .15s}
+.man-photo-thumb:hover,.man-photo-thumb:focus{transform:scale(1.08);border-color:var(--green);box-shadow:0 3px 10px rgba(0,0,0,.18);outline:none}
+.photo-viewer{width:min(1100px,96vw);height:min(850px,92vh);background:#07131d;border-radius:12px;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 24px 70px rgba(0,0,0,.45)}
+.photo-viewer-head{display:flex;align-items:center;gap:10px;padding:10px 12px;background:#102b40;color:#fff}
+.photo-viewer-title{font-size:13px;font-weight:800;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.photo-viewer-btn{border:1px solid rgba(255,255,255,.35);background:rgba(255,255,255,.1);color:#fff;border-radius:7px;padding:8px 11px;font:700 11px var(--font);cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+.photo-viewer-btn:hover{background:rgba(255,255,255,.22)}
+.photo-viewer-stage{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;padding:12px;overflow:auto;background:#07131d}
+.photo-viewer-stage img{display:block;max-width:100%;max-height:100%;object-fit:contain}
+.photo-viewer:fullscreen{width:100vw;height:100vh;border-radius:0}
+@media(max-width:620px){.photo-viewer-head{flex-wrap:wrap}.photo-viewer-title{flex-basis:100%}.photo-viewer-btn{flex:1;justify-content:center}.man-photo-thumb{width:48px;height:48px}}
 @media(max-width:1400px){.man-page .mov-table{font-size:11px}.man-page .mov-table th,.man-page .mov-table td{padding:7px 6px}.man-state-btn{font-size:8.5px;padding:5px 3px}.man-progress-label{font-size:10px}}
 @media(max-width:900px){.man-page{padding:1rem}.man-kpis{grid-template-columns:repeat(3,1fr)}.man-page .card{overflow-x:auto!important}.man-page .mov-table{min-width:860px}.man-filters select{flex:1;min-width:170px}}
 @media(max-width:620px){.man-kpis{grid-template-columns:1fr}.man-filters select,.man-filters input{width:100%;min-width:100%}}
@@ -416,6 +432,29 @@ body.auth-locked{overflow:hidden}
           <button class="btn btn-ghost btn-sm" onclick="document.getElementById('cerca-cassone-input').value='';document.getElementById('cerca-cassone-result').innerHTML=''">✕</button>
         </div>
         <div id="cerca-cassone-result" style="margin-top:8px"></div>
+      </div>
+    </div>
+
+    <!-- GESTIONE EXCEL CASSONI — amministratore e ufficio -->
+    <div class="card excel-cassoni-card" id="dash-excel-cassoni">
+      <div class="card-header">
+        <div class="card-title">📊 Gestione Excel cassoni</div>
+        <span style="font-size:10px;color:var(--ink3);font-weight:700">ADMIN · UFFICIO</span>
+      </div>
+      <div class="card-body">
+        <div class="excel-cassoni-help">
+          Importa nuovi cassoni da un file Excel senza modificare quelli già presenti, oppure scarica la situazione aggiornata completa.
+          Colonne riconosciute: <strong>Codice cassone/NR.INTERNO, Descrizione o Tipologia, Matricola, Cespite, Stato, Cliente attuale, Ultimo movimento e Note</strong>.
+        </div>
+        <div class="excel-cassoni-actions">
+          <label class="btn btn-primary" style="cursor:pointer">
+            📥 Carica nuovi cassoni
+            <input id="dash-import-cassoni-file" type="file" accept=".xlsx,.xls" onchange="importaCassoniDashboard(event)" style="display:none">
+          </label>
+          <button type="button" class="btn btn-ghost" onclick="scaricaModelloCassoniExcel()">📄 Scarica modello</button>
+          <button type="button" class="btn btn-ghost" onclick="esportaCassoniExcel()">⬇ Esporta situazione cassoni</button>
+          <div class="excel-cassoni-status" id="dash-excel-cassoni-status" role="status" aria-live="polite"></div>
+        </div>
       </div>
     </div>
 
@@ -983,6 +1022,21 @@ body.auth-locked{overflow:hidden}
   </div>
 </div>
 
+<!-- Visualizzatore allegati manutenzione -->
+<div class="modal-overlay" id="photo-viewer-modal" onclick="if(event.target===this)chiudiFotoManutenzione()" role="dialog" aria-modal="true" aria-labelledby="photo-viewer-title">
+  <div class="photo-viewer" id="photo-viewer-box">
+    <div class="photo-viewer-head">
+      <span class="photo-viewer-title" id="photo-viewer-title">Allegato segnalazione</span>
+      <button type="button" class="photo-viewer-btn" onclick="fotoManutenzioneSchermoIntero()">⛶ Schermo intero</button>
+      <button type="button" class="photo-viewer-btn" onclick="scaricaFotoManutenzione()">⬇ Scarica</button>
+      <button type="button" class="photo-viewer-btn" onclick="chiudiFotoManutenzione()" aria-label="Chiudi visualizzatore">✕ Chiudi</button>
+    </div>
+    <div class="photo-viewer-stage">
+      <img id="photo-viewer-image" alt="Foto allegata alla segnalazione di manutenzione">
+    </div>
+  </div>
+</div>
+
 <!-- ════════ POPUP NUOVA SEGNALAZIONE MEZZO ════════ -->
 <div class="modal-overlay" id="mezzo-notif-modal">
   <div class="modal" style="max-width:380px">
@@ -1108,7 +1162,7 @@ body.auth-locked{overflow:hidden}
 </div>
 
 <div class="toast" id="toast"></div>
-<div class="app-version" aria-label="Versione applicazione">Versione 19</div>
+<div class="app-version" aria-label="Versione applicazione">Versione 22</div>
 
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
@@ -2307,13 +2361,22 @@ async function eliminaCliente(nome) {
 }
 
 // ══ CSV ════════════════════════════════════════════
+function matricolaCassone(c = {}) {
+  return c.matricola ?? c.numeroMatricola ?? c.nrMatricola ?? c.matr ?? '';
+}
+
+function cespiteCassone(c = {}) {
+  return c.cespite ?? c.numeroCespite ?? c.nrCespite ?? c.codiceCespite ?? '';
+}
+
 function exportCSV() {
-  const rows = [['Data','Ora','Cassone','Tipo','Movimento','Cliente','Autista','Note','N° DDT','Data DDT']];
+  const rows = [['Data','Ora','Cassone','Tipo','Matricola','Cespite','Movimento','Cliente','Autista','Note','N° DDT','Data DDT']];
   Object.values(STATE.movimenti).sort((a,b)=>b.ts>a.ts?1:-1).forEach(m => {
     const d = new Date(m.ts);
+    const cassone = STATE.cassoni[m.cassoneId] || {};
     rows.push([
       d.toLocaleDateString('it-IT'), d.toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'}),
-      m.cassoneId, (STATE.cassoni[m.cassoneId]||{}).tipo||'', m.tipo,
+      m.cassoneId, cassone.tipo||'', matricolaCassone(cassone), cespiteCassone(cassone), m.tipo,
       m.cliente||'', m.autista||'', m.note||'', m.ddtNumero||'', m.ddtTs?fmtDate(m.ddtTs):''
     ]);
   });
@@ -2399,7 +2462,7 @@ function renderManutenzione() {
     const foto = Array.isArray(m.foto) ? m.foto : [];
     const fotoThumbs = foto.length
       ? `<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:5px">${
-          foto.map(src => `<img src="${src}" onclick="window.open(this.src,'_blank')" title="Apri foto a schermo intero" style="width:34px;height:34px;object-fit:cover;border-radius:5px;border:1px solid var(--border,#d7e6e3);cursor:zoom-in">`).join('')
+          foto.map((src,i) => `<img src="${src}" class="man-photo-thumb" onclick="apriFotoManutenzione('${id}',${i})" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();apriFotoManutenzione('${id}',${i})}" title="Visualizza e scarica allegato" alt="Allegato ${i+1} del cassone ${escapeHTML(m.cassoneId)}" role="button" tabindex="0">`).join('')
         }</div>`
       : '';
 
@@ -2456,6 +2519,71 @@ window.resetFiltriManutenzione = function() {
   });
   renderManutenzione();
 };
+
+let _fotoManutenzioneAperta = null;
+
+window.apriFotoManutenzione = function(movId, indice) {
+  const m = STATE.movimenti[movId];
+  const foto = Array.isArray(m?.foto) ? m.foto : [];
+  const src = foto[indice];
+  if (!src) { toast('Allegato non disponibile', 'err'); return; }
+  _fotoManutenzioneAperta = {
+    src,
+    nome: `segnalazione_${m.cassoneId || 'cassone'}_${indice + 1}.jpg`
+  };
+  const modal = document.getElementById('photo-viewer-modal');
+  const img = document.getElementById('photo-viewer-image');
+  document.getElementById('photo-viewer-title').textContent = `Allegato ${indice + 1} · Cassone ${m.cassoneId || '—'}`;
+  img.onerror = () => toast('Impossibile visualizzare questo allegato', 'err');
+  img.src = src;
+  modal.classList.add('open');
+  document.body.style.overflow = 'hidden';
+};
+
+window.chiudiFotoManutenzione = function() {
+  const modal = document.getElementById('photo-viewer-modal');
+  const box = document.getElementById('photo-viewer-box');
+  if (document.fullscreenElement === box && document.exitFullscreen) document.exitFullscreen().catch(() => {});
+  modal.classList.remove('open');
+  document.getElementById('photo-viewer-image').removeAttribute('src');
+  document.body.style.overflow = '';
+  _fotoManutenzioneAperta = null;
+};
+
+window.fotoManutenzioneSchermoIntero = async function() {
+  const box = document.getElementById('photo-viewer-box');
+  try {
+    if (document.fullscreenElement) await document.exitFullscreen();
+    else if (box.requestFullscreen) await box.requestFullscreen();
+  } catch {
+    toast('Schermo intero non disponibile su questo dispositivo', 'err');
+  }
+};
+
+window.scaricaFotoManutenzione = async function() {
+  if (!_fotoManutenzioneAperta) return;
+  try {
+    const res = await fetch(_fotoManutenzioneAperta.src);
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = _fotoManutenzioneAperta.nome;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    toast('✓ Allegato scaricato', 'ok');
+  } catch {
+    toast('Impossibile scaricare questo allegato', 'err');
+  }
+};
+
+document.addEventListener('keydown', event => {
+  if (event.key === 'Escape' && document.getElementById('photo-viewer-modal')?.classList.contains('open')) {
+    chiudiFotoManutenzione();
+  }
+});
 
 window.cambiaStatoManutenzione = async function(movId, nuovoStato, button) {
   const consentiti = ['presa_carico','in_manutenzione','ripristinato'];
@@ -2865,6 +2993,157 @@ window.exportCSV       = exportCSV;
 window.onScanInput      = onScanInput;
 window.onScanKeydown    = onScanKeydown;
 window.selezionaDaCassone = selezionaDaCassone;
+
+// ── Gestione Excel cassoni (Dashboard: admin e ufficio) ────────────────
+const CAMPI_CASSONE_EXPORT = [
+  'Codice cassone','Descrizione / tipologia','Matricola','Cespite','Stato',
+  'Cliente attuale','Ultimo movimento','Note','Data creazione'
+];
+
+function ruoloGestioneExcelConsentito() {
+  return ['admin','ufficio'].includes(window._ruoloCorrente);
+}
+
+function nomeFileData(prefisso) {
+  const data = new Date().toISOString().slice(0,10);
+  return `${prefisso}_${data}.xlsx`;
+}
+
+function normalizzaIntestazione(valore) {
+  return String(valore || '').trim().toUpperCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .replace(/[^A-Z0-9]+/g,' ')
+    .trim();
+}
+
+function valoreColonna(row, candidati, vietati = []) {
+  const entries = Object.entries(row).map(([key,value]) => ({
+    key, value, norm:normalizzaIntestazione(key)
+  }));
+  const cand = candidati.map(normalizzaIntestazione);
+  const stop = vietati.map(normalizzaIntestazione);
+  let found = entries.find(e => cand.includes(e.norm) && !stop.some(v => e.norm.includes(v)));
+  if (!found) found = entries.find(e => cand.some(c => e.norm.includes(c)) && !stop.some(v => e.norm.includes(v)));
+  if (!found || found.value === undefined || found.value === null) return '';
+  return String(found.value).trim();
+}
+
+function creaWorkbookCassoni(rows) {
+  const ws = XLSX.utils.json_to_sheet(rows, {header:CAMPI_CASSONE_EXPORT});
+  ws['!autofilter'] = {ref:`A1:I${Math.max(rows.length + 1, 2)}`};
+  ws['!cols'] = [
+    {wch:18},{wch:48},{wch:18},{wch:18},{wch:16},
+    {wch:30},{wch:23},{wch:42},{wch:23}
+  ];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Cassoni');
+  return wb;
+}
+
+window.scaricaModelloCassoniExcel = function() {
+  if (!ruoloGestioneExcelConsentito()) { toast('Operazione non consentita', 'err'); return; }
+  const esempio = [{
+    'Codice cassone':'ER000',
+    'Descrizione / tipologia':'CASSONE SCARRABILE',
+    'Matricola':'',
+    'Cespite':'',
+    'Stato':'piazzale',
+    'Cliente attuale':'',
+    'Ultimo movimento':'',
+    'Note':'Rimuovere la riga di esempio prima del caricamento',
+    'Data creazione':''
+  }];
+  XLSX.writeFile(creaWorkbookCassoni(esempio), 'modello_importazione_cassoni.xlsx');
+  toast('✓ Modello Excel scaricato', 'ok');
+};
+
+window.esportaCassoniExcel = function() {
+  if (!ruoloGestioneExcelConsentito()) { toast('Operazione non consentita', 'err'); return; }
+  const ids = Object.keys(STATE.cassoni || {}).sort((a,b) => a.localeCompare(b,'it',{numeric:true}));
+  if (!ids.length) { toast('Nessun cassone da esportare', 'err'); return; }
+  const rows = ids.map(id => {
+    const c = STATE.cassoni[id] || {};
+    return {
+      'Codice cassone':id,
+      'Descrizione / tipologia':c.tipo || c.descrizione || '',
+      'Matricola':matricolaCassone(c),
+      'Cespite':cespiteCassone(c),
+      'Stato':c.stato || '',
+      'Cliente attuale':c.clienteAttuale || '',
+      'Ultimo movimento':c.lastMov || '',
+      'Note':c.note || '',
+      'Data creazione':c.creatoIl || ''
+    };
+  });
+  XLSX.writeFile(creaWorkbookCassoni(rows), nomeFileData('situazione_cassoni'));
+  document.getElementById('dash-excel-cassoni-status').textContent = `✅ Esportati ${rows.length} cassoni`;
+  toast(`✓ Esportati ${rows.length} cassoni`, 'ok');
+};
+
+window.importaCassoniDashboard = async function(event) {
+  const input = event.target;
+  const file = input.files?.[0];
+  const statusEl = document.getElementById('dash-excel-cassoni-status');
+  if (!file) return;
+  if (!ruoloGestioneExcelConsentito()) {
+    statusEl.textContent = '❌ Operazione non consentita'; input.value = ''; return;
+  }
+  if (!db) { statusEl.textContent = '❌ Database non connesso'; input.value = ''; return; }
+  statusEl.textContent = '⏳ Analisi del file…';
+  try {
+    const data = await file.arrayBuffer();
+    const wb = XLSX.read(data, {type:'array', cellDates:true});
+    const sheetName = wb.SheetNames.find(n => /CASS|ELENCO|UFFICIALE/i.test(n)) || wb.SheetNames[0];
+    const rows = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], {defval:'', raw:false});
+    const nuovi = {};
+    let duplicati = 0, nonValidi = 0;
+
+    rows.forEach(row => {
+      const codice = valoreColonna(row, ['CODICE CASSONE','NR INTERNO','NUMERO INTERNO','CODICE','ID']).toUpperCase();
+      if (!codice || codice === 'NAN' || /[.#$\[\]\/]/.test(codice)) { nonValidi++; return; }
+      if (STATE.cassoni[codice] || nuovi[codice]) { duplicati++; return; }
+
+      const descrizione = valoreColonna(row, ['DESCRIZIONE TIPOLOGIA','DESCRIZIONE CESPITE','TIPOLOGIA','TIPO','DESCRIZIONE']);
+      const matricola = valoreColonna(row, ['MATRICOLA','NUMERO MATRICOLA','NR MATRICOLA']);
+      const cespite = valoreColonna(row, ['CESPITE','NUMERO CESPITE','NR CESPITE'], ['DESCRIZIONE CESPITE']);
+      const statoRaw = valoreColonna(row, ['STATO','SITUAZIONE']).toLowerCase();
+      const stato = /fuori|giro|cliente/.test(statoRaw) ? 'fuori' : 'piazzale';
+      const cliente = valoreColonna(row, ['CLIENTE ATTUALE','CLIENTE']);
+      const ultimoMovimento = valoreColonna(row, ['ULTIMO MOVIMENTO','LAST MOV','DATA ULTIMO MOVIMENTO']);
+      const note = valoreColonna(row, ['NOTE','NOTE MAX SU COPERCHIO','ANNOTAZIONI']);
+      const dataCreazione = valoreColonna(row, ['DATA CREAZIONE','CREATO IL']);
+
+      nuovi[codice] = {
+        tipo:descrizione || 'Cassone', matricola, cespite, stato,
+        clienteAttuale:stato === 'fuori' ? cliente : '',
+        lastMov:ultimoMovimento, note,
+        creatoIl:dataCreazione || new Date().toISOString()
+      };
+    });
+
+    const entries = Object.entries(nuovi);
+    if (!entries.length) {
+      statusEl.textContent = `⚠️ Nessun cassone nuovo · ${duplicati} già presenti · ${nonValidi} righe non valide`;
+      return;
+    }
+    const dettaglio = `${entries.length} nuovi, ${duplicati} già presenti, ${nonValidi} righe non valide`;
+    if (!confirm(`File: ${file.name}\n${dettaglio}.\n\nAggiungere i ${entries.length} nuovi cassoni? I cassoni esistenti non verranno modificati.`)) {
+      statusEl.textContent = 'Importazione annullata'; return;
+    }
+    statusEl.textContent = `⏳ Caricamento di ${entries.length} cassoni…`;
+    const updates = {};
+    entries.forEach(([id,record]) => { updates[`cassoni/${id}`] = record; });
+    await update(ref(db, '/'), updates);
+    statusEl.textContent = `✅ Importati ${entries.length} cassoni · ${duplicati} duplicati ignorati · ${nonValidi} righe non valide`;
+    toast(`✓ ${entries.length} nuovi cassoni importati`, 'ok');
+  } catch(err) {
+    console.error(err);
+    statusEl.textContent = `❌ File non leggibile: ${err.message || 'formato non valido'}`;
+    toast('Errore durante l’importazione Excel', 'err');
+  } finally {
+    input.value = '';
+  }
+};
 
 // ── Import Excel ────────────────────────────────────
 window.resetStatoCassoni = async function(stato) {
