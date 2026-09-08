@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="tracker-version" content="29">
+<meta name="tracker-version" content="30">
 <title>Tracker Cassoni</title>
 <style>
 /* ── RESET & BASE ──────────────────────────────── */
@@ -1242,7 +1242,7 @@ body.auth-locked{overflow:hidden}
 </div>
 
 <div class="toast" id="toast"></div>
-<div class="app-version" aria-label="Versione applicazione">Versione 29</div>
+<div class="app-version" aria-label="Versione applicazione">Versione 30</div>
 
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
@@ -2836,7 +2836,7 @@ window.apriPresaInCarico = function(movId) {
   }
   _presaCaricoMovId = movId;
   document.getElementById('presa-carico-cassone').textContent = `Cassone ${m.cassoneId} · ${fmtDT(m.ts)}`;
-  document.getElementById('presa-carico-operatore').value = m.manutenzioneOperatore || window._nomeUtenteCorrente || '';
+  document.getElementById('presa-carico-operatore').value = '';
   document.getElementById('presa-carico-note').value = m.manutenzioneNote || '';
   document.getElementById('presa-carico-error').textContent = '';
   document.getElementById('presa-carico-modal').classList.add('open');
