@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="tracker-version" content="23">
+<meta name="tracker-version" content="25">
 <title>Tracker Cassoni</title>
 <style>
 /* ── RESET & BASE ──────────────────────────────── */
@@ -142,6 +142,10 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);min-height:10
 .man-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:1rem}
 .man-head h2{font-size:19px;font-weight:800;letter-spacing:-.02em;margin:0}
 .man-head p{font-size:12px;color:var(--ink3);margin-top:4px}
+.man-view-tabs{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:1rem}
+.man-view-tab{border:1.5px solid var(--border);background:var(--surface);color:var(--ink2);border-radius:8px;padding:8px 12px;font:700 12px var(--font);cursor:pointer}
+.man-view-tab:hover{border-color:var(--green);color:var(--green-d)}
+.man-view-tab.active{background:var(--blue);border-color:var(--blue);color:#fff}
 .man-kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:1rem}
 .man-kpi{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;box-shadow:var(--shadow)}
 .man-kpi strong{display:block;font-size:24px;line-height:1;font-weight:800;margin-bottom:5px}
@@ -174,14 +178,19 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);min-height:10
 .man-step.done.phase-3 .man-step-dot{background:#16a34a;border-color:#16a34a;color:#fff}
 .man-step.done.phase-3 .man-step-line{background:#16a34a}
 .man-progress-label{font-size:11px;font-weight:800;margin-top:5px;color:var(--ink2)}
-.man-state-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px;width:100%;min-width:0}
-.man-state-btn{border:1.5px solid var(--border);background:var(--surface);color:var(--ink2);border-radius:6px;padding:6px 5px;font:700 9px var(--font);cursor:pointer;white-space:normal;line-height:1.15}
+.man-state-actions{display:flex;flex-direction:column;gap:5px;width:100%;min-width:0}
+.man-forward-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px;width:100%;min-width:0}
+.man-state-btn{display:flex;align-items:center;justify-content:center;width:100%;min-width:0;min-height:28px;border:1.5px solid var(--border);background:var(--surface);color:var(--ink2);border-radius:6px;padding:5px 4px;font:700 8.5px var(--font);cursor:pointer;white-space:normal;line-height:1.15;text-align:center;overflow-wrap:anywhere}
 .man-state-btn:hover{border-color:var(--green);color:var(--green-d)}
 .man-state-btn.active{color:#fff}
 .man-state-btn.active.state-presa_carico{background:#f59e0b;border-color:#f59e0b}
 .man-state-btn.active.state-in_manutenzione{background:#eab308;border-color:#eab308}
 .man-state-btn.active.state-ripristinato{background:#16a34a;border-color:#16a34a}
 .man-state-btn:disabled{opacity:.55;cursor:not-allowed}
+.man-state-back{background:#fff8e6;border-color:#f5c451;color:#805b00}
+.man-state-back:hover{border-color:#d89b00;color:#674900}
+.man-delete-btn{background:#fff1f1;border-color:#f3aaaa;color:#b42318}
+.man-delete-btn:hover{border-color:#dc2626;color:#991b1b}
 .man-mail-btn{background:var(--green-d);color:#fff;border:none;border-radius:6px;padding:7px 8px;font:700 10px var(--font);cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:5px;white-space:normal;line-height:1.2;width:100%}
 .man-mail-btn:hover{background:var(--green)}
 .man-mail-wait{font-size:10px;color:var(--ink3);line-height:1.35;display:block;max-width:120px}
@@ -558,6 +567,10 @@ body.auth-locked{overflow:hidden}
       <p>Aggiorna lo stato dei lavori e comunica il ripristino all’ufficio trasporti.</p>
     </div>
     <div id="man-count" style="font-size:13px;color:var(--ink3);padding-top:4px"></div>
+  </div>
+  <div class="man-view-tabs" id="man-view-tabs" style="display:none" aria-label="Sezioni manutenzione">
+    <button type="button" id="man-tab-aperte" class="man-view-tab active" onclick="impostaVistaManutenzione('aperte')">🔧 Interventi aperti <span id="man-tab-count-aperte">0</span></button>
+    <button type="button" id="man-tab-chiuse" class="man-view-tab" onclick="impostaVistaManutenzione('chiuse')">✅ Manutenzioni chiuse <span id="man-tab-count-chiuse">0</span></button>
   </div>
   <div class="man-kpis">
     <div class="man-kpi carico"><strong id="man-kpi-carico">0</strong><span>Presa in carico</span></div>
@@ -1185,7 +1198,7 @@ body.auth-locked{overflow:hidden}
 </div>
 
 <div class="toast" id="toast"></div>
-<div class="app-version" aria-label="Versione applicazione">Versione 23</div>
+<div class="app-version" aria-label="Versione applicazione">Versione 25</div>
 
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
@@ -2420,6 +2433,16 @@ function estraiFlag(note) {
   return FLAGS.filter(f => note.includes(f));
 }
 
+let _vistaManutenzione = 'aperte';
+
+window.impostaVistaManutenzione = function(vista) {
+  if (!['admin','manutenzione'].includes(window._ruoloCorrente)) return;
+  _vistaManutenzione = vista === 'chiuse' ? 'chiuse' : 'aperte';
+  const filtro = document.getElementById('man-filtro-avanzamento');
+  if (filtro) filtro.value = '';
+  renderManutenzione();
+};
+
 function renderManutenzione() {
   const tbody    = document.getElementById('man-tbody');
   const ricerca  = (document.getElementById('man-cerca')?.value || '').trim().toLowerCase();
@@ -2429,9 +2452,14 @@ function renderManutenzione() {
   const countEl  = document.getElementById('man-count');
   if (!tbody) return;
 
-  // Raccoglie tutti i movimenti con almeno un flag
+  const puoGestire = ['admin','manutenzione'].includes(window._ruoloCorrente);
+  if (!puoGestire) _vistaManutenzione = 'aperte';
+  const statoIntervento = m => m.manutenzioneStato || 'segnalata';
+
+  // Raccoglie le segnalazioni senza alterare i movimenti originali.
   const movs = Object.entries(STATE.movimenti || {})
     .filter(([,m]) => {
+      if (m.manutenzioneEliminata === true) return false;
       const flags = estraiFlag(m.note);
       if (!flags.length) return false;
       if (filtroF && !flags.some(f => f.startsWith(filtroF))) return false;
@@ -2450,9 +2478,19 @@ function renderManutenzione() {
     const cas = STATE.cassoni[m.cassoneId] || {};
     return !filtroS || cas.stato === filtroS;
   });
-  // Le segnalazioni inserite dal trasportatore partono dal punto 0.
-  const statoIntervento = m => m.manutenzioneStato || 'segnalata';
-  const rows = tutteLeRows.filter(([,m]) => !filtroA || statoIntervento(m) === filtroA);
+  const aperte = tutteLeRows.filter(([,m]) => statoIntervento(m) !== 'ripristinato');
+  const chiuse = tutteLeRows.filter(([,m]) => statoIntervento(m) === 'ripristinato');
+  const righeVista = _vistaManutenzione === 'chiuse' ? chiuse : aperte;
+  const rows = righeVista.filter(([,m]) => !filtroA || statoIntervento(m) === filtroA);
+
+  const tabAperte = document.getElementById('man-tab-aperte');
+  const tabChiuse = document.getElementById('man-tab-chiuse');
+  if (tabAperte) tabAperte.classList.toggle('active', _vistaManutenzione === 'aperte');
+  if (tabChiuse) tabChiuse.classList.toggle('active', _vistaManutenzione === 'chiuse');
+  const countAperte = document.getElementById('man-tab-count-aperte');
+  const countChiuse = document.getElementById('man-tab-count-chiuse');
+  if (countAperte) countAperte.textContent = aperte.length;
+  if (countChiuse) countChiuse.textContent = chiuse.length;
 
   const conteggi = { segnalata:0, presa_carico:0, in_manutenzione:0, ripristinato:0 };
   movs.forEach(([,m]) => { conteggi[statoIntervento(m)] = (conteggi[statoIntervento(m)] || 0) + 1; });
@@ -2461,11 +2499,11 @@ function renderManutenzione() {
   document.getElementById('man-kpi-ripristinato').textContent = conteggi.ripristinato || 0;
 
   if (countEl) countEl.textContent = rows.length
-    ? `${rows.length} segnalazion${rows.length===1?'e':'i'} trovate${conteggi.segnalata ? ` · ${conteggi.segnalata} al punto 0` : ''}`
+    ? `${rows.length} ${_vistaManutenzione === 'chiuse' ? (rows.length===1?'manutenzione chiusa':'manutenzioni chiuse') : (rows.length===1?'segnalazione aperta':'segnalazioni aperte')}${_vistaManutenzione === 'aperte' && conteggi.segnalata ? ` · ${conteggi.segnalata} al punto 0` : ''}`
     : 'Nessuna segnalazione';
 
   if (!rows.length) {
-    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:2rem;color:var(--ink3);font-style:italic">Nessun intervento${filtroF||filtroS||filtroA?' per i filtri selezionati':''}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:2rem;color:var(--ink3);font-style:italic">Nessun intervento ${_vistaManutenzione === 'chiuse' ? 'chiuso' : 'aperto'}${filtroF||filtroS||filtroA||ricerca?' per i filtri selezionati':''}</td></tr>`;
     return;
   }
 
@@ -2496,7 +2534,7 @@ function renderManutenzione() {
     const progress = `<div class="man-progress" aria-label="Stato: ${avanzamentoLabel}">
       ${['0','1','2','3'].map((n,i) => `<div class="man-step phase-${i} ${i<=stepIndex?'done':''}"><span class="man-step-dot">${i<stepIndex?'✓':n}</span>${i<3?'<span class="man-step-line"></span>':''}</div>`).join('')}
     </div><div class="man-progress-label">${avanzamentoLabel}${m.manutenzioneAggiornatoIl ? ` · ${fmtDT(m.manutenzioneAggiornatoIl)}` : ''}</div>`;
-    const stateButtons = ['admin','manutenzione'].includes(window._ruoloCorrente) ? [
+    let stateButtons = puoGestire ? `<div class="man-forward-actions">${[
       ['presa_carico','Presa in carico'],['in_manutenzione','In manutenzione'],['ripristinato','Ripristinato']
     ].map(([value,label]) => {
       const ordine = {segnalata:0,presa_carico:1,in_manutenzione:2,ripristinato:3};
@@ -2504,7 +2542,13 @@ function renderManutenzione() {
       const disabilitato = bloccato;
       const title = bloccato ? 'Segui le fasi in ordine' : `Imposta: ${label}`;
       return `<button type="button" class="man-state-btn state-${value} ${avanzamento===value?'active':''}" onclick="cambiaStatoManutenzione('${id}','${value}',this)" title="${title}" ${disabilitato?'disabled':''}>${label}</button>`;
-    }).join('') : '<span class="man-mail-wait">Avanzamenti gestiti da amministratore e manutenzione</span>';
+    }).join('')}</div>` : '<span class="man-mail-wait">Avanzamenti gestiti da amministratore e manutenzione</span>';
+    if (puoGestire && stepIndex > 0) {
+      stateButtons += `<button type="button" class="man-state-btn man-state-back" onclick="tornaStatoManutenzione('${id}',this)">↩ Stato precedente</button>`;
+    }
+    if (puoGestire) {
+      stateButtons += `<button type="button" class="man-state-btn man-delete-btn" onclick="eliminaSegnalazioneManutenzione('${id}',this)">🗑 Elimina segnalazione</button>`;
+    }
 
     const subjectFine = encodeURIComponent(`Lavoro ultimato – cassone ${m.cassoneId}`);
     const bodyFine = encodeURIComponent(`Buongiorno,\n\nsi conferma che l’intervento sul cassone ${m.cassoneId} (${cas.tipo||'tipo non indicato'}) è stato ultimato.\n\nProblema segnalato: ${flags.join(', ') || '—'}${noteLibera ? '\nNote: ' + noteLibera : ''}\nData segnalazione: ${fmtDT(m.ts)}\nData ripristino: ${fmtDT(m.manutenzioneAggiornatoIl)}\nOperatore: ${m.manutenzioneOperatore || window._nomeUtenteCorrente || '—'}\n\nIl cassone risulta ripristinato.\n\nCordiali saluti`);
@@ -2638,6 +2682,61 @@ window.cambiaStatoManutenzione = async function(movId, nuovoStato, button) {
     toast(`✓ Stato aggiornato: ${etichetta}`, 'ok');
   } catch(err) {
     console.error(err); toast('Errore durante l’aggiornamento dello stato', 'err');
+    if (button) button.disabled = false;
+  }
+};
+
+window.tornaStatoManutenzione = async function(movId, button) {
+  if (!db || !['admin','manutenzione'].includes(window._ruoloCorrente)) {
+    toast('Operazione non consentita', 'err'); return;
+  }
+  const m = STATE.movimenti[movId];
+  if (!m) return;
+  const fasi = ['segnalata','presa_carico','in_manutenzione','ripristinato'];
+  const etichette = {segnalata:'Punto 0 · Segnalata',presa_carico:'Presa in carico',in_manutenzione:'In manutenzione',ripristinato:'Ripristinato'};
+  const statoAttuale = m.manutenzioneStato || 'segnalata';
+  const indice = fasi.indexOf(statoAttuale);
+  if (indice <= 0) { toast('La segnalazione è già al punto 0', 'err'); return; }
+  const statoPrecedente = fasi[indice - 1];
+  if (!confirm(`Riportare l’intervento sul cassone ${m.cassoneId} allo stato “${etichette[statoPrecedente]}”?`)) return;
+  if (button) button.disabled = true;
+  const ts = now();
+  try {
+    const updatesStato = {
+      manutenzioneStato:statoPrecedente,
+      manutenzioneAggiornatoIl:ts,
+      manutenzioneOperatore:window._nomeUtenteCorrente || '',
+      mailRipristino:null
+    };
+    for (let i = indice; i < fasi.length; i++) updatesStato[`manutenzioneTimeline/${fasi[i]}`] = null;
+    updatesStato[`manutenzioneCorrezioni/${Date.now()}`] = {
+      da:statoAttuale, a:statoPrecedente, ts, operatore:window._nomeUtenteCorrente || ''
+    };
+    await update(ref(db, `movimenti/${movId}`), updatesStato);
+    toast(`✓ Stato riportato a: ${etichette[statoPrecedente]}`, 'ok');
+  } catch(err) {
+    console.error(err); toast('Errore durante il ritorno allo stato precedente', 'err');
+    if (button) button.disabled = false;
+  }
+};
+
+window.eliminaSegnalazioneManutenzione = async function(movId, button) {
+  if (!db || !['admin','manutenzione'].includes(window._ruoloCorrente)) {
+    toast('Operazione non consentita', 'err'); return;
+  }
+  const m = STATE.movimenti[movId];
+  if (!m) return;
+  if (!confirm(`Eliminare la segnalazione di manutenzione del cassone ${m.cassoneId}?\n\nIl movimento di entrata o uscita resterà salvato nel sistema.`)) return;
+  if (button) button.disabled = true;
+  try {
+    await update(ref(db, `movimenti/${movId}`), {
+      manutenzioneEliminata:true,
+      manutenzioneEliminataIl:now(),
+      manutenzioneEliminataDa:window._nomeUtenteCorrente || ''
+    });
+    toast('✓ Segnalazione eliminata; movimento conservato', 'ok');
+  } catch(err) {
+    console.error(err); toast('Errore durante l’eliminazione della segnalazione', 'err');
     if (button) button.disabled = false;
   }
 };
@@ -3420,6 +3519,10 @@ function applicaRuolo(ruolo) {
   const tabNuovo = document.getElementById('nav-tab-nuovo-cassone');
   [tabDash, tabBoll, tabArch, tabMan, tabMezzi, tabTra].forEach(t => t && (t.style.display = ''));
   if (tabNuovo) tabNuovo.style.display = 'none';
+  const manTabs = document.getElementById('man-view-tabs');
+  const puoGestireManutenzione = ['admin','manutenzione'].includes(ruolo);
+  if (manTabs) manTabs.style.display = puoGestireManutenzione ? 'flex' : 'none';
+  if (!puoGestireManutenzione) _vistaManutenzione = 'aperte';
   let vistaIniziale = 'dashboard';
   if (ruolo === 'trasportatore') {
     if (tabDash)  tabDash.style.display  = 'none';
