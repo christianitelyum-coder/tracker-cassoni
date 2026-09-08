@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="tracker-version" content="25">
+<meta name="tracker-version" content="26">
 <title>Tracker Cassoni</title>
 <style>
 /* ── RESET & BASE ──────────────────────────────── */
@@ -103,6 +103,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);min-height:10
 .alert-list{display:flex;flex-direction:column;gap:8px}
 .alert-row{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:var(--radius-sm);background:var(--amber-l);border:1px solid #fcd34d;font-size:12px}
 .alert-row.alert-in{background:var(--green-l);border-color:#a3ddd3}
+.alert-row.alert-maint{background:#fff1f1;border-color:#f3aaaa}
 .alert-icon{font-size:16px;flex-shrink:0}
 .alert-text{flex:1;font-weight:500;color:var(--ink)}
 .btn-ddt{padding:5px 12px;border-radius:6px;border:none;font-size:11px;font-weight:700;cursor:pointer;transition:all .15s;font-family:var(--font)}
@@ -485,6 +486,15 @@ body.auth-locked{overflow:hidden}
       </div>
       <div class="card-body">
         <div class="alert-list" id="ddt-alerts"><span style="font-size:12px;color:var(--ink3)">Nessun DDT in sospeso</span></div>
+      </div>
+    </div>
+    <div class="card" id="dash-alert-manutenzione-uscita" style="display:none">
+      <div class="card-header">
+        <div class="card-title">🚨 Segnalazioni su cassoni in uscita</div>
+        <span style="font-size:10px;color:var(--red);font-weight:800">SOLO ADMIN</span>
+      </div>
+      <div class="card-body">
+        <div class="alert-list" id="admin-uscita-alerts"><span style="font-size:12px;color:var(--ink3)">Nessun cassone segnalato ancora fuori piazzale</span></div>
       </div>
     </div>
     <div class="card" style="grid-column:1/-1">
@@ -1198,7 +1208,7 @@ body.auth-locked{overflow:hidden}
 </div>
 
 <div class="toast" id="toast"></div>
-<div class="app-version" aria-label="Versione applicazione">Versione 25</div>
+<div class="app-version" aria-label="Versione applicazione">Versione 26</div>
 
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
@@ -1263,7 +1273,21 @@ function subscribeAll() {
   // Movimenti
   const rMov = ref(db, 'movimenti');
   onValue(rMov, snap => {
-    STATE.movimenti = snap.val() || {};
+    const nuoviMovimenti = snap.val() || {};
+    const attivazioni = Object.entries(nuoviMovimenti)
+      .filter(([,m]) => m.manutenzioneAttivataIl)
+      .map(([id]) => id);
+    if (_manAttivazioniInizializzate && window._ruoloCorrente === 'manutenzione') {
+      attivazioni.forEach(id => {
+        if (!_manAttivazioniViste.has(id)) {
+          const m = nuoviMovimenti[id];
+          toast(`🔧 Cassone ${m.cassoneId}: segnalazione attivata al rientro`, 'ok');
+        }
+      });
+    }
+    _manAttivazioniViste = new Set(attivazioni);
+    _manAttivazioniInizializzate = true;
+    STATE.movimenti = nuoviMovimenti;
     scheduleRenderAll();
   });
   // Clienti
@@ -1273,6 +1297,8 @@ function subscribeAll() {
     renderClientiDatalist();
   });
 }
+let _manAttivazioniInizializzate = false;
+let _manAttivazioniViste = new Set();
 let _subscriptionsAvviate = false;
 function avviaSubscriptions(ruolo) {
   if (_subscriptionsAvviate || !db) return;
@@ -1316,7 +1342,7 @@ function renderAll() {
   const vista = document.querySelector('.view.active')?.id || '';
   renderKPI();
   if (vista === 'view-dashboard') {
-    renderPiazzale(); renderDDTAlerts(); renderDashMovimenti();
+    renderPiazzale(); renderDDTAlerts(); renderAdminSegnalazioniUscita(); renderDashMovimenti();
   } else if (vista === 'view-bollettazione') {
     renderBollettazione();
   } else if (vista === 'view-archivio') {
@@ -1448,6 +1474,40 @@ function renderDDTAlerts() {
         onclick="openDDT('${id}')">📄 DDT</button>
     </div>`
   ).join('');
+}
+
+function segnalazioneInAttesaRientro(m) {
+  if (m.manutenzioneInAttesaRientro === true) return true;
+  if (m.manutenzioneInAttesaRientro === false) return false;
+  const cas = STATE.cassoni[m.cassoneId] || {};
+  return m.tipo === 'USCITA' && cas.stato === 'fuori' && !m.manutenzioneAttivataIl &&
+    (m.manutenzioneStato || 'segnalata') === 'segnalata';
+}
+
+function renderAdminSegnalazioniUscita() {
+  const card = document.getElementById('dash-alert-manutenzione-uscita');
+  const container = document.getElementById('admin-uscita-alerts');
+  if (!card || !container) return;
+  const isAdmin = window._ruoloCorrente === 'admin';
+  card.style.display = isAdmin ? '' : 'none';
+  if (!isAdmin) return;
+  const rows = Object.entries(STATE.movimenti || {})
+    .filter(([,m]) => !m.manutenzioneEliminata && estraiFlag(m.note).length && segnalazioneInAttesaRientro(m))
+    .sort((a,b) => new Date(b[1].ts||0) - new Date(a[1].ts||0));
+  if (!rows.length) {
+    container.innerHTML = '<span style="font-size:12px;color:var(--ink3)">✅ Nessun cassone segnalato ancora fuori piazzale</span>';
+    return;
+  }
+  container.innerHTML = rows.map(([,m]) => {
+    const problemi = estraiFlag(m.note).join(', ');
+    return `<div class="alert-row alert-maint">
+      <span class="alert-icon">🚨</span>
+      <span class="alert-text"><strong>${escapeHTML(m.cassoneId)}</strong> · ancora in uscita presso ${escapeHTML(m.cliente||'—')}
+        <span style="color:var(--red);font-size:11px;display:block">${escapeHTML(problemi)} · segnalato da ${escapeHTML(m.autista||'—')}</span>
+        <span style="color:var(--ink3);font-size:10px;display:block">${fmtDT(m.ts)} · sarà inoltrato alla manutenzione al rientro</span>
+      </span>
+    </div>`;
+  }).join('');
 }
 
 function renderDashMovimenti() {
@@ -1950,6 +2010,9 @@ async function registraMovimento(tipo) {
       nuovoMov.manutenzioneStato = 'segnalata';
       nuovoMov.manutenzioneAggiornatoIl = ts;
       nuovoMov.manutenzioneTimeline = { segnalata: ts };
+      // Una segnalazione fatta in uscita resta riservata all'admin finché il cassone non rientra.
+      nuovoMov.manutenzioneInAttesaRientro = tipo === 'USCITA';
+      if (tipo === 'RIENTRO') nuovoMov.manutenzioneAttivataIl = ts;
     }
     if (_traspFoto.length) nuovoMov.foto = _traspFoto.slice();
 
@@ -1959,6 +2022,19 @@ async function registraMovimento(tipo) {
     updates[`cassoni/${_scanCassoneId}/stato`] = tipo === 'USCITA' ? 'fuori' : 'piazzale';
     updates[`cassoni/${_scanCassoneId}/clienteAttuale`] = tipo === 'USCITA' ? cliente : '';
     updates[`cassoni/${_scanCassoneId}/lastMov`] = ts;
+    if (tipo === 'RIENTRO') {
+      // Attiva sul movimento originale tutte le segnalazioni rimaste in attesa durante l'uscita.
+      Object.entries(STATE.movimenti || {}).forEach(([id,m]) => {
+        if (m.cassoneId !== _scanCassoneId || m.tipo !== 'USCITA' || m.manutenzioneEliminata) return;
+        if (!estraiFlag(m.note).length || (m.manutenzioneStato || 'segnalata') !== 'segnalata') return;
+        const inAttesa = m.manutenzioneInAttesaRientro === true || (!m.manutenzioneAttivataIl && (STATE.cassoni[_scanCassoneId]?.stato === 'fuori'));
+        if (!inAttesa) return;
+        updates[`movimenti/${id}/manutenzioneInAttesaRientro`] = false;
+        updates[`movimenti/${id}/manutenzioneAttivataIl`] = ts;
+        updates[`movimenti/${id}/manutenzioneAggiornatoIl`] = ts;
+        updates[`movimenti/${id}/manutenzioneTimeline/segnalata`] = ts;
+      });
+    }
     await update(ref(db, '/'), updates);
 
     toast(tipo === 'USCITA' ? '🔴 Uscita registrata — DDT da emettere' : '🟢 Rientro registrato', 'ok');
@@ -2462,6 +2538,7 @@ function renderManutenzione() {
       if (m.manutenzioneEliminata === true) return false;
       const flags = estraiFlag(m.note);
       if (!flags.length) return false;
+      if (segnalazioneInAttesaRientro(m)) return false;
       if (filtroF && !flags.some(f => f.startsWith(filtroF))) return false;
       if (ricerca) {
         const cas = STATE.cassoni[m.cassoneId] || {};
@@ -3067,7 +3144,7 @@ window.switchView = function(name) {
   document.getElementById('view-' + name)?.classList.add('active');
   const tabAttivo = document.querySelector(`.nav-tab[onclick*="'${name}'"]`);
   if (tabAttivo) tabAttivo.classList.add('active');
-  if (name === 'dashboard') { renderKPI(); renderPiazzale(); renderDDTAlerts(); renderDashMovimenti(); }
+  if (name === 'dashboard') { renderKPI(); renderPiazzale(); renderDDTAlerts(); renderAdminSegnalazioniUscita(); renderDashMovimenti(); }
   if (name === 'bollettazione') renderBollettazione();
   if (name === 'archivio')      renderArchivio();
   if (name === 'manutenzione')  renderManutenzione();
@@ -3523,6 +3600,8 @@ function applicaRuolo(ruolo) {
   const puoGestireManutenzione = ['admin','manutenzione'].includes(ruolo);
   if (manTabs) manTabs.style.display = puoGestireManutenzione ? 'flex' : 'none';
   if (!puoGestireManutenzione) _vistaManutenzione = 'aperte';
+  const alertUscitaAdmin = document.getElementById('dash-alert-manutenzione-uscita');
+  if (alertUscitaAdmin) alertUscitaAdmin.style.display = ruolo === 'admin' ? '' : 'none';
   let vistaIniziale = 'dashboard';
   if (ruolo === 'trasportatore') {
     if (tabDash)  tabDash.style.display  = 'none';
