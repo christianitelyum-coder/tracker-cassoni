@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="tracker-version" content="26">
+<meta name="tracker-version" content="28">
 <title>Tracker Cassoni</title>
 <style>
 /* ── RESET & BASE ──────────────────────────────── */
@@ -84,7 +84,9 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);min-height:10
 
 /* Piazzale live */
 .piazzale-grid{display:flex;flex-wrap:wrap;gap:8px}
-.cassone-chip{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:20px;font-size:12px;font-weight:600;border:1.5px solid;cursor:default;transition:all .15s}
+.cassone-chip{display:inline-flex;flex-direction:column;align-items:flex-start;gap:3px;padding:7px 10px;border-radius:10px;min-width:145px;max-width:270px;font-size:12px;font-weight:600;border:1.5px solid;cursor:default;transition:all .15s}
+.cassone-chip-main{display:flex;align-items:center;gap:6px;width:100%;min-width:0}
+.cassone-chip-desc{display:block;width:100%;padding-left:18px;font-size:9.5px;line-height:1.25;font-weight:600;opacity:.78;overflow-wrap:anywhere}
 .chip-piazzale{background:var(--green-l);border-color:#a3ddd3;color:var(--green-d)}
 .chip-fuori{background:var(--red-l);border-color:#f0b8b3;color:var(--red)}
 .chip-empty{color:var(--ink3);font-style:italic;font-size:12px;padding:8px 0}
@@ -1208,7 +1210,7 @@ body.auth-locked{overflow:hidden}
 </div>
 
 <div class="toast" id="toast"></div>
-<div class="app-version" aria-label="Versione applicazione">Versione 26</div>
+<div class="app-version" aria-label="Versione applicazione">Versione 28</div>
 
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
@@ -1387,10 +1389,27 @@ function renderPiazzale() {
     return;
   }
 
-  // Raggruppa per tipo (prima parola significativa)
+  // Ricava la famiglia dalla descrizione, anche per i cassoni inseriti manualmente o via Excel.
+  function tipologiaDashboard(c) {
+    const descrizione = [c.descrizione, c.tipo, c.note]
+      .filter(Boolean).join(' ').toUpperCase()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    if (/PIANAL/.test(descrizione)) return 'Pianale';
+    if (/COMPATTAT/.test(descrizione)) return 'Compattatore';
+    if (/CENTINAT/.test(descrizione)) return 'Centinato';
+    if (/VASCA/.test(descrizione)) return 'Vasca';
+    if (/SCARRAB/.test(descrizione)) return 'Scarrabile';
+    const tipoInserito = String(c.tipo || '').trim();
+    if (/^(PIANALE|COMPATTATORE|CENTINATO|VASCA|SCARRABILE)$/i.test(tipoInserito)) {
+      return tipoInserito.charAt(0).toUpperCase() + tipoInserito.slice(1).toLowerCase();
+    }
+    return tipoInserito ? tipoInserito.split('·')[0].trim() : 'Altro';
+  }
+
+  // Ogni cassone compare in una sola tipologia; la descrizione prevale sulla categoria generica.
   const gruppi = {};
   cas.forEach(([id, c]) => {
-    const tipo = (c.tipo || 'Altro').split('·')[0].trim();
+    const tipo = tipologiaDashboard(c);
     if (!gruppi[tipo]) gruppi[tipo] = [];
     gruppi[tipo].push({ id, ...c });
   });
@@ -1406,7 +1425,12 @@ function renderPiazzale() {
         const cls   = c.stato === 'piazzale' ? 'chip-piazzale' : 'chip-fuori';
         const ico   = c.stato === 'piazzale' ? '✅' : '🔴';
         const title = c.stato === 'fuori' && c.clienteAttuale ? ` → ${c.clienteAttuale}` : '';
-        return `<div class="cassone-chip ${cls}" title="${escapeHTML(c.id + title)}">${ico} <strong>${escapeHTML(c.id)}</strong>${title ? `<span style="font-size:10px;opacity:.75"> ${escapeHTML(title)}</span>` : ''}</div>`;
+        const tipoGenerico = /^(PIANALE|COMPATTATORE|CENTINATO|VASCA|SCARRABILE|ALTRO)$/i.test(String(c.tipo||'').trim());
+        const descrizione = c.descrizione || c.note || (!tipoGenerico ? c.tipo : '') || 'Descrizione non indicata';
+        return `<div class="cassone-chip ${cls}" title="${escapeHTML(c.id + title + ' · ' + descrizione)}">
+          <span class="cassone-chip-main">${ico} <strong>${escapeHTML(c.id)}</strong>${title ? `<span style="font-size:10px;opacity:.75"> ${escapeHTML(title)}</span>` : ''}</span>
+          <span class="cassone-chip-desc">${escapeHTML(descrizione)}</span>
+        </div>`;
       }).join('');
 
     return `<div style="margin-bottom:1.25rem">
