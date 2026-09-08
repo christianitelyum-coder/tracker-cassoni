@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="tracker-version" content="28">
+<meta name="tracker-version" content="29">
 <title>Tracker Cassoni</title>
 <style>
 /* ── RESET & BASE ──────────────────────────────── */
@@ -287,6 +287,12 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);min-height:10
 .ddt-table th{background:var(--ink);color:#fff;padding:6px 10px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em}
 .ddt-table td{padding:7px 10px;border-bottom:1px solid var(--border)}
 .modal-footer{padding:1rem 1.5rem;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end}
+.presa-carico-field{display:flex;flex-direction:column;gap:5px}
+.presa-carico-field label{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--ink3)}
+.presa-carico-field input,.presa-carico-field textarea{width:100%;font:13px var(--font);color:var(--ink);background:var(--surface);border:1.5px solid var(--border);border-radius:7px;padding:9px 11px;outline:none}
+.presa-carico-field textarea{min-height:95px;resize:vertical;line-height:1.4}
+.presa-carico-field input:focus,.presa-carico-field textarea:focus{border-color:var(--green);box-shadow:0 0 0 3px rgba(47,174,158,.12)}
+.man-assignment{margin-top:5px;padding:5px 7px;border-radius:6px;background:var(--s2);border:1px solid var(--border);font-size:10px;line-height:1.35;color:var(--ink2)}
 
 /* ── SETUP ───────────────────────────────────────── */
 .setup{max-width:520px;margin:3rem auto;padding:1.5rem}
@@ -1071,6 +1077,32 @@ body.auth-locked{overflow:hidden}
 </div>
 
 <!-- Visualizzatore allegati manutenzione -->
+<div class="modal-overlay" id="presa-carico-modal" onclick="if(event.target===this)chiudiPresaInCarico()" role="dialog" aria-modal="true" aria-labelledby="presa-carico-title">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-header">
+      <span class="modal-title" id="presa-carico-title">🔧 Presa in carico intervento</span>
+      <button type="button" class="modal-close" onclick="chiudiPresaInCarico()" aria-label="Chiudi">×</button>
+    </div>
+    <div class="modal-body" style="display:flex;flex-direction:column;gap:14px">
+      <div id="presa-carico-cassone" style="font-size:13px;font-weight:700;color:var(--ink2)"></div>
+      <div class="presa-carico-field">
+        <label for="presa-carico-operatore">Operatore addetto alla manutenzione *</label>
+        <input id="presa-carico-operatore" maxlength="100" autocomplete="name" placeholder="Nome e cognome dell’operatore">
+      </div>
+      <div class="presa-carico-field">
+        <label for="presa-carico-note">Note manutenzione</label>
+        <textarea id="presa-carico-note" maxlength="1000" placeholder="Inserisci annotazioni, verifiche da eseguire o altre informazioni utili…"></textarea>
+      </div>
+      <div class="auth-error" id="presa-carico-error" role="alert"></div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-ghost" onclick="chiudiPresaInCarico()">Annulla</button>
+      <button type="button" class="btn btn-primary" id="presa-carico-save" onclick="salvaPresaInCarico()">✓ Conferma presa in carico</button>
+    </div>
+  </div>
+</div>
+
+<!-- Visualizzatore allegati manutenzione -->
 <div class="modal-overlay" id="photo-viewer-modal" onclick="if(event.target===this)chiudiFotoManutenzione()" role="dialog" aria-modal="true" aria-labelledby="photo-viewer-title">
   <div class="photo-viewer" id="photo-viewer-box">
     <div class="photo-viewer-head">
@@ -1210,7 +1242,7 @@ body.auth-locked{overflow:hidden}
 </div>
 
 <div class="toast" id="toast"></div>
-<div class="app-version" aria-label="Versione applicazione">Versione 28</div>
+<div class="app-version" aria-label="Versione applicazione">Versione 29</div>
 
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
@@ -2566,7 +2598,7 @@ function renderManutenzione() {
       if (filtroF && !flags.some(f => f.startsWith(filtroF))) return false;
       if (ricerca) {
         const cas = STATE.cassoni[m.cassoneId] || {};
-        const testo = [m.cassoneId, m.cliente, m.autista, m.note, m.manutenzioneOperatore, cas.tipo, cas.stato]
+        const testo = [m.cassoneId, m.cliente, m.autista, m.note, m.manutenzioneOperatore, m.manutenzioneNote, cas.tipo, cas.stato]
           .filter(Boolean).join(' ').toLowerCase();
         if (!testo.includes(ricerca)) return false;
       }
@@ -2632,9 +2664,12 @@ function renderManutenzione() {
     const avanzamento = statoIntervento(m);
     const stepIndex = {segnalata:0,presa_carico:1,in_manutenzione:2,ripristinato:3}[avanzamento] ?? 0;
     const avanzamentoLabel = {segnalata:'Punto 0 · Segnalata',presa_carico:'Presa in carico',in_manutenzione:'In manutenzione',ripristinato:'Ripristinato'}[avanzamento];
+    const assignment = m.manutenzioneOperatore || m.manutenzioneNote
+      ? `<div class="man-assignment">${m.manutenzioneOperatore ? `<strong>Operatore:</strong> ${escapeHTML(m.manutenzioneOperatore)}` : ''}${m.manutenzioneNote ? `<br><strong>Note:</strong> ${escapeHTML(m.manutenzioneNote)}` : ''}</div>`
+      : '';
     const progress = `<div class="man-progress" aria-label="Stato: ${avanzamentoLabel}">
       ${['0','1','2','3'].map((n,i) => `<div class="man-step phase-${i} ${i<=stepIndex?'done':''}"><span class="man-step-dot">${i<stepIndex?'✓':n}</span>${i<3?'<span class="man-step-line"></span>':''}</div>`).join('')}
-    </div><div class="man-progress-label">${avanzamentoLabel}${m.manutenzioneAggiornatoIl ? ` · ${fmtDT(m.manutenzioneAggiornatoIl)}` : ''}</div>`;
+    </div><div class="man-progress-label">${avanzamentoLabel}${m.manutenzioneAggiornatoIl ? ` · ${fmtDT(m.manutenzioneAggiornatoIl)}` : ''}</div>${assignment}`;
     let stateButtons = puoGestire ? `<div class="man-forward-actions">${[
       ['presa_carico','Presa in carico'],['in_manutenzione','In manutenzione'],['ripristinato','Ripristinato']
     ].map(([value,label]) => {
@@ -2652,7 +2687,7 @@ function renderManutenzione() {
     }
 
     const subjectFine = encodeURIComponent(`Lavoro ultimato – cassone ${m.cassoneId}`);
-    const bodyFine = encodeURIComponent(`Buongiorno,\n\nsi conferma che l’intervento sul cassone ${m.cassoneId} (${cas.tipo||'tipo non indicato'}) è stato ultimato.\n\nProblema segnalato: ${flags.join(', ') || '—'}${noteLibera ? '\nNote: ' + noteLibera : ''}\nData segnalazione: ${fmtDT(m.ts)}\nData ripristino: ${fmtDT(m.manutenzioneAggiornatoIl)}\nOperatore: ${m.manutenzioneOperatore || window._nomeUtenteCorrente || '—'}\n\nIl cassone risulta ripristinato.\n\nCordiali saluti`);
+    const bodyFine = encodeURIComponent(`Buongiorno,\n\nsi conferma che l’intervento sul cassone ${m.cassoneId} (${cas.tipo||'tipo non indicato'}) è stato ultimato.\n\nProblema segnalato: ${flags.join(', ') || '—'}${noteLibera ? '\nNote segnalazione: ' + noteLibera : ''}${m.manutenzioneNote ? '\nNote manutenzione: ' + m.manutenzioneNote : ''}\nData segnalazione: ${fmtDT(m.ts)}\nData ripristino: ${fmtDT(m.manutenzioneAggiornatoIl)}\nOperatore: ${m.manutenzioneOperatore || window._nomeUtenteCorrente || '—'}\n\nIl cassone risulta ripristinato.\n\nCordiali saluti`);
     const mailtoFine = `mailto:trasporti.centrorisorse@itelyum.com?subject=${subjectFine}&body=${bodyFine}`;
     const mailFineInviata = m.mailRipristino;
     const btnChiusura = mailFineInviata
@@ -2767,6 +2802,10 @@ window.cambiaStatoManutenzione = async function(movId, nuovoStato, button) {
   if (ordine[nuovoStato] !== ordine[statoAttuale] + 1) {
     toast('Segui le fasi di avanzamento in ordine', 'err'); return;
   }
+  if (nuovoStato === 'presa_carico') {
+    apriPresaInCarico(movId);
+    return;
+  }
   const etichetta = {presa_carico:'Presa in carico',in_manutenzione:'In manutenzione',ripristinato:'Ripristinato'}[nuovoStato];
   if (!confirm(`Impostare l’intervento sul cassone ${m.cassoneId} come “${etichetta}”?`)) return;
   if (button) button.disabled = true;
@@ -2784,6 +2823,66 @@ window.cambiaStatoManutenzione = async function(movId, nuovoStato, button) {
   } catch(err) {
     console.error(err); toast('Errore durante l’aggiornamento dello stato', 'err');
     if (button) button.disabled = false;
+  }
+};
+
+let _presaCaricoMovId = null;
+
+window.apriPresaInCarico = function(movId) {
+  if (!['admin','manutenzione'].includes(window._ruoloCorrente)) return;
+  const m = STATE.movimenti[movId];
+  if (!m || (m.manutenzioneStato || 'segnalata') !== 'segnalata') {
+    toast('La segnalazione non può essere presa in carico', 'err'); return;
+  }
+  _presaCaricoMovId = movId;
+  document.getElementById('presa-carico-cassone').textContent = `Cassone ${m.cassoneId} · ${fmtDT(m.ts)}`;
+  document.getElementById('presa-carico-operatore').value = m.manutenzioneOperatore || window._nomeUtenteCorrente || '';
+  document.getElementById('presa-carico-note').value = m.manutenzioneNote || '';
+  document.getElementById('presa-carico-error').textContent = '';
+  document.getElementById('presa-carico-modal').classList.add('open');
+  setTimeout(() => document.getElementById('presa-carico-operatore')?.focus(), 0);
+};
+
+window.chiudiPresaInCarico = function() {
+  document.getElementById('presa-carico-modal')?.classList.remove('open');
+  _presaCaricoMovId = null;
+};
+
+window.salvaPresaInCarico = async function() {
+  const movId = _presaCaricoMovId;
+  const m = STATE.movimenti[movId];
+  const operatore = document.getElementById('presa-carico-operatore').value.trim();
+  const note = document.getElementById('presa-carico-note').value.trim();
+  const errorEl = document.getElementById('presa-carico-error');
+  if (!db || !m || !['admin','manutenzione'].includes(window._ruoloCorrente)) {
+    errorEl.textContent = 'Operazione non consentita.'; return;
+  }
+  if (!operatore) {
+    errorEl.textContent = 'Inserisci il nome dell’operatore addetto alla manutenzione.';
+    document.getElementById('presa-carico-operatore').focus(); return;
+  }
+  if ((m.manutenzioneStato || 'segnalata') !== 'segnalata') {
+    errorEl.textContent = 'Lo stato della segnalazione è già cambiato. Chiudi e aggiorna la pagina.'; return;
+  }
+  const btn = document.getElementById('presa-carico-save');
+  btn.disabled = true;
+  const ts = now();
+  try {
+    await update(ref(db, `movimenti/${movId}`), {
+      manutenzioneStato:'presa_carico',
+      manutenzioneAggiornatoIl:ts,
+      manutenzioneOperatore:operatore,
+      manutenzioneNote:note,
+      manutenzioneRegistratoDa:window._nomeUtenteCorrente || '',
+      'manutenzioneTimeline/presa_carico':ts,
+      mailRipristino:null
+    });
+    chiudiPresaInCarico();
+    toast(`✓ Presa in carico assegnata a ${operatore}`, 'ok');
+  } catch(err) {
+    console.error(err); errorEl.textContent = 'Errore durante il salvataggio. Riprova.';
+  } finally {
+    btn.disabled = false;
   }
 };
 
@@ -2810,6 +2909,11 @@ window.tornaStatoManutenzione = async function(movId, button) {
       mailRipristino:null
     };
     for (let i = indice; i < fasi.length; i++) updatesStato[`manutenzioneTimeline/${fasi[i]}`] = null;
+    if (statoPrecedente === 'segnalata') {
+      updatesStato.manutenzioneOperatore = null;
+      updatesStato.manutenzioneNote = null;
+      updatesStato.manutenzioneRegistratoDa = null;
+    }
     updatesStato[`manutenzioneCorrezioni/${Date.now()}`] = {
       da:statoAttuale, a:statoPrecedente, ts, operatore:window._nomeUtenteCorrente || ''
     };
