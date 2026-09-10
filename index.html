@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="tracker-version" content="30">
+<meta name="tracker-version" content="32">
 <title>Tracker Cassoni</title>
 <style>
 /* ── RESET & BASE ──────────────────────────────── */
@@ -263,6 +263,16 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);min-height:10
 .mezzo-cat-btn.active{background:var(--amber-l);border-color:var(--amber);box-shadow:0 0 0 1px var(--amber) inset}
 .mezzo-cat-btn.active .mezzo-cat-lbl{color:var(--amber)}
 .mezzo-cat-badge{position:absolute;top:-7px;right:-7px;background:var(--amber);color:#fff;font-size:10px;font-weight:800;border-radius:10px;min-width:17px;height:17px;line-height:17px;text-align:center;padding:0 4px;box-shadow:0 1px 3px rgba(0,0,0,.25)}
+.autista-open-flags{display:none;background:var(--surface);border-radius:var(--radius);padding:1.1rem;box-shadow:var(--shadow);border:1.5px solid #fca5a5;border-left:5px solid var(--red);margin-bottom:1rem}
+.autista-open-flags.visible{display:block}
+.autista-open-title{display:flex;align-items:center;justify-content:space-between;gap:8px;color:var(--red);font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;margin-bottom:9px}
+.autista-open-count{min-width:22px;height:22px;display:grid;place-items:center;border-radius:11px;background:var(--red);color:#fff;font-size:11px}
+.autista-open-item{padding:9px 10px;border-radius:8px;background:var(--red-l);border:1px solid #f0b8b3;margin-top:7px}
+.autista-open-head{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.autista-open-targa{font-size:14px;font-weight:800;color:var(--ink)}
+.autista-open-state{margin-left:auto;padding:3px 8px;border-radius:10px;background:var(--surface);color:var(--red);font-size:10px;font-weight:800}
+.autista-open-detail{font-size:11px;color:var(--ink2);line-height:1.4;margin-top:4px}
+.autista-open-time{font-size:10px;color:var(--ink3);margin-top:4px}
 
 .trasp-recenti{background:var(--surface);border-radius:var(--radius);padding:1.1rem;box-shadow:var(--shadow);border:1px solid var(--border)}
 .trasp-recenti h3{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ink3);margin-bottom:.75rem}
@@ -772,6 +782,11 @@ body.auth-locked{overflow:hidden}
     <button class="btn-invia-mezzo" onclick="inviaSegnalazioneMezzo()">📨 Invia segnalazione</button>
   </div>
 
+  <div class="autista-open-flags" id="autista-segnalazioni-aperte" aria-live="polite">
+    <div class="autista-open-title"><span>🚩 Le tue segnalazioni ancora aperte</span><span class="autista-open-count" id="autista-segnalazioni-count">0</span></div>
+    <div id="autista-segnalazioni-list"></div>
+  </div>
+
   <div class="trasp-recenti">
     <h3>Ultimi tuoi movimenti</h3>
     <div id="trasp-recenti-list"><span style="font-size:12px;color:var(--ink3)">Nessuno ancora</span></div>
@@ -1121,7 +1136,7 @@ body.auth-locked{overflow:hidden}
 <div class="modal-overlay" id="mezzo-notif-modal">
   <div class="modal" style="max-width:380px">
     <div class="modal-header">
-      <span class="modal-title">🚩 Nuova segnalazione mezzo</span>
+      <span class="modal-title" id="mezzo-notif-title">🚩 Nuova segnalazione mezzo</span>
       <button class="modal-close" onclick="chiudiNotificaMezzo()">×</button>
     </div>
     <div class="modal-body" id="mezzo-notif-body" style="font-size:13px;line-height:1.9"></div>
@@ -1242,7 +1257,7 @@ body.auth-locked{overflow:hidden}
 </div>
 
 <div class="toast" id="toast"></div>
-<div class="app-version" aria-label="Versione applicazione">Versione 30</div>
+<div class="app-version" aria-label="Versione applicazione">Versione 32</div>
 
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
@@ -3140,9 +3155,15 @@ async function inviaSegnalazioneMezzo() {
   if (!categorie.length) { toast('Seleziona almeno una categoria di anomalia', 'err'); return; }
   const dettagli = {};
   categorie.forEach(cat => { dettagli[cat] = [..._mezzoDettagli[cat]]; });
-  const autista = localStorage.getItem('tracker_auth_user') || '';
+  const autista = window._nomeOperatoreCorrente || window._nomeUtenteCorrente || 'Utente non identificato';
+  const segnalatoDaUid = auth?.currentUser?.uid || window._uidUtenteCorrente || '';
+  const ts = now();
 
-  await push(ref(db, 'segnalazioniMezzi'), { targa, categorie, dettagli, posizione, autista, ts: now() });
+  await push(ref(db, 'segnalazioniMezzi'), {
+    targa, categorie, dettagli, posizione, autista, segnalatoDaUid, ts,
+    stato:'segnalata', statoAggiornatoIl:ts,
+    statoTimeline:{segnalata:ts}
+  });
 
   toast('✓ Segnalazione mezzo inviata', 'ok');
   document.getElementById('mezzo-targa').value = '';
@@ -3155,6 +3176,7 @@ function renderSegnalazioniMezzi() {
   const container = document.getElementById('mezzi-groups');
   const countEl    = document.getElementById('mezzi-count');
   if (!container) return;
+  renderSegnalazioniMezziAutista();
   const all = Object.entries(STATE.segnalazioniMezzi || {})
     .sort((a,b) => (b[1].ts||'') > (a[1].ts||'') ? 1 : -1);
 
@@ -3177,9 +3199,24 @@ function renderSegnalazioniMezzi() {
         </div>
         <div class="card-body" style="padding:0">
           ${rows.length ? `<div style="overflow-x:auto"><table class="mov-table">
-            <thead><tr><th>Data</th><th>Targa</th><th>Dettaglio</th><th>Posizione</th><th>Segnalato da</th><th></th></tr></thead>
+            <thead><tr><th>Data</th><th>Targa</th><th>Dettaglio</th><th>Posizione</th><th>Segnalato da</th><th>Avanzamento</th><th>Cambia stato</th><th></th></tr></thead>
             <tbody>${rows.map(([id, r]) => {
               const dett = (r.dettagli && r.dettagli[key]) || [];
+              const stato = r.stato || 'segnalata';
+              const indiceStato = {segnalata:0,presa_carico:1,in_manutenzione:2,ripristinato:3}[stato] ?? 0;
+              const statoLabel = {segnalata:'Punto 0 · Segnalata',presa_carico:'Presa in carico',in_manutenzione:'In manutenzione',ripristinato:'Ripristinato'}[stato];
+              const progress = `<div class="man-progress" aria-label="Stato: ${statoLabel}">
+                ${['0','1','2','3'].map((n,i) => `<div class="man-step phase-${i} ${i<=indiceStato?'done':''}"><span class="man-step-dot">${i<indiceStato?'✓':n}</span>${i<3?'<span class="man-step-line"></span>':''}</div>`).join('')}
+              </div><div class="man-progress-label">${statoLabel}${r.statoAggiornatoIl ? ` · ${fmtDT(r.statoAggiornatoIl)}` : ''}</div>`;
+              const puoGestire = ['admin','manutenzione'].includes(window._ruoloCorrente);
+              let comandi = puoGestire ? `<div class="man-forward-actions">${[
+                ['presa_carico','Presa in carico'],['in_manutenzione','In manutenzione'],['ripristinato','Ripristinato']
+              ].map(([value,label]) => {
+                const ordine = {segnalata:0,presa_carico:1,in_manutenzione:2,ripristinato:3};
+                const bloccato = ordine[value] !== ordine[stato] + 1;
+                return `<button type="button" class="man-state-btn state-${value} ${stato===value?'active':''}" onclick="cambiaStatoSegnalazioneMezzo('${id}','${value}',this)" ${bloccato?'disabled':''}>${label}</button>`;
+              }).join('')}</div>` : '<span class="man-mail-wait">Avanzamenti gestiti da amministratore e manutenzione</span>';
+              if (puoGestire && indiceStato > 0) comandi += `<button type="button" class="man-state-btn man-state-back" onclick="tornaStatoSegnalazioneMezzo('${id}',this)">↩ Stato precedente</button>`;
               return `
               <tr>
                 <td style="white-space:nowrap;color:var(--ink2);font-size:12px">${fmtDT(r.ts)}</td>
@@ -3187,6 +3224,8 @@ function renderSegnalazioniMezzi() {
                 <td style="color:var(--ink2);font-size:12px">${dett.length ? dett.map(d => `<span style="display:inline-block;padding:1px 7px;border-radius:10px;font-size:10px;font-weight:700;background:var(--amber-l);color:var(--amber);border:1px solid #fcd34d;margin:1px">${d}</span>`).join(' ') : '—'}</td>
                 <td style="color:var(--ink2);font-size:12px">${r.posizione||'—'}</td>
                 <td style="color:var(--ink2);font-size:12px">${r.autista||'—'}</td>
+                <td style="min-width:210px">${progress}</td>
+                <td style="min-width:180px"><div class="man-state-actions">${comandi}</div></td>
                 <td style="white-space:nowrap;text-align:center">
                   <button class="btn btn-ghost btn-sm" onclick="eliminaSegnalazioneMezzo('${id}')" style="color:var(--red,#c0392b)" title="Elimina">🗑</button>
                 </td>
@@ -3201,6 +3240,100 @@ function renderSegnalazioniMezzi() {
 }
 window.renderSegnalazioniMezzi = renderSegnalazioniMezzi;
 
+function renderSegnalazioniMezziAutista() {
+  const box = document.getElementById('autista-segnalazioni-aperte');
+  const list = document.getElementById('autista-segnalazioni-list');
+  const count = document.getElementById('autista-segnalazioni-count');
+  if (!box || !list || !count) return;
+  const uid = auth?.currentUser?.uid || window._uidUtenteCorrente || '';
+  const nomiCorrenti = [window._nomeOperatoreCorrente,window._nomeUtenteCorrente].filter(Boolean);
+  const aperte = Object.entries(STATE.segnalazioniMezzi || {})
+    .filter(([,rec]) => {
+      const appartiene = rec.segnalatoDaUid ? rec.segnalatoDaUid === uid : nomiCorrenti.includes(rec.autista);
+      return appartiene && (rec.stato || 'segnalata') !== 'ripristinato';
+    })
+    .sort((a,b) => new Date(b[1].ts||0) - new Date(a[1].ts||0));
+  box.classList.toggle('visible', aperte.length > 0);
+  count.textContent = aperte.length;
+  if (!aperte.length) { list.innerHTML = ''; return; }
+  const etichette = {segnalata:'Punto 0 · Segnalata',presa_carico:'Presa in carico',in_manutenzione:'In manutenzione'};
+  list.innerHTML = aperte.map(([,rec]) => {
+    const stato = rec.stato || 'segnalata';
+    const problemi = (rec.categorie || []).flatMap(cat => (rec.dettagli && rec.dettagli[cat]) || [])
+      .filter(Boolean).join(' · ');
+    return `<div class="autista-open-item">
+      <div class="autista-open-head">
+        <span aria-hidden="true">🚩</span><span class="autista-open-targa">${escapeHTML(rec.targa||'—')}</span>
+        <span class="autista-open-state">${escapeHTML(etichette[stato] || stato)}</span>
+      </div>
+      <div class="autista-open-detail">${escapeHTML(problemi || 'Anomalia segnalata')}${rec.posizione ? `<br><strong>Posizione:</strong> ${escapeHTML(rec.posizione)}` : ''}</div>
+      <div class="autista-open-time">Segnalata il ${fmtDT(rec.ts)}</div>
+    </div>`;
+  }).join('');
+}
+window.renderSegnalazioniMezziAutista = renderSegnalazioniMezziAutista;
+
+window.cambiaStatoSegnalazioneMezzo = async function(id, nuovoStato, button) {
+  if (!db || !['admin','manutenzione'].includes(window._ruoloCorrente)) {
+    toast('Operazione non consentita', 'err'); return;
+  }
+  const rec = STATE.segnalazioniMezzi[id];
+  if (!rec) return;
+  const ordine = {segnalata:0,presa_carico:1,in_manutenzione:2,ripristinato:3};
+  const statoAttuale = rec.stato || 'segnalata';
+  if (!(nuovoStato in ordine) || ordine[nuovoStato] !== ordine[statoAttuale] + 1) {
+    toast('Segui le fasi di avanzamento in ordine', 'err'); return;
+  }
+  const etichetta = {presa_carico:'Presa in carico',in_manutenzione:'In manutenzione',ripristinato:'Ripristinato'}[nuovoStato];
+  if (!confirm(`Impostare la segnalazione del mezzo ${rec.targa} come “${etichetta}”?`)) return;
+  if (button) button.disabled = true;
+  const ts = now();
+  try {
+    const updatesStato = {
+      stato:nuovoStato,
+      statoAggiornatoIl:ts,
+      statoAggiornatoDa:window._nomeOperatoreCorrente || window._nomeUtenteCorrente || ''
+    };
+    updatesStato[`statoTimeline/${nuovoStato}`] = ts;
+    await update(ref(db, `segnalazioniMezzi/${id}`), updatesStato);
+    toast(`✓ Stato mezzo aggiornato: ${etichetta}`, 'ok');
+  } catch(err) {
+    console.error(err); toast('Errore durante l’aggiornamento dello stato', 'err');
+    if (button) button.disabled = false;
+  }
+};
+
+window.tornaStatoSegnalazioneMezzo = async function(id, button) {
+  if (!db || !['admin','manutenzione'].includes(window._ruoloCorrente)) {
+    toast('Operazione non consentita', 'err'); return;
+  }
+  const rec = STATE.segnalazioniMezzi[id];
+  if (!rec) return;
+  const fasi = ['segnalata','presa_carico','in_manutenzione','ripristinato'];
+  const etichette = {segnalata:'Punto 0 · Segnalata',presa_carico:'Presa in carico',in_manutenzione:'In manutenzione',ripristinato:'Ripristinato'};
+  const statoAttuale = rec.stato || 'segnalata';
+  const indice = fasi.indexOf(statoAttuale);
+  if (indice <= 0) return;
+  const precedente = fasi[indice - 1];
+  if (!confirm(`Riportare la segnalazione del mezzo ${rec.targa} a “${etichette[precedente]}”?`)) return;
+  if (button) button.disabled = true;
+  const ts = now();
+  try {
+    const updatesStato = {
+      stato:precedente,
+      statoAggiornatoIl:ts,
+      statoAggiornatoDa:window._nomeOperatoreCorrente || window._nomeUtenteCorrente || ''
+    };
+    for (let i=indice; i<fasi.length; i++) updatesStato[`statoTimeline/${fasi[i]}`] = null;
+    updatesStato[`statoCorrezioni/${Date.now()}`] = {da:statoAttuale,a:precedente,ts,operatore:updatesStato.statoAggiornatoDa};
+    await update(ref(db, `segnalazioniMezzi/${id}`), updatesStato);
+    toast(`✓ Stato riportato a: ${etichette[precedente]}`, 'ok');
+  } catch(err) {
+    console.error(err); toast('Errore durante il ritorno allo stato precedente', 'err');
+    if (button) button.disabled = false;
+  }
+};
+
 async function eliminaSegnalazioneMezzo(id) {
   if (!db) return;
   if (!confirm('Eliminare questa segnalazione mezzo?')) return;
@@ -3211,23 +3344,28 @@ window.eliminaSegnalazioneMezzo = eliminaSegnalazioneMezzo;
 
 // ── Popup notifica nuova segnalazione mezzo ──
 let _mezziNotifQueue = [];
-function mostraNotificaMezzo(rec) {
-  _mezziNotifQueue.push(rec);
+function mostraNotificaMezzo(rec, tipo='nuova') {
+  _mezziNotifQueue.push({rec,tipo});
   if (_mezziNotifQueue.length === 1) renderNotificaMezzo();
 }
 function renderNotificaMezzo() {
-  const rec = _mezziNotifQueue[0];
-  if (!rec) return;
+  const elemento = _mezziNotifQueue[0];
+  if (!elemento) return;
+  const {rec,tipo} = elemento;
   const catBlocks = (rec.categorie || []).map(c => {
     const def = CATEGORIE_MEZZO[c];
     const dett = (rec.dettagli && rec.dettagli[c]) || [];
-    return `<div style="margin-bottom:4px"><strong>${def?def.icon+' '+def.label:c}:</strong> ${dett.length?dett.join(', '):'—'}</div>`;
+    return `<div style="margin-bottom:4px"><strong>${def?def.icon+' '+escapeHTML(def.label):escapeHTML(c)}:</strong> ${dett.length?dett.map(escapeHTML).join(', '):'—'}</div>`;
   }).join('');
+  const stato = rec.stato || 'segnalata';
+  const statoLabel = {segnalata:'Punto 0 · Segnalata',presa_carico:'Presa in carico',in_manutenzione:'In manutenzione',ripristinato:'Ripristinato'}[stato] || stato;
+  document.getElementById('mezzo-notif-title').textContent = tipo === 'stato' ? '🔔 Aggiornamento segnalazione mezzo' : '🚩 Nuova segnalazione mezzo';
   document.getElementById('mezzo-notif-body').innerHTML = `
-    <div style="margin-bottom:4px"><strong>Targa:</strong> ${rec.targa||'—'}</div>
+    <div style="margin-bottom:4px"><strong>Targa:</strong> ${escapeHTML(rec.targa||'—')}</div>
     ${catBlocks}
-    <div style="margin-bottom:4px"><strong>Posizione:</strong> ${rec.posizione||'—'}</div>
-    <div style="color:var(--ink3);font-size:11px;margin-top:8px">Segnalato da ${rec.autista||'—'} — ${fmtDT(rec.ts)}</div>
+    <div style="margin-bottom:4px"><strong>Posizione:</strong> ${escapeHTML(rec.posizione||'—')}</div>
+    ${tipo === 'stato' ? `<div style="margin:10px 0 4px;padding:8px 10px;border-radius:7px;background:var(--green-l);color:var(--green-d);font-weight:800"><strong>Nuovo stato:</strong> ${escapeHTML(statoLabel)}</div>` : ''}
+    <div style="color:var(--ink3);font-size:11px;margin-top:8px">Segnalato da ${escapeHTML(rec.autista||'—')} — ${fmtDT(rec.ts)}</div>
   `;
   document.getElementById('mezzo-notif-modal').classList.add('open');
 }
@@ -3239,6 +3377,7 @@ window.chiudiNotificaMezzo = function() {
 
 let _mezziInizializzato = false;
 let _mezziIdVisti = new Set();
+let _mezziStatiVisti = new Map();
 function subscribeMezzi() {
   if (!db) return;
   onValue(ref(db, 'segnalazioniMezzi'), snap => {
@@ -3247,10 +3386,20 @@ function subscribeMezzi() {
     const ids = Object.keys(val);
     if (_mezziInizializzato) {
       ids.forEach(id => {
-        if (!_mezziIdVisti.has(id)) mostraNotificaMezzo(val[id]);
+        const rec = val[id];
+        if (!_mezziIdVisti.has(id)) {
+          if (window._ruoloCorrente !== 'trasportatore') mostraNotificaMezzo(rec, 'nuova');
+          return;
+        }
+        const statoPrima = _mezziStatiVisti.get(id) || 'segnalata';
+        const statoAdesso = rec.stato || 'segnalata';
+        const stessoUid = rec.segnalatoDaUid && rec.segnalatoDaUid === (auth?.currentUser?.uid || window._uidUtenteCorrente);
+        const stessoNome = !rec.segnalatoDaUid && rec.autista && [window._nomeOperatoreCorrente,window._nomeUtenteCorrente].includes(rec.autista);
+        if (statoPrima !== statoAdesso && (stessoUid || stessoNome)) mostraNotificaMezzo(rec, 'stato');
       });
     }
     _mezziIdVisti = new Set(ids);
+    _mezziStatiVisti = new Map(Object.entries(val).map(([id,rec]) => [id,rec.stato || 'segnalata']));
     _mezziInizializzato = true;
     renderSegnalazioniMezzi();
   });
@@ -3277,6 +3426,7 @@ window.switchView = function(name) {
   if (name === 'archivio')      renderArchivio();
   if (name === 'manutenzione')  renderManutenzione();
   if (name === 'mezzi')         renderSegnalazioniMezzi();
+  if (name === 'trasportatore') renderSegnalazioniMezziAutista();
   if (name === 'nuovo-cassone') { setNuovoCassoneFeedback('', ''); setTimeout(() => document.getElementById('nuovo-cas-id')?.focus(), 0); }
   if (name === 'setup') { renderCassoniSetup(); renderClientiDatalist(); }
 };
@@ -3755,15 +3905,18 @@ function applicaRuolo(ruolo) {
 }
 let _accessoDopoCambio = null;
 function finalizzaAccessoFirebase(firebaseUser, ruolo) {
-  avviaSubscriptions(ruolo);
-  document.getElementById('auth-overlay').classList.remove('open');
-  document.body.classList.remove('auth-locked');
   const nome = firebaseUser.email?.endsWith('@tracker-cassoni.test')
     ? firebaseUser.email.split('@')[0]
     : (firebaseUser.email || firebaseUser.displayName || firebaseUser.uid);
+  const nomeOperatore = firebaseUser.displayName?.trim() || firebaseUser.email?.split('@')[0] || firebaseUser.uid;
+  window._uidUtenteCorrente = firebaseUser.uid;
   window._nomeUtenteCorrente = nome;
-  aggiornaBadgeUtente(nome);
+  window._nomeOperatoreCorrente = nomeOperatore;
   applicaRuolo(ruolo);
+  avviaSubscriptions(ruolo);
+  document.getElementById('auth-overlay').classList.remove('open');
+  document.body.classList.remove('auth-locked');
+  aggiornaBadgeUtente(nome);
 }
 async function completaLoginFirebase(firebaseUser) {
   const ruoloSnap = await get(ref(db, `utenti_ruoli/${firebaseUser.uid}`));
