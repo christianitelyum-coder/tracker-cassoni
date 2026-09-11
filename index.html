@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="tracker-version" content="32">
+<meta name="tracker-version" content="33">
 <title>Tracker Cassoni</title>
 <style>
 /* ── RESET & BASE ──────────────────────────────── */
@@ -145,6 +145,9 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);min-height:10
 .man-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:1rem}
 .man-head h2{font-size:19px;font-weight:800;letter-spacing:-.02em;margin:0}
 .man-head p{font-size:12px;color:var(--ink3);margin-top:4px}
+.man-head-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-left:auto}
+.man-add-btn{background:var(--green-d);color:#fff;border:none;box-shadow:var(--shadow)}
+.man-add-btn:hover{background:var(--green)}
 .man-view-tabs{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:1rem}
 .man-view-tab{border:1.5px solid var(--border);background:var(--surface);color:var(--ink2);border-radius:8px;padding:8px 12px;font:700 12px var(--font);cursor:pointer}
 .man-view-tab:hover{border-color:var(--green);color:var(--green-d)}
@@ -594,7 +597,10 @@ body.auth-locked{overflow:hidden}
       <h2>🔧 Gestione interventi cassoni</h2>
       <p>Aggiorna lo stato dei lavori e comunica il ripristino all’ufficio trasporti.</p>
     </div>
-    <div id="man-count" style="font-size:13px;color:var(--ink3);padding-top:4px"></div>
+    <div class="man-head-actions">
+      <button type="button" id="man-add-cassone-btn" class="btn man-add-btn" onclick="apriInserimentoManutenzione()">＋ Inserisci cassone in manutenzione</button>
+      <div id="man-count" style="font-size:13px;color:var(--ink3);padding-top:4px"></div>
+    </div>
   </div>
   <div class="man-view-tabs" id="man-view-tabs" style="display:none" aria-label="Sezioni manutenzione">
     <button type="button" id="man-tab-aperte" class="man-view-tab active" onclick="impostaVistaManutenzione('aperte')">🔧 Interventi aperti <span id="man-tab-count-aperte">0</span></button>
@@ -1091,6 +1097,35 @@ body.auth-locked{overflow:hidden}
   </div>
 </div>
 
+<!-- Inserimento manuale cassone in manutenzione -->
+<div class="modal-overlay" id="man-add-modal" onclick="if(event.target===this)chiudiInserimentoManutenzione()" role="dialog" aria-modal="true" aria-labelledby="man-add-title">
+  <div class="modal" style="max-width:500px">
+    <div class="modal-header">
+      <span class="modal-title" id="man-add-title">🔧 Inserisci cassone in manutenzione</span>
+      <button type="button" class="modal-close" onclick="chiudiInserimentoManutenzione()" aria-label="Chiudi">×</button>
+    </div>
+    <div class="modal-body" style="display:flex;flex-direction:column;gap:14px">
+      <div class="presa-carico-field">
+        <label for="man-add-cassone">Codice cassone *</label>
+        <input id="man-add-cassone" list="man-add-cassoni-list" maxlength="40" autocomplete="off" autocapitalize="characters" placeholder="Digita o seleziona il codice">
+        <datalist id="man-add-cassoni-list"></datalist>
+      </div>
+      <div class="presa-carico-field">
+        <label for="man-add-problema">Problema / descrizione intervento *</label>
+        <textarea id="man-add-problema" maxlength="1000" placeholder="Descrivi il motivo dell’inserimento in manutenzione…"></textarea>
+      </div>
+      <div style="font-size:11px;line-height:1.5;color:var(--ink3);background:var(--surface2);border-radius:7px;padding:9px 10px">
+        Il cassone verrà inserito al <strong>Punto 0 · Segnalata</strong>. Se risulta fuori piazzale, sarà registrato automaticamente anche il rientro.
+      </div>
+      <div class="auth-error" id="man-add-error" role="alert"></div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-ghost" onclick="chiudiInserimentoManutenzione()">Annulla</button>
+      <button type="button" class="btn btn-primary" id="man-add-save" onclick="salvaInserimentoManutenzione()">✓ Inserisci in manutenzione</button>
+    </div>
+  </div>
+</div>
+
 <!-- Visualizzatore allegati manutenzione -->
 <div class="modal-overlay" id="presa-carico-modal" onclick="if(event.target===this)chiudiPresaInCarico()" role="dialog" aria-modal="true" aria-labelledby="presa-carico-title">
   <div class="modal" style="max-width:480px">
@@ -1257,7 +1292,7 @@ body.auth-locked{overflow:hidden}
 </div>
 
 <div class="toast" id="toast"></div>
-<div class="app-version" aria-label="Versione applicazione">Versione 32</div>
+<div class="app-version" aria-label="Versione applicazione">Versione 33</div>
 
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
@@ -1418,7 +1453,7 @@ function renderKPI() {
   const cas = Object.values(STATE.cassoni);
   const piazzale = cas.filter(c => c.stato === 'piazzale').length;
   const fuori    = cas.filter(c => c.stato === 'fuori').length;
-  const movs = Object.values(STATE.movimenti);
+  const movs = Object.values(STATE.movimenti).filter(m => !m.movimentoTecnico);
   const ddtPend  = movs.filter(m => m.tipo === 'USCITA' && !m.ddtNumero).length;
   const oggi     = movs.filter(m => isOggi(m.ts)).length;
   document.getElementById('kpi-piazzale').textContent  = piazzale;
@@ -1584,6 +1619,7 @@ function renderAdminSegnalazioniUscita() {
 function renderDashMovimenti() {
   const container = document.getElementById('dash-movimenti');
   const movs = Object.entries(STATE.movimenti)
+    .filter(([,m]) => !m.movimentoTecnico)
     .sort((a,b) => b[1].ts > a[1].ts ? 1 : -1)
     .slice(0, 12);
   if (!movs.length) { container.innerHTML = '<span style="font-size:12px;color:var(--ink3)">Nessun movimento</span>'; return; }
@@ -1613,6 +1649,7 @@ function renderBollettazione() {
   const ddt   = document.getElementById('filt-ddt').value;
   const data  = document.getElementById('filt-data').value;
   let movs = Object.entries(STATE.movimenti)
+    .filter(([,m]) => !m.movimentoTecnico)
     .sort((a,b) => b[1].ts > a[1].ts ? 1 : -1);
   if (tipo)  movs = movs.filter(([,m]) => m.tipo === tipo);
   if (ddt === 'pend')   movs = movs.filter(([,m]) => m.tipo === 'USCITA' && !m.ddtNumero);
@@ -1818,7 +1855,7 @@ async function eliminaMovimento(movId) {
 
   // Lo stato viene ricalcolato dall'ultimo movimento rimasto, non semplicemente invertito.
   const precedenti = Object.entries(STATE.movimenti)
-    .filter(([id, m]) => id !== movId && m.cassoneId === cassoneId)
+    .filter(([id, m]) => id !== movId && m.cassoneId === cassoneId && !m.movimentoTecnico)
     .sort((a, b) => String(b[1].ts || '').localeCompare(String(a[1].ts || '')));
   const ultimo = precedenti[0]?.[1] || null;
   const statoRipristino = ultimo ? (ultimo.tipo === 'USCITA' ? 'fuori' : 'piazzale') : 'piazzale';
@@ -2143,7 +2180,7 @@ async function registraMovimento(tipo) {
 }
 
 function renderTrasportatoreRecenti(autistaNome) {
-  const movs = Object.values(STATE.movimenti)
+  const movs = Object.values(STATE.movimenti).filter(m => !m.movimentoTecnico)
     .filter(m => !autistaNome || m.autista === autistaNome)
     .sort((a,b) => b.ts > a.ts ? 1 : -1)
     .slice(0, 5);
@@ -2555,7 +2592,7 @@ function cespiteCassone(c = {}) {
 
 function exportCSV() {
   const rows = [['Data','Ora','Cassone','Tipo','Matricola','Cespite','Movimento','Cliente','Autista','Note','N° DDT','Data DDT']];
-  Object.values(STATE.movimenti).sort((a,b)=>b.ts>a.ts?1:-1).forEach(m => {
+  Object.values(STATE.movimenti).filter(m => !m.movimentoTecnico).sort((a,b)=>b.ts>a.ts?1:-1).forEach(m => {
     const d = new Date(m.ts);
     const cassone = STATE.cassoni[m.cassoneId] || {};
     rows.push([
@@ -2600,6 +2637,8 @@ function renderManutenzione() {
   if (!tbody) return;
 
   const puoGestire = ['admin','manutenzione'].includes(window._ruoloCorrente);
+  const addBtn = document.getElementById('man-add-cassone-btn');
+  if (addBtn) addBtn.style.display = puoGestire ? 'inline-flex' : 'none';
   if (!puoGestire) _vistaManutenzione = 'aperte';
   const statoIntervento = m => m.manutenzioneStato || 'segnalata';
 
@@ -2731,6 +2770,103 @@ function renderManutenzione() {
     </tr>`;
   }).join('');
 }
+
+window.apriInserimentoManutenzione = function() {
+  if (!['admin','manutenzione'].includes(window._ruoloCorrente)) {
+    toast('Operazione non consentita', 'err'); return;
+  }
+  const lista = document.getElementById('man-add-cassoni-list');
+  lista.innerHTML = Object.entries(STATE.cassoni || {})
+    .sort((a,b) => a[0].localeCompare(b[0], 'it', {numeric:true}))
+    .map(([id,c]) => `<option value="${escapeHTML(id)}">${escapeHTML(c.tipo || '')} · ${c.stato === 'fuori' ? 'Fuori' : 'In piazzale'}</option>`)
+    .join('');
+  document.getElementById('man-add-cassone').value = '';
+  document.getElementById('man-add-problema').value = '';
+  document.getElementById('man-add-error').textContent = '';
+  document.getElementById('man-add-modal').classList.add('open');
+  setTimeout(() => document.getElementById('man-add-cassone')?.focus(), 0);
+};
+
+window.chiudiInserimentoManutenzione = function() {
+  document.getElementById('man-add-modal')?.classList.remove('open');
+};
+
+window.salvaInserimentoManutenzione = async function() {
+  const errorEl = document.getElementById('man-add-error');
+  const btn = document.getElementById('man-add-save');
+  const cassoneId = document.getElementById('man-add-cassone').value.trim().toUpperCase();
+  const problema = document.getElementById('man-add-problema').value.trim();
+  if (!db || !['admin','manutenzione'].includes(window._ruoloCorrente)) {
+    errorEl.textContent = 'Operazione non consentita.'; return;
+  }
+  const cas = STATE.cassoni[cassoneId];
+  if (!cassoneId || !cas) {
+    errorEl.textContent = 'Seleziona un codice cassone presente nell’elenco.'; return;
+  }
+  if (!problema) {
+    errorEl.textContent = 'Descrivi il problema o l’intervento richiesto.';
+    document.getElementById('man-add-problema').focus(); return;
+  }
+  const interventoAperto = Object.values(STATE.movimenti || {}).some(m =>
+    m.cassoneId === cassoneId && !m.manutenzioneEliminata && estraiFlag(m.note).length &&
+    !segnalazioneInAttesaRientro(m) && (m.manutenzioneStato || 'segnalata') !== 'ripristinato'
+  );
+  if (interventoAperto) {
+    errorEl.textContent = 'Questo cassone ha già una manutenzione aperta.'; return;
+  }
+
+  btn.disabled = true;
+  const ts = now();
+  const eraFuori = cas.stato === 'fuori';
+  const movRef = push(ref(db, 'movimenti'));
+  const nuovoMov = {
+    cassoneId,
+    tipo: eraFuori ? 'RIENTRO' : 'MANUTENZIONE',
+    ts,
+    cliente: eraFuori ? (cas.clienteAttuale || 'Rientro automatico per manutenzione') : 'Piazzale Centro Risorse',
+    autista: window._nomeUtenteCorrente || '',
+    note: `Altro: ${problema}`,
+    ddtNumero:'', ddtTs:'',
+    manutenzioneInseritaManualmente:true,
+    manutenzioneInseritaDa:window._nomeUtenteCorrente || '',
+    manutenzioneStato:'segnalata',
+    manutenzioneAggiornatoIl:ts,
+    manutenzioneAttivataIl:ts,
+    manutenzioneInAttesaRientro:false,
+    manutenzioneTimeline:{segnalata:ts}
+  };
+  if (!eraFuori) nuovoMov.movimentoTecnico = true;
+
+  try {
+    const updates = {};
+    updates[`movimenti/${movRef.key}`] = nuovoMov;
+    if (eraFuori) {
+      updates[`cassoni/${cassoneId}/stato`] = 'piazzale';
+      updates[`cassoni/${cassoneId}/clienteAttuale`] = '';
+      updates[`cassoni/${cassoneId}/lastMov`] = ts;
+      // Il rientro automatico attiva anche eventuali segnalazioni nate durante l'uscita.
+      Object.entries(STATE.movimenti || {}).forEach(([id,m]) => {
+        if (m.cassoneId !== cassoneId || m.tipo !== 'USCITA' || m.manutenzioneEliminata) return;
+        if (!estraiFlag(m.note).length || (m.manutenzioneStato || 'segnalata') !== 'segnalata') return;
+        if (!segnalazioneInAttesaRientro(m)) return;
+        updates[`movimenti/${id}/manutenzioneInAttesaRientro`] = false;
+        updates[`movimenti/${id}/manutenzioneAttivataIl`] = ts;
+        updates[`movimenti/${id}/manutenzioneAggiornatoIl`] = ts;
+        updates[`movimenti/${id}/manutenzioneTimeline/segnalata`] = ts;
+      });
+    }
+    await update(ref(db, '/'), updates);
+    chiudiInserimentoManutenzione();
+    toast(eraFuori
+      ? `✓ ${cassoneId}: rientro automatico e manutenzione registrati`
+      : `✓ ${cassoneId} inserito in manutenzione al punto 0`, 'ok');
+  } catch(err) {
+    console.error(err);
+    errorEl.textContent = 'Errore durante il salvataggio. Riprova.';
+  } finally {
+    btn.disabled = false;
+  }
+};
 
 window.resetFiltriManutenzione = function() {
   ['man-cerca','man-filtro-avanzamento','man-filtro-flag','man-filtro-stato'].forEach(id => {
