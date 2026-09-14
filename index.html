@@ -3,8 +3,26 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="tracker-version" content="33">
-<title>Tracker Cassoni</title>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<meta name="tracker-version" content="37">
+<title>Tracker Cassoni — v37</title>
+<script>
+// Evita che una vecchia installazione/PWA continui a mostrare un index precedente.
+(function(){
+  var build = '37';
+  try {
+    if ('serviceWorker' in navigator) navigator.serviceWorker.getRegistrations().then(function(regs){
+      regs.forEach(function(reg){ reg.unregister(); });
+    });
+    if ('caches' in window) caches.keys().then(function(keys){
+      keys.forEach(function(key){ caches.delete(key); });
+    });
+    sessionStorage.setItem('tracker_build_caricato', build);
+  } catch(e) { console.warn('Pulizia cache non disponibile:', e); }
+})();
+</script>
 <style>
 /* ── RESET & BASE ──────────────────────────────── */
 *{box-sizing:border-box;margin:0;padding:0}
@@ -170,6 +188,13 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);min-height:10
 .man-page .mov-table th:nth-child(5){width:22%}
 .man-page .mov-table th:nth-child(6){width:20%}
 .man-page .mov-table th:nth-child(7){width:17%}
+.man-page .mov-table.man-closed-view th:nth-child(6),.man-page .mov-table.man-closed-view td:nth-child(6){display:none}
+.man-page .mov-table.man-closed-view th:nth-child(1){width:12.5%}
+.man-page .mov-table.man-closed-view th:nth-child(2){width:10%}
+.man-page .mov-table.man-closed-view th:nth-child(3){width:8.75%}
+.man-page .mov-table.man-closed-view th:nth-child(4){width:20%}
+.man-page .mov-table.man-closed-view th:nth-child(5){width:27.5%}
+.man-page .mov-table.man-closed-view th:nth-child(7){width:21.25%}
 .man-progress{display:flex;align-items:center;width:100%;min-width:0}
 .man-step{display:flex;align-items:center;flex:1;min-width:0}
 .man-step:last-child{flex:0 0 auto}
@@ -635,7 +660,7 @@ body.auth-locked{overflow:hidden}
     <button class="btn btn-ghost btn-sm" type="button" onclick="resetFiltriManutenzione()">✕ Reset filtri</button>
   </div>
   <div class="card" style="overflow-x:auto">
-  <table class="mov-table">
+  <table class="mov-table" id="man-table">
     <thead>
       <tr>
         <th>Segnalazione</th>
@@ -1292,7 +1317,7 @@ body.auth-locked{overflow:hidden}
 </div>
 
 <div class="toast" id="toast"></div>
-<div class="app-version" aria-label="Versione applicazione">Versione 33</div>
+<div class="app-version" aria-label="Versione applicazione">Versione 37</div>
 
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
@@ -2636,6 +2661,9 @@ function renderManutenzione() {
   const countEl  = document.getElementById('man-count');
   if (!tbody) return;
 
+  const manTable = document.getElementById('man-table');
+  if (manTable) manTable.classList.toggle('man-closed-view', _vistaManutenzione === 'chiuse');
+
   const puoGestire = ['admin','manutenzione'].includes(window._ruoloCorrente);
   const addBtn = document.getElementById('man-add-cassone-btn');
   if (addBtn) addBtn.style.display = puoGestire ? 'inline-flex' : 'none';
@@ -2821,7 +2849,10 @@ window.salvaInserimentoManutenzione = async function() {
   const movRef = push(ref(db, 'movimenti'));
   const nuovoMov = {
     cassoneId,
-    tipo: eraFuori ? 'RIENTRO' : 'MANUTENZIONE',
+    // Le regole del database ammettono esclusivamente USCITA o RIENTRO.
+    // Quando il cassone è già in piazzale il record resta tecnico e viene
+    // escluso dalle viste dei movimenti, ma mantiene un tipo valido.
+    tipo: 'RIENTRO',
     ts,
     cliente: eraFuori ? (cas.clienteAttuale || 'Rientro automatico per manutenzione') : 'Piazzale Centro Risorse',
     autista: window._nomeUtenteCorrente || '',
@@ -2862,7 +2893,10 @@ window.salvaInserimentoManutenzione = async function() {
       : `✓ ${cassoneId} inserito in manutenzione al punto 0`, 'ok');
   } catch(err) {
     console.error(err);
-    errorEl.textContent = 'Errore durante il salvataggio. Riprova.';
+    const codice = String(err?.code || '').toLowerCase();
+    errorEl.textContent = codice.includes('permission')
+      ? 'Salvataggio non autorizzato per questo profilo. Verifica le regole di accesso al database.'
+      : `Errore durante il salvataggio${err?.message ? ': ' + err.message : '. Riprova.'}`;
   } finally {
     btn.disabled = false;
   }
