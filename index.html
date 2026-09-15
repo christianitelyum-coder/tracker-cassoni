@@ -6,12 +6,12 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="tracker-version" content="37">
-<title>Tracker Cassoni — v37</title>
+<meta name="tracker-version" content="38">
+<title>Tracker Cassoni — v38</title>
 <script>
 // Evita che una vecchia installazione/PWA continui a mostrare un index precedente.
 (function(){
-  var build = '37';
+  var build = '38';
   try {
     if ('serviceWorker' in navigator) navigator.serviceWorker.getRegistrations().then(function(regs){
       regs.forEach(function(reg){ reg.unregister(); });
@@ -1317,7 +1317,7 @@ body.auth-locked{overflow:hidden}
 </div>
 
 <div class="toast" id="toast"></div>
-<div class="app-version" aria-label="Versione applicazione">Versione 37</div>
+<div class="app-version" aria-label="Versione applicazione">Versione 38</div>
 
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
@@ -2642,6 +2642,18 @@ function estraiFlag(note) {
   return FLAGS.filter(f => note.includes(f));
 }
 
+// Le manutenzioni inserite dal profilo manutentore vengono collegate a un
+// movimento esistente, senza creare un nuovo movimento logistico. Il problema
+// resta in un campo dedicato e viene presentato come segnalazione "Altro".
+function testoSegnalazioneManutenzione(m) {
+  if (m?.manutenzioneProblema) return `Altro: ${m.manutenzioneProblema}`;
+  return m?.note || '';
+}
+
+function dataSegnalazioneManutenzione(m) {
+  return m?.manutenzioneSegnalataIl || m?.ts || '';
+}
+
 let _vistaManutenzione = 'aperte';
 
 window.impostaVistaManutenzione = function(vista) {
@@ -2674,19 +2686,20 @@ function renderManutenzione() {
   const movs = Object.entries(STATE.movimenti || {})
     .filter(([,m]) => {
       if (m.manutenzioneEliminata === true) return false;
-      const flags = estraiFlag(m.note);
+      const testoManutenzione = testoSegnalazioneManutenzione(m);
+      const flags = estraiFlag(testoManutenzione);
       if (!flags.length) return false;
       if (segnalazioneInAttesaRientro(m)) return false;
       if (filtroF && !flags.some(f => f.startsWith(filtroF))) return false;
       if (ricerca) {
         const cas = STATE.cassoni[m.cassoneId] || {};
-        const testo = [m.cassoneId, m.cliente, m.autista, m.note, m.manutenzioneOperatore, m.manutenzioneNote, cas.tipo, cas.stato]
+        const testo = [m.cassoneId, m.cliente, m.autista, testoManutenzione, m.manutenzioneOperatore, m.manutenzioneNote, cas.tipo, cas.stato]
           .filter(Boolean).join(' ').toLowerCase();
         if (!testo.includes(ricerca)) return false;
       }
       return true;
     })
-    .sort((a,b) => new Date(b[1].ts || 0).getTime() - new Date(a[1].ts || 0).getTime());
+    .sort((a,b) => new Date(dataSegnalazioneManutenzione(b[1]) || 0).getTime() - new Date(dataSegnalazioneManutenzione(a[1]) || 0).getTime());
 
   // Filtra per stato cassone
   const tutteLeRows = movs.filter(([,m]) => {
@@ -2724,11 +2737,12 @@ function renderManutenzione() {
 
   tbody.innerHTML = rows.map(([id,m]) => {
     const cas   = STATE.cassoni[m.cassoneId] || {};
-    const flags = estraiFlag(m.note);
-    const noteLibera = (m.note||'').split(' | ')
+    const testoManutenzione = testoSegnalazioneManutenzione(m);
+    const flags = estraiFlag(testoManutenzione);
+    const noteLibera = testoManutenzione.split(' | ')
       .filter(p => !FLAGS.some(f => p.startsWith(f)))
       .join(' | ');
-    const altroTesto = (m.note||'').match(/Altro: ([^|]+)/)?.[1]?.trim() || '';
+    const altroTesto = testoManutenzione.match(/Altro: ([^|]+)/)?.[1]?.trim() || '';
     const flagBadges = flags.map(f => {
       const ico = f.startsWith('Altro') ? '⚠️' : (FLAG_ICONS[f]||'⚠️');
       const label = f.startsWith('Altro') && altroTesto ? `Altro: ${altroTesto}` : f;
@@ -2769,7 +2783,7 @@ function renderManutenzione() {
     }
 
     const subjectFine = encodeURIComponent(`Lavoro ultimato – cassone ${m.cassoneId}`);
-    const bodyFine = encodeURIComponent(`Buongiorno,\n\nsi conferma che l’intervento sul cassone ${m.cassoneId} (${cas.tipo||'tipo non indicato'}) è stato ultimato.\n\nProblema segnalato: ${flags.join(', ') || '—'}${noteLibera ? '\nNote segnalazione: ' + noteLibera : ''}${m.manutenzioneNote ? '\nNote manutenzione: ' + m.manutenzioneNote : ''}\nData segnalazione: ${fmtDT(m.ts)}\nData ripristino: ${fmtDT(m.manutenzioneAggiornatoIl)}\nOperatore: ${m.manutenzioneOperatore || window._nomeUtenteCorrente || '—'}\n\nIl cassone risulta ripristinato.\n\nCordiali saluti`);
+    const bodyFine = encodeURIComponent(`Buongiorno,\n\nsi conferma che l’intervento sul cassone ${m.cassoneId} (${cas.tipo||'tipo non indicato'}) è stato ultimato.\n\nProblema segnalato: ${flags.join(', ') || '—'}${noteLibera ? '\nNote segnalazione: ' + noteLibera : ''}${m.manutenzioneNote ? '\nNote manutenzione: ' + m.manutenzioneNote : ''}\nData segnalazione: ${fmtDT(dataSegnalazioneManutenzione(m))}\nData ripristino: ${fmtDT(m.manutenzioneAggiornatoIl)}\nOperatore: ${m.manutenzioneOperatore || window._nomeUtenteCorrente || '—'}\n\nIl cassone risulta ripristinato.\n\nCordiali saluti`);
     const mailtoFine = `mailto:trasporti.centrorisorse@itelyum.com?subject=${subjectFine}&body=${bodyFine}`;
     const mailFineInviata = m.mailRipristino;
     const btnChiusura = mailFineInviata
@@ -2788,7 +2802,7 @@ function renderManutenzione() {
       : btnChiusura;
 
     return `<tr>
-      <td style="white-space:nowrap;color:var(--ink2);font-size:12px">${fmtDT(m.ts)}<br><span style="font-size:10px;color:var(--ink3)">${escapeHTML(m.cliente||'—')}</span></td>
+      <td style="white-space:nowrap;color:var(--ink2);font-size:12px">${fmtDT(dataSegnalazioneManutenzione(m))}<br><span style="font-size:10px;color:var(--ink3)">${escapeHTML(m.cliente||'—')}</span></td>
       <td><strong>${escapeHTML(m.cassoneId)}</strong><br><span style="font-size:10px;color:var(--ink3)">${escapeHTML(cas.tipo||'—')}</span></td>
       <td><span class="status-pill ${statoCls}" style="font-size:11px">${statoLbl}</span></td>
       <td>${flagBadges}${fotoThumbs}${noteLibera?`<div style="color:var(--ink2);font-size:11px;margin-top:5px">${escapeHTML(noteLibera)}</div>`:''}</td>
@@ -2836,7 +2850,7 @@ window.salvaInserimentoManutenzione = async function() {
     document.getElementById('man-add-problema').focus(); return;
   }
   const interventoAperto = Object.values(STATE.movimenti || {}).some(m =>
-    m.cassoneId === cassoneId && !m.manutenzioneEliminata && estraiFlag(m.note).length &&
+    m.cassoneId === cassoneId && !m.manutenzioneEliminata && estraiFlag(testoSegnalazioneManutenzione(m)).length &&
     !segnalazioneInAttesaRientro(m) && (m.manutenzioneStato || 'segnalata') !== 'ripristinato'
   );
   if (interventoAperto) {
@@ -2869,6 +2883,38 @@ window.salvaInserimentoManutenzione = async function() {
   if (!eraFuori) nuovoMov.movimentoTecnico = true;
 
   try {
+    // Il profilo manutenzione non crea movimenti logistici: collega la nuova
+    // segnalazione all'ultimo movimento del cassone, operazione compatibile
+    // con i permessi già usati per cambiare gli stati di avanzamento.
+    if (window._ruoloCorrente === 'manutenzione') {
+      const ultimoMovimento = Object.entries(STATE.movimenti || {})
+        .filter(([,m]) => m.cassoneId === cassoneId && !m.movimentoTecnico)
+        .sort((a,b) => new Date(b[1].ts || 0).getTime() - new Date(a[1].ts || 0).getTime())[0];
+      if (!ultimoMovimento) throw new Error('NESSUN_MOVIMENTO_CASSONE');
+      const [ultimoId] = ultimoMovimento;
+      await update(ref(db, `movimenti/${ultimoId}`), {
+        manutenzioneProblema:problema,
+        manutenzioneInseritaManualmente:true,
+        manutenzioneInseritaDa:window._nomeUtenteCorrente || '',
+        manutenzioneSegnalataIl:ts,
+        manutenzioneStato:'segnalata',
+        manutenzioneAggiornatoIl:ts,
+        manutenzioneAttivataIl:ts,
+        manutenzioneInAttesaRientro:false,
+        manutenzioneEliminata:false,
+        manutenzioneTimeline:{segnalata:ts}
+      });
+      if (eraFuori) {
+        await update(ref(db, `cassoni/${cassoneId}`), {
+          stato:'piazzale', clienteAttuale:'', lastMov:ts
+        });
+      }
+      chiudiInserimentoManutenzione();
+      toast(eraFuori
+        ? `✓ ${cassoneId}: rientro automatico e manutenzione registrati`
+        : `✓ ${cassoneId} inserito in manutenzione al punto 0`, 'ok');
+      return;
+    }
     const updates = {};
     updates[`movimenti/${movRef.key}`] = nuovoMov;
     if (eraFuori) {
@@ -2894,7 +2940,9 @@ window.salvaInserimentoManutenzione = async function() {
   } catch(err) {
     console.error(err);
     const codice = String(err?.code || '').toLowerCase();
-    errorEl.textContent = codice.includes('permission')
+    errorEl.textContent = String(err?.message || '').includes('NESSUN_MOVIMENTO_CASSONE')
+      ? 'Il cassone non ha ancora movimenti associati. Effettua il primo inserimento tramite un profilo amministratore.'
+      : codice.includes('permission')
       ? 'Salvataggio non autorizzato per questo profilo. Verifica le regole di accesso al database.'
       : `Errore durante il salvataggio${err?.message ? ': ' + err.message : '. Riprova.'}`;
   } finally {
