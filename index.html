@@ -6,12 +6,12 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="tracker-version" content="38">
-<title>Tracker Cassoni — v38</title>
+<meta name="tracker-version" content="39">
+<title>Tracker Cassoni — v39</title>
 <script>
 // Evita che una vecchia installazione/PWA continui a mostrare un index precedente.
 (function(){
-  var build = '38';
+  var build = '39';
   try {
     if ('serviceWorker' in navigator) navigator.serviceWorker.getRegistrations().then(function(regs){
       regs.forEach(function(reg){ reg.unregister(); });
@@ -291,6 +291,15 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);min-height:10
 .mezzo-cat-btn.active{background:var(--amber-l);border-color:var(--amber);box-shadow:0 0 0 1px var(--amber) inset}
 .mezzo-cat-btn.active .mezzo-cat-lbl{color:var(--amber)}
 .mezzo-cat-badge{position:absolute;top:-7px;right:-7px;background:var(--amber);color:#fff;font-size:10px;font-weight:800;border-radius:10px;min-width:17px;height:17px;line-height:17px;text-align:center;padding:0 4px;box-shadow:0 1px 3px rgba(0,0,0,.25)}
+.mezzi-view-tabs{display:flex;gap:8px;flex-wrap:wrap;margin-left:auto}
+.mezzi-view-tab{border:1.5px solid var(--border);background:var(--surface);color:var(--ink2);border-radius:8px;padding:8px 12px;font:700 12px var(--font);cursor:pointer}
+.mezzi-view-tab.active{background:var(--green);border-color:var(--green);color:#fff}
+.mezzi-report-list{display:grid;gap:10px;margin-top:12px}
+.mezzi-report-row{display:grid;grid-template-columns:minmax(105px,.8fr) minmax(105px,.8fr) minmax(150px,1.4fr) minmax(130px,1fr) auto;gap:10px;align-items:center;padding:12px 14px;border:1px solid var(--border);border-radius:10px;background:var(--surface)}
+.mezzi-report-label{font-size:9px;color:var(--ink3);font-weight:800;text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:2px}
+.mezzi-report-value{font-size:12px;color:var(--ink2);font-weight:650;line-height:1.35}
+.mezzi-report-actions{display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap}
+@media(max-width:850px){.mezzi-view-tabs{margin-left:0;width:100%}.mezzi-view-tab{flex:1}.mezzi-report-row{grid-template-columns:1fr 1fr}.mezzi-report-actions{grid-column:1/-1;justify-content:stretch}.mezzi-report-actions .btn{flex:1}}
 .autista-open-flags{display:none;background:var(--surface);border-radius:var(--radius);padding:1.1rem;box-shadow:var(--shadow);border:1.5px solid #fca5a5;border-left:5px solid var(--red);margin-bottom:1rem}
 .autista-open-flags.visible{display:block}
 .autista-open-title{display:flex;align-items:center;justify-content:space-between;gap:8px;color:var(--red);font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;margin-bottom:9px}
@@ -682,9 +691,22 @@ body.auth-locked{overflow:hidden}
 <div class="view" id="view-mezzi">
 <div class="boll-toolbar" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
   <h2 style="margin:0;font-size:16px;font-weight:800;letter-spacing:-.01em">🚩 Segnalazione Manutenzioni Mezzi</h2>
+  <div class="mezzi-view-tabs">
+    <button type="button" class="mezzi-view-tab active" id="mezzi-tab-operative" onclick="impostaVistaMezzi('operative')">🚩 Segnalazioni</button>
+    <button type="button" class="mezzi-view-tab" id="mezzi-tab-report" onclick="impostaVistaMezzi('report')">📁 Archivio report PDF</button>
+  </div>
 </div>
 <div id="mezzi-count" style="font-size:13px;color:var(--ink3);margin:8px 0 4px"></div>
-<div id="mezzi-groups"></div>
+<div id="mezzi-operative-panel"><div id="mezzi-groups"></div></div>
+<div id="mezzi-report-panel" style="display:none">
+  <div class="card" style="margin-top:10px">
+    <div class="card-header"><div class="card-title">📁 Report manutenzioni mezzi</div></div>
+    <div class="card-body">
+      <div style="font-size:11px;color:var(--ink3);line-height:1.5">I report restano disponibili anche dopo la rimozione della segnalazione dall'elenco operativo.</div>
+      <div id="mezzi-report-list" class="mezzi-report-list"></div>
+    </div>
+  </div>
+</div>
 </div>
 
 <div class="view" id="view-trasportatore">
@@ -791,6 +813,14 @@ body.auth-locked{overflow:hidden}
     <div class="form-row">
       <label class="form-lbl">Targa</label>
       <input class="form-ctrl" id="mezzo-targa" placeholder="Es. AB123CD" autocapitalize="characters">
+    </div>
+    <div class="form-row" style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div><label class="form-lbl">Tipologia mezzo</label><input class="form-ctrl" id="mezzo-tipologia" placeholder="Es. autoarticolato"></div>
+      <div><label class="form-lbl">Marca e modello</label><input class="form-ctrl" id="mezzo-modello" placeholder="Es. Iveco S-Way"></div>
+    </div>
+    <div class="form-row">
+      <label class="form-lbl">Priorità</label>
+      <select class="form-ctrl" id="mezzo-priorita"><option value="media">Media</option><option value="alta">Alta</option><option value="urgente">Urgente</option><option value="bassa">Bassa</option></select>
     </div>
     <div class="form-row">
       <label class="form-lbl">Anomalia riscontrata</label>
@@ -1317,7 +1347,7 @@ body.auth-locked{overflow:hidden}
 </div>
 
 <div class="toast" id="toast"></div>
-<div class="app-version" aria-label="Versione applicazione">Versione 38</div>
+<div class="app-version" aria-label="Versione applicazione">Versione 39</div>
 
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
@@ -3367,6 +3397,9 @@ function aggiornaBottoneCategoriaMezzo(cat) {
 async function inviaSegnalazioneMezzo() {
   if (!db) { toast('Firebase non connesso', 'err'); return; }
   const targa     = document.getElementById('mezzo-targa').value.trim().toUpperCase();
+  const tipologia = document.getElementById('mezzo-tipologia').value.trim();
+  const modello   = document.getElementById('mezzo-modello').value.trim();
+  const priorita  = document.getElementById('mezzo-priorita').value;
   const posizione = document.getElementById('mezzo-posizione').value.trim();
   const categorie = Object.keys(_mezzoDettagli).filter(cat => _mezzoDettagli[cat].size > 0);
   if (!targa)            { toast('Inserisci la targa del mezzo', 'err'); return; }
@@ -3378,13 +3411,16 @@ async function inviaSegnalazioneMezzo() {
   const ts = now();
 
   await push(ref(db, 'segnalazioniMezzi'), {
-    targa, categorie, dettagli, posizione, autista, segnalatoDaUid, ts,
+    targa, tipologia, modello, priorita, categorie, dettagli, posizione, autista, segnalatoDaUid, ts,
     stato:'segnalata', statoAggiornatoIl:ts,
-    statoTimeline:{segnalata:ts}
+    statoTimeline:{segnalata:ts}, reportArchiviato:true, reportCreatoIl:ts
   });
 
   toast('✓ Segnalazione mezzo inviata', 'ok');
   document.getElementById('mezzo-targa').value = '';
+  document.getElementById('mezzo-tipologia').value = '';
+  document.getElementById('mezzo-modello').value = '';
+  document.getElementById('mezzo-priorita').value = 'media';
   document.getElementById('mezzo-posizione').value = '';
   Object.keys(_mezzoDettagli).forEach(cat => { _mezzoDettagli[cat].clear(); _mezzoAltroTesto[cat] = ''; aggiornaBottoneCategoriaMezzo(cat); });
 }
@@ -3396,7 +3432,10 @@ function renderSegnalazioniMezzi() {
   if (!container) return;
   renderSegnalazioniMezziAutista();
   const all = Object.entries(STATE.segnalazioniMezzi || {})
+    .filter(([,r]) => !r.eliminata)
     .sort((a,b) => (b[1].ts||'') > (a[1].ts||'') ? 1 : -1);
+
+  renderArchivioReportMezzi();
 
   if (countEl) countEl.textContent = all.length
     ? `${all.length} segnalazion${all.length===1?'e':'i'}`
@@ -3458,6 +3497,113 @@ function renderSegnalazioniMezzi() {
 }
 window.renderSegnalazioniMezzi = renderSegnalazioniMezzi;
 
+let _vistaMezzi = 'operative';
+window.impostaVistaMezzi = function(vista) {
+  _vistaMezzi = vista === 'report' ? 'report' : 'operative';
+  document.getElementById('mezzi-operative-panel').style.display = _vistaMezzi === 'operative' ? '' : 'none';
+  document.getElementById('mezzi-report-panel').style.display = _vistaMezzi === 'report' ? '' : 'none';
+  document.getElementById('mezzi-tab-operative').classList.toggle('active', _vistaMezzi === 'operative');
+  document.getElementById('mezzi-tab-report').classList.toggle('active', _vistaMezzi === 'report');
+  renderArchivioReportMezzi();
+};
+
+function descrizioneProblemiMezzo(rec) {
+  return (rec.categorie || []).flatMap(cat => (rec.dettagli && rec.dettagli[cat]) || []).filter(Boolean);
+}
+
+function renderArchivioReportMezzi() {
+  const list = document.getElementById('mezzi-report-list');
+  if (!list) return;
+  const reports = Object.entries(STATE.segnalazioniMezzi || {})
+    .sort((a,b) => new Date(b[1].ts || 0) - new Date(a[1].ts || 0));
+  if (!reports.length) {
+    list.innerHTML = '<div style="padding:1.2rem;text-align:center;color:var(--ink3);font-style:italic">Nessun report archiviato</div>';
+    return;
+  }
+  const statoLabel = {segnalata:'Segnalata',presa_carico:'Presa in carico',in_manutenzione:'In manutenzione',ripristinato:'Ripristinata'};
+  list.innerHTML = reports.map(([id,r]) => {
+    const problemi = descrizioneProblemiMezzo(r).join(' · ') || 'Anomalia non specificata';
+    return `<div class="mezzi-report-row">
+      <div><span class="mezzi-report-label">Data</span><span class="mezzi-report-value">${fmtDT(r.ts)}</span></div>
+      <div><span class="mezzi-report-label">Targa</span><span class="mezzi-report-value"><strong>${escapeHTML(r.targa || '—')}</strong></span></div>
+      <div><span class="mezzi-report-label">Problematica</span><span class="mezzi-report-value">${escapeHTML(problemi)}</span></div>
+      <div><span class="mezzi-report-label">Stato</span><span class="mezzi-report-value">${escapeHTML(statoLabel[r.stato || 'segnalata'] || r.stato || 'Segnalata')}</span></div>
+      <div class="mezzi-report-actions">
+        <button type="button" class="btn btn-ghost btn-sm" onclick="visualizzaReportMezzo('${id}')">👁 Visualizza</button>
+        <button type="button" class="btn btn-primary btn-sm" onclick="scaricaReportMezzo('${id}')">⬇ PDF</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function creaSchedaReportMezzo(id) {
+  const r = STATE.segnalazioniMezzi[id];
+  if (!r) return null;
+  const categorie = (r.categorie || []).map(cat => CATEGORIE_MEZZO[cat]?.label || cat).join(', ') || '—';
+  const problemi = descrizioneProblemiMezzo(r);
+  const stati = [
+    ['Segnalata', r.statoTimeline?.segnalata || r.ts],
+    ['Presa in carico', r.statoTimeline?.presa_carico],
+    ['In manutenzione', r.statoTimeline?.in_manutenzione],
+    ['Ripristinata', r.statoTimeline?.ripristinato]
+  ].filter(([,ts]) => ts);
+  const priorita = {bassa:'Bassa',media:'Media',alta:'Alta',urgente:'Urgente'}[r.priorita] || r.priorita || 'Media';
+  const el = document.createElement('div');
+  el.style.cssText = 'position:fixed;left:-20000px;top:0;width:760px;background:#fff;color:#17324d;font-family:Arial,sans-serif;padding:38px 42px;box-sizing:border-box';
+  el.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;border-bottom:4px solid #2f9e8f;padding-bottom:18px;margin-bottom:24px">
+      <div><div style="font-size:30px;font-weight:900;letter-spacing:.04em;color:#153a5b">ITELYUM</div><div style="font-size:11px;color:#688297;margin-top:4px;text-transform:uppercase;letter-spacing:.12em">Tracker Cassoni</div></div>
+      <div style="text-align:right"><div style="font-size:20px;font-weight:800;color:#2f9e8f">REPORT MANUTENZIONE MEZZO</div><div style="font-size:11px;color:#688297;margin-top:5px">Rif. ${escapeHTML(id)}</div></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:13px 24px;background:#f1f7f6;border-radius:10px;padding:18px 20px;margin-bottom:20px">
+      ${[['Autista',r.autista],['Data segnalazione',fmtDT(r.ts)],['Tipologia mezzo',r.tipologia],['Targa',r.targa],['Marca e modello',r.modello],['Priorità',priorita],['Posizione',r.posizione],['Stato attuale',({segnalata:'Segnalata',presa_carico:'Presa in carico',in_manutenzione:'In manutenzione',ripristinato:'Ripristinata'}[r.stato||'segnalata'])]].map(([l,v]) => `<div><div style="font-size:9px;color:#688297;font-weight:800;text-transform:uppercase;letter-spacing:.08em">${l}</div><div style="font-size:14px;font-weight:700;margin-top:4px;min-height:18px">${escapeHTML(v || '—')}</div></div>`).join('')}
+    </div>
+    <div style="margin-bottom:18px"><div style="font-size:11px;color:#2f9e8f;font-weight:900;text-transform:uppercase;letter-spacing:.08em;border-bottom:2px solid #c9dfdc;padding-bottom:7px">Categoria anomalia</div><div style="font-size:14px;font-weight:700;padding:12px 2px">${escapeHTML(categorie)}</div></div>
+    <div style="margin-bottom:22px"><div style="font-size:11px;color:#2f9e8f;font-weight:900;text-transform:uppercase;letter-spacing:.08em;border-bottom:2px solid #c9dfdc;padding-bottom:7px">Descrizione problematica</div><div style="font-size:14px;line-height:1.65;padding:12px 2px;min-height:110px">${problemi.length ? problemi.map(p => `• ${escapeHTML(p)}`).join('<br>') : '—'}</div></div>
+    <div><div style="font-size:11px;color:#2f9e8f;font-weight:900;text-transform:uppercase;letter-spacing:.08em;border-bottom:2px solid #c9dfdc;padding-bottom:7px">Cronologia avanzamento</div><table style="width:100%;border-collapse:collapse;margin-top:10px;font-size:12px">${stati.map(([s,ts]) => `<tr><td style="padding:8px;border-bottom:1px solid #dce8e6;font-weight:700">${s}</td><td style="padding:8px;border-bottom:1px solid #dce8e6;text-align:right">${fmtDT(ts)}</td></tr>`).join('')}</table></div>
+    <div style="display:flex;justify-content:space-between;margin-top:38px;padding-top:14px;border-top:1px solid #dce8e6;font-size:10px;color:#688297"><span>Report generato il ${new Date().toLocaleString('it-IT')}</span><span>Documento archiviato digitalmente</span></div>`;
+  document.body.appendChild(el);
+  return {el, r};
+}
+
+function opzioniPdfReportMezzo(r) {
+  const targa = String(r.targa || 'mezzo').replace(/[^A-Za-z0-9_-]/g,'_');
+  const data = String(r.ts || now()).slice(0,10);
+  return {
+    margin:8,
+    filename:`report_manutenzione_${targa}_${data}.pdf`,
+    image:{type:'jpeg',quality:.98},
+    html2canvas:{scale:2,useCORS:true,backgroundColor:'#ffffff'},
+    jsPDF:{unit:'mm',format:'a4',orientation:'portrait'},
+    pagebreak:{mode:['avoid-all','css','legacy']}
+  };
+}
+
+window.scaricaReportMezzo = async function(id) {
+  const scheda = creaSchedaReportMezzo(id);
+  if (!scheda) return;
+  try {
+    await html2pdf().set(opzioniPdfReportMezzo(scheda.r)).from(scheda.el).save();
+    toast('✓ Report PDF scaricato', 'ok');
+  } catch(err) {
+    console.error(err); toast('Impossibile creare il PDF', 'err');
+  } finally { scheda.el.remove(); }
+};
+
+window.visualizzaReportMezzo = async function(id) {
+  const scheda = creaSchedaReportMezzo(id);
+  if (!scheda) return;
+  const finestra = window.open('', '_blank');
+  try {
+    const url = await html2pdf().set(opzioniPdfReportMezzo(scheda.r)).from(scheda.el).outputPdf('bloburl');
+    if (finestra) finestra.location.href = url;
+    else window.open(url, '_blank');
+  } catch(err) {
+    if (finestra) finestra.close();
+    console.error(err); toast('Impossibile visualizzare il PDF', 'err');
+  } finally { scheda.el.remove(); }
+};
+
 function renderSegnalazioniMezziAutista() {
   const box = document.getElementById('autista-segnalazioni-aperte');
   const list = document.getElementById('autista-segnalazioni-list');
@@ -3468,7 +3614,7 @@ function renderSegnalazioniMezziAutista() {
   const aperte = Object.entries(STATE.segnalazioniMezzi || {})
     .filter(([,rec]) => {
       const appartiene = rec.segnalatoDaUid ? rec.segnalatoDaUid === uid : nomiCorrenti.includes(rec.autista);
-      return appartiene && (rec.stato || 'segnalata') !== 'ripristinato';
+      return appartiene && !rec.eliminata && (rec.stato || 'segnalata') !== 'ripristinato';
     })
     .sort((a,b) => new Date(b[1].ts||0) - new Date(a[1].ts||0));
   box.classList.toggle('visible', aperte.length > 0);
@@ -3554,9 +3700,9 @@ window.tornaStatoSegnalazioneMezzo = async function(id, button) {
 
 async function eliminaSegnalazioneMezzo(id) {
   if (!db) return;
-  if (!confirm('Eliminare questa segnalazione mezzo?')) return;
-  await remove(ref(db, `segnalazioniMezzi/${id}`));
-  toast('Segnalazione eliminata', '');
+  if (!confirm('Rimuovere questa segnalazione dall’elenco operativo? Il report resterà nell’archivio PDF.')) return;
+  await update(ref(db, `segnalazioniMezzi/${id}`), {eliminata:true, eliminataIl:now(), eliminataDa:window._nomeOperatoreCorrente || window._nomeUtenteCorrente || ''});
+  toast('Segnalazione rimossa; report conservato in archivio', '');
 }
 window.eliminaSegnalazioneMezzo = eliminaSegnalazioneMezzo;
 
