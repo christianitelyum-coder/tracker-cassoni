@@ -6,12 +6,12 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="tracker-version" content="39">
-<title>Tracker Cassoni — v39</title>
+<meta name="tracker-version" content="43">
+<title>Tracker Cassoni — v43</title>
 <script>
 // Evita che una vecchia installazione/PWA continui a mostrare un index precedente.
 (function(){
-  var build = '39';
+  var build = '43';
   try {
     if ('serviceWorker' in navigator) navigator.serviceWorker.getRegistrations().then(function(regs){
       regs.forEach(function(reg){ reg.unregister(); });
@@ -291,6 +291,17 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);min-height:10
 .mezzo-cat-btn.active{background:var(--amber-l);border-color:var(--amber);box-shadow:0 0 0 1px var(--amber) inset}
 .mezzo-cat-btn.active .mezzo-cat-lbl{color:var(--amber)}
 .mezzo-cat-badge{position:absolute;top:-7px;right:-7px;background:var(--amber);color:#fff;font-size:10px;font-weight:800;border-radius:10px;min-width:17px;height:17px;line-height:17px;text-align:center;padding:0 4px;box-shadow:0 1px 3px rgba(0,0,0,.25)}
+.mezzo-damage-box{border:1.5px solid var(--border);border-radius:10px;background:#fbfdfd;padding:10px;margin-top:5px}
+.mezzo-damage-help{font-size:10px;color:var(--ink3);line-height:1.4;margin-bottom:8px}
+.mezzo-damage-views{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.mezzo-damage-view{position:relative;min-height:112px;border:1px solid #cbd8dc;border-radius:8px;background:#fff;overflow:hidden;cursor:crosshair;user-select:none}
+.mezzo-damage-view svg{display:block;width:100%;height:86px;pointer-events:none;margin-top:17px}
+.mezzo-damage-view-label{position:absolute;top:5px;left:7px;font-size:8px;font-weight:800;color:var(--ink3);text-transform:uppercase;letter-spacing:.05em;pointer-events:none}
+.mezzo-damage-marker{position:absolute;transform:translate(-50%,-50%);width:19px;height:19px;border-radius:50%;border:2px solid #fff;background:#dc2626;color:#fff;box-shadow:0 1px 4px rgba(0,0,0,.35);display:grid;place-items:center;font:800 9px Arial;cursor:pointer;z-index:2}
+.mezzo-damage-marker.component{width:31px;height:31px;background:rgba(220,38,38,.23);border:3px solid #dc2626;color:#991b1b;box-shadow:0 0 0 5px rgba(220,38,38,.12),0 2px 7px rgba(0,0,0,.32);font-size:10px}
+.mezzo-damage-marker.component::after{content:attr(data-component);position:absolute;top:32px;left:50%;transform:translateX(-50%);width:max-content;max-width:118px;padding:3px 6px;border-radius:4px;background:#991b1b;color:#fff;font:700 8px/1.15 Arial;text-align:center;pointer-events:none}
+.mezzo-damage-actions{display:flex;justify-content:flex-end;gap:7px;margin-top:8px;flex-wrap:wrap}
+@media(max-width:620px){.mezzo-damage-views{grid-template-columns:1fr}.mezzo-damage-view{min-height:125px}.mezzo-damage-view svg{height:98px}}
 .mezzi-view-tabs{display:flex;gap:8px;flex-wrap:wrap;margin-left:auto}
 .mezzi-view-tab{border:1.5px solid var(--border);background:var(--surface);color:var(--ink2);border-radius:8px;padding:8px 12px;font:700 12px var(--font);cursor:pointer}
 .mezzi-view-tab.active{background:var(--green);border-color:var(--green);color:#fff}
@@ -823,6 +834,17 @@ body.auth-locked{overflow:hidden}
       <select class="form-ctrl" id="mezzo-priorita"><option value="media">Media</option><option value="alta">Alta</option><option value="urgente">Urgente</option><option value="bassa">Bassa</option></select>
     </div>
     <div class="form-row">
+      <label class="form-lbl">Indicazione danni sul mezzo</label>
+      <div class="mezzo-damage-box">
+        <div class="mezzo-damage-help">Tocca il punto danneggiato sulla vista dall'alto o su una delle viste laterali. Tocca un indicatore rosso per eliminarlo.</div>
+        <div class="mezzo-damage-views" id="mezzo-damage-diagram"></div>
+        <div class="mezzo-damage-actions">
+          <button type="button" class="btn btn-ghost btn-sm" onclick="annullaUltimoDannoMezzo()">↩ Annulla ultimo</button>
+          <button type="button" class="btn btn-ghost btn-sm" onclick="azzeraDanniMezzo()">✕ Cancella punti</button>
+        </div>
+      </div>
+    </div>
+    <div class="form-row">
       <label class="form-lbl">Anomalia riscontrata</label>
       <div class="mezzo-cat-row">
         <button type="button" class="mezzo-cat-btn" id="mezzo-cat-motore" onclick="apriCategoriaMezzoModal('motore')">
@@ -833,6 +855,9 @@ body.auth-locked{overflow:hidden}
         </button>
         <button type="button" class="mezzo-cat-btn" id="mezzo-cat-spie" onclick="apriCategoriaMezzoModal('spie')">
           <span class="mezzo-cat-icon">💡</span><span class="mezzo-cat-lbl">Spie accese</span>
+        </button>
+        <button type="button" class="mezzo-cat-btn" id="mezzo-cat-componenti" onclick="apriCategoriaMezzoModal('componenti')">
+          <span class="mezzo-cat-icon">🔧</span><span class="mezzo-cat-lbl">Componenti</span>
         </button>
       </div>
     </div>
@@ -1347,7 +1372,7 @@ body.auth-locked{overflow:hidden}
 </div>
 
 <div class="toast" id="toast"></div>
-<div class="app-version" aria-label="Versione applicazione">Versione 39</div>
+<div class="app-version" aria-label="Versione applicazione">Versione 43</div>
 
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
@@ -3329,11 +3354,127 @@ const CATEGORIE_MEZZO = {
       'Altro',
     ],
   },
+  componenti: {
+    label: 'Componenti del veicolo', icon: '🔧',
+    opzioni: [
+      'Specchietto sinistro','Specchietto destro','Parabrezza','Tergicristalli','Vetro laterale sinistro','Vetro laterale destro',
+      'Portiera sinistra','Portiera destra','Maniglia portiera sinistra','Maniglia portiera destra','Tetto cabina','Gradini cabina sinistri','Gradini cabina destri',
+      'Faro anteriore sinistro','Faro anteriore destro','Indicatore di direzione sinistro','Indicatore di direzione destro','Fanale posteriore sinistro','Fanale posteriore destro',
+      'Griglia anteriore','Paraurti anteriore','Paraurti posteriore','Targa anteriore','Targa posteriore',
+      'Pneumatico anteriore sinistro','Pneumatico anteriore destro','Pneumatici posteriori sinistri','Pneumatici posteriori destri','Cerchi ruota',
+      'Parafango anteriore sinistro','Parafango anteriore destro','Parafanghi posteriori sinistri','Parafanghi posteriori destri',
+      'Serbatoio carburante','Serbatoio AdBlue','Box batterie','Telaio','Ralla / quinta ruota','Collegamenti aria ed elettrici','Sospensioni','Impianto frenante',
+      'Motore','Radiatore','Impianto di scarico','Marmitta / silenziatore','Presa aria','Clacson','Altro',
+    ],
+  },
 };
+
+// Vista e coordinate percentuali del punto più rappresentativo di ogni componente.
+const COMPONENTI_MEZZO_MAP = {
+  'Specchietto sinistro':['sinistra',16,38], 'Specchietto destro':['destra',84,38],
+  'Parabrezza':['fronte',50,34], 'Tergicristalli':['fronte',50,48],
+  'Vetro laterale sinistro':['sinistra',31,36], 'Vetro laterale destro':['destra',69,36],
+  'Portiera sinistra':['sinistra',31,57], 'Portiera destra':['destra',69,57],
+  'Maniglia portiera sinistra':['sinistra',39,58], 'Maniglia portiera destra':['destra',61,58],
+  'Tetto cabina':['alto',50,20], 'Gradini cabina sinistri':['sinistra',25,76], 'Gradini cabina destri':['destra',75,76],
+  'Faro anteriore sinistro':['fronte',31,67], 'Faro anteriore destro':['fronte',69,67],
+  'Indicatore di direzione sinistro':['fronte',25,60], 'Indicatore di direzione destro':['fronte',75,60],
+  'Fanale posteriore sinistro':['retro',31,65], 'Fanale posteriore destro':['retro',69,65],
+  'Griglia anteriore':['fronte',50,61], 'Paraurti anteriore':['fronte',50,78], 'Paraurti posteriore':['retro',50,78],
+  'Targa anteriore':['fronte',50,72], 'Targa posteriore':['retro',50,72],
+  'Pneumatico anteriore sinistro':['sinistra',28,82], 'Pneumatico anteriore destro':['destra',72,82],
+  'Pneumatici posteriori sinistri':['sinistra',79,82], 'Pneumatici posteriori destri':['destra',21,82],
+  'Cerchi ruota':['sinistra',74,82], 'Parafango anteriore sinistro':['sinistra',28,72], 'Parafango anteriore destro':['destra',72,72],
+  'Parafanghi posteriori sinistri':['sinistra',79,72], 'Parafanghi posteriori destri':['destra',21,72],
+  'Serbatoio carburante':['sinistra',53,73], 'Serbatoio AdBlue':['destra',47,73], 'Box batterie':['sinistra',43,72],
+  'Telaio':['alto',50,71], 'Ralla / quinta ruota':['alto',50,66], 'Collegamenti aria ed elettrici':['retro',50,51],
+  'Sospensioni':['retro',50,72], 'Impianto frenante':['retro',38,75], 'Motore':['sinistra',28,61],
+  'Radiatore':['fronte',50,58], 'Impianto di scarico':['destra',46,55], 'Marmitta / silenziatore':['destra',48,70],
+  'Presa aria':['destra',61,28], 'Clacson':['fronte',50,55],
+};
+
+const _mezzoDanni = [];
+
+function svgVistaMotrice(vista) {
+  const body = 'fill="#f8fafb" stroke="#354f5c" stroke-width="2" vector-effect="non-scaling-stroke"';
+  const detail = 'fill="none" stroke="#6d838d" stroke-width="1.3" vector-effect="non-scaling-stroke"';
+  if (vista === 'alto') return `<svg viewBox="0 0 200 125" aria-label="Motrice vista dall'alto">
+    <path d="M55 15Q55 5 68 5h64q13 0 13 10v42q0 11-11 14H66Q55 68 55 57z" ${body}/>
+    <path d="M65 12h70l5 25H60z" fill="#e4ecef" stroke="#354f5c" stroke-width="1.5"/><line x1="100" y1="12" x2="100" y2="37" ${detail}/>
+    <rect x="68" y="72" width="64" height="43" rx="3" ${body}/><ellipse cx="100" cy="86" rx="22" ry="10" fill="#d8e3e6" stroke="#354f5c" stroke-width="1.4"/>
+    <rect x="57" y="74" width="9" height="18" rx="2" fill="#354f5c"/><rect x="134" y="74" width="9" height="18" rx="2" fill="#354f5c"/>
+    <rect x="57" y="96" width="9" height="18" rx="2" fill="#354f5c"/><rect x="134" y="96" width="9" height="18" rx="2" fill="#354f5c"/>
+    <line x1="100" y1="5" x2="100" y2="115" stroke="#9aadb5" stroke-dasharray="4 4"/>
+  </svg>`;
+  if (vista === 'fronte' || vista === 'retro') {
+    const frontale = vista === 'fronte';
+    return `<svg viewBox="0 0 160 125" aria-label="Motrice vista ${frontale?'frontale':'posteriore'}">
+      <path d="M39 23Q42 8 57 7h46q15 1 18 16l6 72H33z" ${body}/>
+      ${frontale
+        ? `<path d="M48 18h64l6 33H42z" fill="#e4ecef" stroke="#354f5c" stroke-width="1.5"/><rect x="49" y="58" width="62" height="18" rx="3" ${detail}/><line x1="57" y1="63" x2="103" y2="63" ${detail}/><line x1="55" y1="69" x2="105" y2="69" ${detail}/><circle cx="46" cy="82" r="5" fill="#d9b949" stroke="#354f5c"/><circle cx="114" cy="82" r="5" fill="#d9b949" stroke="#354f5c"/>`
+        : `<rect x="48" y="18" width="64" height="48" rx="3" fill="#e4ecef" stroke="#354f5c" stroke-width="1.5"/><rect x="45" y="72" width="16" height="9" rx="2" fill="#d45b55"/><rect x="99" y="72" width="16" height="9" rx="2" fill="#d45b55"/><rect x="63" y="79" width="34" height="10" ${detail}/>`}
+      <rect x="25" y="85" width="15" height="31" rx="4" fill="#354f5c"/><rect x="120" y="85" width="15" height="31" rx="4" fill="#354f5c"/><line x1="33" y1="96" x2="127" y2="96" ${detail}/>
+    </svg>`;
+  }
+  const specchio = vista === 'destra' ? 'transform="translate(220 0) scale(-1 1)"' : '';
+  return `<svg viewBox="0 0 220 125" aria-label="Motrice vista laterale"><g ${specchio}>
+    <path d="M17 88h16V37q2-18 20-18h62l25 28v35h62v18H17z" ${body}/>
+    <path d="M48 27h57l23 27H47z" fill="#e4ecef" stroke="#354f5c" stroke-width="1.5"/><line x1="84" y1="27" x2="84" y2="54" ${detail}/>
+    <rect x="48" y="60" width="40" height="24" rx="2" ${detail}/><rect x="91" y="60" width="32" height="24" rx="2" ${detail}/><rect x="142" y="66" width="54" height="18" rx="3" fill="#e4ecef" stroke="#354f5c" stroke-width="1.5"/>
+    <ellipse cx="169" cy="74" rx="19" ry="7" ${detail}/><rect x="30" y="49" width="7" height="31" rx="2" fill="#6d838d"/><line x1="123" y1="88" x2="201" y2="88" ${detail}/>
+    <circle cx="61" cy="99" r="17" fill="#354f5c"/><circle cx="61" cy="99" r="7" fill="#fff"/><circle cx="154" cy="99" r="17" fill="#354f5c"/><circle cx="154" cy="99" r="7" fill="#fff"/><circle cx="190" cy="99" r="17" fill="#354f5c"/><circle cx="190" cy="99" r="7" fill="#fff"/>
+  </g></svg>`;
+}
+
+function renderDanniMezzo() {
+  const box = document.getElementById('mezzo-damage-diagram');
+  if (!box) return;
+  const viste = [['sinistra','Lato sinistro'],['fronte','Vista frontale'],['destra','Lato destro'],['retro','Vista posteriore'],['alto',"Vista dall'alto"]];
+  box.innerHTML = viste.map(([vista,label]) => `<div class="mezzo-damage-view" data-vista="${vista}" onclick="aggiungiDannoMezzo(event,'${vista}')">
+    <span class="mezzo-damage-view-label">${label}</span>${svgVistaMotrice(vista)}
+    ${_mezzoDanni.map((d,i) => d.vista === vista ? `<button type="button" class="mezzo-damage-marker${d.componente?' component':''}" data-component="${escapeHTML(d.componente||'')}" style="left:${d.x}%;top:${d.y}%" onclick="event.stopPropagation();rimuoviDannoMezzo(${i})" title="${escapeHTML(d.componente ? d.componente+' - tocca per rimuovere' : 'Rimuovi indicatore '+(i+1))}">${i+1}</button>` : '').join('')}
+  </div>`).join('');
+}
+
+window.aggiungiDannoMezzo = function(event, vista) {
+  const rect = event.currentTarget.getBoundingClientRect();
+  const x = Math.max(2, Math.min(98, ((event.clientX - rect.left) / rect.width) * 100));
+  const y = Math.max(8, Math.min(96, ((event.clientY - rect.top) / rect.height) * 100));
+  _mezzoDanni.push({vista,x:Number(x.toFixed(2)),y:Number(y.toFixed(2))});
+  renderDanniMezzo();
+};
+window.rimuoviDannoMezzo = function(indice) {
+  const rimosso = _mezzoDanni[indice];
+  _mezzoDanni.splice(indice,1);
+  if (rimosso?.componente) { _mezzoDettagli.componenti?.delete(rimosso.componente); aggiornaBottoneCategoriaMezzo('componenti'); }
+  renderDanniMezzo();
+};
+window.annullaUltimoDannoMezzo = function() {
+  if (_mezzoDanni.length) window.rimuoviDannoMezzo(_mezzoDanni.length-1);
+};
+window.azzeraDanniMezzo = function() {
+  _mezzoDanni.length = 0;
+  if (_mezzoDettagli.componenti) {
+    [..._mezzoDettagli.componenti].forEach(v => { if (COMPONENTI_MEZZO_MAP[v]) _mezzoDettagli.componenti.delete(v); });
+    aggiornaBottoneCategoriaMezzo('componenti');
+  }
+  renderDanniMezzo();
+};
+
+function diagrammaDanniReport(danni) {
+  const punti = Array.isArray(danni) ? danni : [];
+  const viste = [['sinistra','LATO SINISTRO'],['fronte','VISTA FRONTALE'],['destra','LATO DESTRO'],['retro','VISTA POSTERIORE'],['alto',"VISTA DALL'ALTO"]];
+  return `<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:14px">${viste.map(([vista,label]) => `<div style="position:relative;height:180px;border:1.5px solid #777;border-radius:5px;background:#fff;overflow:hidden">
+    <div style="position:absolute;top:7px;left:0;right:0;text-align:center;font-size:9px;font-weight:800;color:#555">${label}</div>
+    <div style="position:absolute;left:4px;right:4px;top:27px;bottom:4px">${svgVistaMotrice(vista).replace('<svg ','<svg style="width:100%;height:100%;display:block" ')}</div>
+    ${punti.map((d,i) => d.vista === vista ? `<span title="${escapeHTML(d.componente||'Danno localizzato')}" style="position:absolute;left:${Number(d.x)||50}%;top:${Number(d.y)||50}%;transform:translate(-50%,-50%);width:${d.componente?30:20}px;height:${d.componente?30:20}px;border-radius:50%;background:${d.componente?'rgba(220,38,38,.25)':'#dc2626'};color:${d.componente?'#991b1b':'#fff'};border:${d.componente?3:2}px solid #dc2626;box-shadow:0 1px 4px #555;display:flex;align-items:center;justify-content:center;font:800 10px Arial">${i+1}</span>` : '').join('')}
+  </div>`).join('')}</div>`;
+}
 
 let _mezzoDettagli = {};
 let _mezzoAltroTesto = {};
 Object.keys(CATEGORIE_MEZZO).forEach(cat => { _mezzoDettagli[cat] = new Set(); _mezzoAltroTesto[cat] = ''; });
+renderDanniMezzo();
 
 let _mezzoCatCorrente = null;
 function apriCategoriaMezzoModal(cat) {
@@ -3371,6 +3512,7 @@ window.confermaCategoriaMezzo = function() {
   const finale = checked.map(opt => opt === 'Altro' ? (altroTesto ? `Altro: ${altroTesto}` : 'Altro') : opt);
   _mezzoDettagli[cat] = new Set(finale);
   _mezzoAltroTesto[cat] = altroTesto;
+  if (cat === 'componenti') sincronizzaComponentiEvidenziati(finale);
   aggiornaBottoneCategoriaMezzo(cat);
   document.getElementById('mezzo-cat-modal').classList.remove('open');
   _mezzoCatCorrente = null;
@@ -3394,6 +3536,19 @@ function aggiornaBottoneCategoriaMezzo(cat) {
   }
 }
 
+function sincronizzaComponentiEvidenziati(componenti) {
+  const selezionati = new Set(componenti.filter(c => COMPONENTI_MEZZO_MAP[c]));
+  for (let i = _mezzoDanni.length - 1; i >= 0; i--) {
+    if (_mezzoDanni[i].componente && !selezionati.has(_mezzoDanni[i].componente)) _mezzoDanni.splice(i,1);
+  }
+  selezionati.forEach(componente => {
+    if (_mezzoDanni.some(d => d.componente === componente)) return;
+    const [vista,x,y] = COMPONENTI_MEZZO_MAP[componente];
+    _mezzoDanni.push({vista,x,y,componente,automatico:true});
+  });
+  renderDanniMezzo();
+}
+
 async function inviaSegnalazioneMezzo() {
   if (!db) { toast('Firebase non connesso', 'err'); return; }
   const targa     = document.getElementById('mezzo-targa').value.trim().toUpperCase();
@@ -3412,6 +3567,7 @@ async function inviaSegnalazioneMezzo() {
 
   await push(ref(db, 'segnalazioniMezzi'), {
     targa, tipologia, modello, priorita, categorie, dettagli, posizione, autista, segnalatoDaUid, ts,
+    danni:_mezzoDanni.map(d => ({vista:d.vista,x:d.x,y:d.y,componente:d.componente||''})),
     stato:'segnalata', statoAggiornatoIl:ts,
     statoTimeline:{segnalata:ts}, reportArchiviato:true, reportCreatoIl:ts
   });
@@ -3422,6 +3578,8 @@ async function inviaSegnalazioneMezzo() {
   document.getElementById('mezzo-modello').value = '';
   document.getElementById('mezzo-priorita').value = 'media';
   document.getElementById('mezzo-posizione').value = '';
+  _mezzoDanni.length = 0;
+  renderDanniMezzo();
   Object.keys(_mezzoDettagli).forEach(cat => { _mezzoDettagli[cat].clear(); _mezzoAltroTesto[cat] = ''; aggiornaBottoneCategoriaMezzo(cat); });
 }
 window.inviaSegnalazioneMezzo = inviaSegnalazioneMezzo;
@@ -3549,19 +3707,55 @@ function creaSchedaReportMezzo(id) {
   ].filter(([,ts]) => ts);
   const priorita = {bassa:'Bassa',media:'Media',alta:'Alta',urgente:'Urgente'}[r.priorita] || r.priorita || 'Media';
   const el = document.createElement('div');
-  el.style.cssText = 'position:fixed;left:-20000px;top:0;width:760px;background:#fff;color:#17324d;font-family:Arial,sans-serif;padding:38px 42px;box-sizing:border-box';
+  el.style.cssText = 'position:fixed;left:-20000px;top:0;width:760px;min-height:1060px;background:#fff;color:#454545;font-family:Arial,sans-serif;padding:52px 62px 48px;box-sizing:border-box';
   el.innerHTML = `
-    <div style="display:flex;align-items:center;justify-content:space-between;border-bottom:4px solid #2f9e8f;padding-bottom:18px;margin-bottom:24px">
-      <div><div style="font-size:30px;font-weight:900;letter-spacing:.04em;color:#153a5b">ITELYUM</div><div style="font-size:11px;color:#688297;margin-top:4px;text-transform:uppercase;letter-spacing:.12em">Tracker Cassoni</div></div>
-      <div style="text-align:right"><div style="font-size:20px;font-weight:800;color:#2f9e8f">REPORT MANUTENZIONE MEZZO</div><div style="font-size:11px;color:#688297;margin-top:5px">Rif. ${escapeHTML(id)}</div></div>
+    <div style="display:flex;justify-content:flex-end;align-items:center;height:76px;margin-bottom:32px">
+      <div style="width:72%;background:#80ad52;color:#fff;padding:18px 26px;font-size:22px;font-weight:800;letter-spacing:.025em;text-transform:uppercase;box-sizing:border-box">SOLUZIONI PER L'AMBIENTE</div>
     </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:13px 24px;background:#f1f7f6;border-radius:10px;padding:18px 20px;margin-bottom:20px">
-      ${[['Autista',r.autista],['Data segnalazione',fmtDT(r.ts)],['Tipologia mezzo',r.tipologia],['Targa',r.targa],['Marca e modello',r.modello],['Priorità',priorita],['Posizione',r.posizione],['Stato attuale',({segnalata:'Segnalata',presa_carico:'Presa in carico',in_manutenzione:'In manutenzione',ripristinato:'Ripristinata'}[r.stato||'segnalata'])]].map(([l,v]) => `<div><div style="font-size:9px;color:#688297;font-weight:800;text-transform:uppercase;letter-spacing:.08em">${l}</div><div style="font-size:14px;font-weight:700;margin-top:4px;min-height:18px">${escapeHTML(v || '—')}</div></div>`).join('')}
+    <div style="display:grid;grid-template-columns:165px 1fr;gap:12px 16px;margin-bottom:30px">
+      ${[
+        ['AUTISTA',r.autista],
+        ['TIPOLOGIA MEZZO',r.tipologia],
+        ['TARGA MEZZO',r.targa],
+        ['MARCA & MODELLO',r.modello],
+        ['POSIZIONE',r.posizione]
+      ].map(([l,v]) => `<div style="font-size:12px;font-weight:800;font-style:italic;padding-top:7px">${l}</div><div style="font-size:17px;font-weight:500;padding:4px 4px 6px;border-bottom:2px solid #666;min-height:23px">${escapeHTML(v || '—')}</div>`).join('')}
     </div>
-    <div style="margin-bottom:18px"><div style="font-size:11px;color:#2f9e8f;font-weight:900;text-transform:uppercase;letter-spacing:.08em;border-bottom:2px solid #c9dfdc;padding-bottom:7px">Categoria anomalia</div><div style="font-size:14px;font-weight:700;padding:12px 2px">${escapeHTML(categorie)}</div></div>
-    <div style="margin-bottom:22px"><div style="font-size:11px;color:#2f9e8f;font-weight:900;text-transform:uppercase;letter-spacing:.08em;border-bottom:2px solid #c9dfdc;padding-bottom:7px">Descrizione problematica</div><div style="font-size:14px;line-height:1.65;padding:12px 2px;min-height:110px">${problemi.length ? problemi.map(p => `• ${escapeHTML(p)}`).join('<br>') : '—'}</div></div>
-    <div><div style="font-size:11px;color:#2f9e8f;font-weight:900;text-transform:uppercase;letter-spacing:.08em;border-bottom:2px solid #c9dfdc;padding-bottom:7px">Cronologia avanzamento</div><table style="width:100%;border-collapse:collapse;margin-top:10px;font-size:12px">${stati.map(([s,ts]) => `<tr><td style="padding:8px;border-bottom:1px solid #dce8e6;font-weight:700">${s}</td><td style="padding:8px;border-bottom:1px solid #dce8e6;text-align:right">${fmtDT(ts)}</td></tr>`).join('')}</table></div>
-    <div style="display:flex;justify-content:space-between;margin-top:38px;padding-top:14px;border-top:1px solid #dce8e6;font-size:10px;color:#688297"><span>Report generato il ${new Date().toLocaleString('it-IT')}</span><span>Documento archiviato digitalmente</span></div>`;
+    <div style="display:grid;grid-template-columns:165px 1fr;gap:0 16px;margin-bottom:10px">
+      <div style="font-size:12px;font-weight:800;font-style:italic;text-align:center;padding-bottom:9px;border-bottom:3px solid #555">PRIORITA'</div>
+      <div style="font-size:12px;font-weight:800;font-style:italic;text-align:center;padding-bottom:9px;border-bottom:3px solid #555">DESCRIZIONE PROBLEMATICA</div>
+      <div style="font-size:16px;font-weight:700;padding:16px 6px;border-bottom:2px solid #666;min-height:28px">${escapeHTML(priorita)}</div>
+      <div style="font-size:15px;padding:16px 6px;border-bottom:2px solid #666;min-height:28px"><strong>${escapeHTML(categorie)}</strong></div>
+      ${problemi.map((p,i) => `<div style="border-bottom:1.5px solid #777;min-height:34px"></div><div style="font-size:15px;padding:9px 6px;border-bottom:1.5px solid #777;min-height:34px;box-sizing:border-box">${escapeHTML(p)}</div>`).join('')}
+      ${Array.from({length:Math.max(5,9-problemi.length)},() => '<div style="border-bottom:1.5px solid #777;min-height:34px"></div><div style="border-bottom:1.5px solid #777;min-height:34px"></div>').join('')}
+    </div>
+    <div style="margin-top:24px">
+      <div style="font-size:11px;font-weight:800;font-style:italic;text-align:center;padding-bottom:7px;border-bottom:2px solid #666">STATO AVANZAMENTO</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 22px;font-size:11px">${stati.map(([s,ts]) => `<div style="padding:7px 4px;border-bottom:1px solid #999;font-weight:700">${s}</div><div style="padding:7px 4px;border-bottom:1px solid #999;text-align:right">${fmtDT(ts)}</div>`).join('')}</div>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-top:42px">
+      <div style="width:180px;text-align:center"><div style="font-size:11px;font-weight:800;font-style:italic;margin-bottom:14px">DATA</div><div style="font-size:15px;padding:7px;border-bottom:2px solid #666">${fmtDate(r.ts)}</div></div>
+      <div style="width:230px;text-align:center"><div style="font-size:11px;font-weight:800;font-style:italic;margin-bottom:14px">FIRMA DELL'AUTISTA</div><div style="height:32px;border-bottom:2px solid #666"></div></div>
+    </div>
+    <div style="margin-top:28px;text-align:right;font-size:8px;color:#999">Rif. ${escapeHTML(id)} · Report generato il ${new Date().toLocaleString('it-IT')}</div>
+    <div style="page-break-before:always;break-before:page;min-height:950px;padding-top:35px;box-sizing:border-box">
+      <div style="display:flex;justify-content:flex-end;align-items:center;height:76px;margin-bottom:35px">
+        <div style="width:72%;background:#80ad52;color:#fff;padding:18px 26px;font-size:22px;font-weight:800;letter-spacing:.025em;text-transform:uppercase;box-sizing:border-box">SOLUZIONI PER L'AMBIENTE</div>
+      </div>
+      <div style="font-size:17px;font-weight:800;text-align:center;color:#444;margin-bottom:5px">MAPPA DEI DANNI DEL MEZZO</div>
+      <div style="font-size:11px;text-align:center;color:#777;margin-bottom:18px">Targa ${escapeHTML(r.targa || '—')} · Gli indicatori rossi identificano i punti segnalati dall'autista</div>
+      ${diagrammaDanniReport(r.danni)}
+      <div style="margin-top:28px;border-top:2px solid #666;padding-top:12px">
+        <div style="font-size:11px;font-weight:800;font-style:italic;margin-bottom:9px">RIFERIMENTI DEI DANNI</div>
+        ${Array.isArray(r.danni) && r.danni.length
+          ? r.danni.map((d,i) => `<div style="display:flex;align-items:center;gap:9px;padding:7px 2px;border-bottom:1px solid #aaa;font-size:12px"><span style="width:20px;height:20px;border-radius:50%;background:#dc2626;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800">${i+1}</span><strong>${escapeHTML(d.componente || ({alto:"Vista dall'alto",sinistra:'Lato sinistro',destra:'Lato destro',fronte:'Vista frontale',retro:'Vista posteriore'}[d.vista] || d.vista))}</strong><span style="color:#777">- ${d.componente?'componente evidenziato':'punto indicato manualmente'}</span></div>`).join('')
+          : '<div style="font-size:12px;color:#777;padding:10px 0">Nessun danno localizzato sulla sagoma.</div>'}
+      </div>
+      <div style="display:flex;justify-content:space-between;margin-top:52px">
+        <div style="width:180px;text-align:center"><div style="font-size:10px;font-weight:800;font-style:italic;margin-bottom:15px">DATA</div><div style="font-size:14px;padding:7px;border-bottom:2px solid #666">${fmtDate(r.ts)}</div></div>
+        <div style="width:230px;text-align:center"><div style="font-size:10px;font-weight:800;font-style:italic;margin-bottom:15px">FIRMA DELL'AUTISTA</div><div style="height:31px;border-bottom:2px solid #666"></div></div>
+      </div>
+    </div>`;
   document.body.appendChild(el);
   return {el, r};
 }
