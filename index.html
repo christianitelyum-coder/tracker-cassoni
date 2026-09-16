@@ -6,12 +6,12 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="tracker-version" content="45">
-<title>Tracker Cassoni — v45</title>
+<meta name="tracker-version" content="46">
+<title>Tracker Cassoni — v46</title>
 <script>
 // Evita che una vecchia installazione/PWA continui a mostrare un index precedente.
 (function(){
-  var build = '45';
+  var build = '46';
   try {
     if ('serviceWorker' in navigator) navigator.serviceWorker.getRegistrations().then(function(regs){
       regs.forEach(function(reg){ reg.unregister(); });
@@ -711,7 +711,7 @@ body.auth-locked{overflow:hidden}
 <div id="mezzi-operative-panel"><div id="mezzi-groups"></div></div>
 <div id="mezzi-report-panel" style="display:none">
   <div class="card" style="margin-top:10px">
-    <div class="card-header"><div class="card-title">📁 Report manutenzioni mezzi</div></div>
+    <div class="card-header" style="gap:10px;flex-wrap:wrap"><div class="card-title">📁 Report manutenzioni mezzi</div><button type="button" class="btn btn-primary btn-sm" onclick="stampaChecklistVuotaMezzo()">🖨 Stampa checklist vuota</button></div>
     <div class="card-body">
       <div style="font-size:11px;color:var(--ink3);line-height:1.5">I report restano disponibili anche dopo la rimozione della segnalazione dall'elenco operativo.</div>
       <div id="mezzi-report-list" class="mezzi-report-list"></div>
@@ -1372,7 +1372,7 @@ body.auth-locked{overflow:hidden}
 </div>
 
 <div class="toast" id="toast"></div>
-<div class="app-version" aria-label="Versione applicazione">Versione 45</div>
+<div class="app-version" aria-label="Versione applicazione">Versione 46</div>
 
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
@@ -3656,6 +3656,41 @@ function descrizioneProblemiMezzo(rec) {
   return (rec.categorie || []).flatMap(cat => (rec.dettagli && rec.dettagli[cat]) || []).filter(Boolean);
 }
 
+function paginaChecklistMezzo(rec = null, vuota = false) {
+  const selezionati = new Set(vuota ? [] : ((rec?.dettagli?.componenti) || []));
+  const componenti = CATEGORIE_MEZZO.componenti.opzioni.filter(v => v !== 'Altro');
+  const viste = [['sinistra','LATO SINISTRO'],['fronte','VISTA FRONTALE'],['destra','LATO DESTRO'],['retro','VISTA POSTERIORE'],['alto',"VISTA DALL'ALTO"]];
+  const campo = (titolo,valore='') => `<div style="border-bottom:1.5px solid #555;min-height:27px;padding:5px 3px;font-size:11px"><strong>${titolo}:</strong> ${escapeHTML(valore || '')}</div>`;
+  return `<section style="page-break-before:always;break-before:page;min-height:950px;padding-top:24px;box-sizing:border-box;background:#fff;color:#333;font-family:Arial,sans-serif">
+    <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:4px solid #80ad52;padding-bottom:10px;margin-bottom:12px">
+      <div><div style="font-size:20px;font-weight:900">CHECKLIST ISPEZIONE MOTRICE</div><div style="font-size:10px;color:#666;margin-top:3px">Controllo visivo e segnalazione componenti</div></div>
+      <div style="background:#80ad52;color:#fff;padding:10px 16px;font-size:13px;font-weight:800">SOLUZIONI PER L'AMBIENTE</div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px 18px;margin-bottom:13px">
+      ${campo('TARGA',vuota?'':rec?.targa)}${campo('AUTISTA',vuota?'':rec?.autista)}
+      ${campo('MARCA / MODELLO',vuota?'':rec?.modello)}${campo('DATA',vuota?'':fmtDate(rec?.ts))}
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-bottom:12px">
+      ${viste.map(([vista,label]) => `<div style="border:1px solid #aaa;border-radius:4px;padding:4px;text-align:center;height:118px;display:flex;flex-direction:column"><div style="font-size:8px;font-weight:800;margin-bottom:2px">${label}</div><img src="${MEZZO_IMAGE_DATA[vista]}" alt="${label}" style="width:100%;height:94px;object-fit:contain;display:block"></div>`).join('')}
+    </div>
+    <div style="font-size:10px;font-weight:900;border-bottom:2px solid #555;padding-bottom:5px;margin-bottom:6px">COMPONENTI DA CONTROLLARE — spuntare OK oppure ANOMALIA</div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);column-gap:12px;row-gap:1px">
+      ${componenti.map(c => `<div style="font-size:8.2px;padding:3px 2px;border-bottom:1px solid #ddd;display:flex;align-items:center;gap:4px"><span style="font-size:10px">${selezionati.has(c)?'☒':'☐'}</span><span style="flex:1">${escapeHTML(c)}</span><span style="white-space:nowrap">OK ☐ &nbsp; ANOM. ☐</span></div>`).join('')}
+    </div>
+    <div style="margin-top:12px;font-size:9px;font-weight:800">NOTE / DESCRIZIONE ANOMALIE</div>
+    <div style="height:54px;border-bottom:1px solid #777;background:repeating-linear-gradient(to bottom,transparent 0,transparent 17px,#bbb 18px)"></div>
+    <div style="display:flex;justify-content:space-between;margin-top:18px;font-size:10px"><div style="width:190px;border-bottom:1.5px solid #555;padding-bottom:5px">Firma autista</div><div style="width:190px;border-bottom:1.5px solid #555;padding-bottom:5px">Firma manutentore</div></div>
+  </section>`;
+}
+
+window.stampaChecklistVuotaMezzo = function() {
+  const w = window.open('', '_blank');
+  if (!w) { toast('Consenti i popup per stampare la checklist', 'err'); return; }
+  w.document.open();
+  w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Checklist vuota motrice</title><style>@page{size:A4;margin:9mm}*{box-sizing:border-box}body{margin:0;background:#fff}.no-print{position:fixed;right:12px;top:12px;padding:10px 16px;border:0;border-radius:6px;background:#176f63;color:#fff;font-weight:800;cursor:pointer;z-index:5}@media print{.no-print{display:none}}</style></head><body><button class="no-print" onclick="print()">🖨 Stampa</button><main style="width:190mm;margin:auto">${paginaChecklistMezzo(null,true).replace('page-break-before:always;break-before:page;','')}</main><script>Promise.all(Array.from(document.images).map(i=>i.complete?Promise.resolve():(i.decode?i.decode():new Promise(r=>{i.onload=i.onerror=r})))).then(()=>document.body.dataset.pronto='1');<\/script></body></html>`);
+  w.document.close();
+};
+
 function renderArchivioReportMezzi() {
   const list = document.getElementById('mezzi-report-list');
   if (!list) return;
@@ -3742,7 +3777,8 @@ function creaSchedaReportMezzo(id) {
         <div style="width:180px;text-align:center"><div style="font-size:10px;font-weight:800;font-style:italic;margin-bottom:15px">DATA</div><div style="font-size:14px;padding:7px;border-bottom:2px solid #666">${fmtDate(r.ts)}</div></div>
         <div style="width:230px;text-align:center"><div style="font-size:10px;font-weight:800;font-style:italic;margin-bottom:15px">FIRMA DELL'AUTISTA</div><div style="height:31px;border-bottom:2px solid #666"></div></div>
       </div>
-    </div>`;
+    </div>
+    ${paginaChecklistMezzo(r)}`;
   document.body.appendChild(el);
   return {el, r};
 }
@@ -3756,14 +3792,29 @@ function opzioniPdfReportMezzo(r) {
     image:{type:'jpeg',quality:.98},
     html2canvas:{scale:2,useCORS:true,backgroundColor:'#ffffff'},
     jsPDF:{unit:'mm',format:'a4',orientation:'portrait'},
-    pagebreak:{mode:['avoid-all','css','legacy']}
+    pagebreak:{mode:['css','legacy']}
   };
+}
+
+async function attendiImmaginiReport(elemento) {
+  const immagini = [...elemento.querySelectorAll('img')];
+  await Promise.all(immagini.map(img => {
+    if (img.complete && img.naturalWidth > 0) return img.decode ? img.decode().catch(() => {}) : Promise.resolve();
+    return new Promise(resolve => {
+      const fine = () => resolve();
+      img.addEventListener('load', fine, {once:true});
+      img.addEventListener('error', fine, {once:true});
+      setTimeout(fine, 8000);
+    });
+  }));
+  await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
 }
 
 window.scaricaReportMezzo = async function(id) {
   const scheda = creaSchedaReportMezzo(id);
   if (!scheda) return;
   try {
+    await attendiImmaginiReport(scheda.el);
     await html2pdf().set(opzioniPdfReportMezzo(scheda.r)).from(scheda.el).save();
     toast('✓ Report PDF scaricato', 'ok');
   } catch(err) {
@@ -3776,6 +3827,7 @@ window.visualizzaReportMezzo = async function(id) {
   if (!scheda) return;
   const finestra = window.open('', '_blank');
   try {
+    await attendiImmaginiReport(scheda.el);
     const url = await html2pdf().set(opzioniPdfReportMezzo(scheda.r)).from(scheda.el).outputPdf('bloburl');
     if (finestra) finestra.location.href = url;
     else window.open(url, '_blank');
@@ -3923,11 +3975,39 @@ window.chiudiNotificaMezzo = function() {
 let _mezziInizializzato = false;
 let _mezziIdVisti = new Set();
 let _mezziStatiVisti = new Map();
+let _assegnazioneGk956gfInCorso = false;
+async function assegnaGk956gfAMauro(records) {
+  if (!db || window._ruoloCorrente !== 'admin' || _assegnazioneGk956gfInCorso) return;
+  const candidato = Object.entries(records || {})
+    .filter(([,rec]) => String(rec.targa || '').replace(/\s+/g,'').toUpperCase() === 'GK956GF')
+    .sort((a,b) => new Date(b[1].ts || 0) - new Date(a[1].ts || 0))[0];
+  if (!candidato) return;
+  const [id,rec] = candidato;
+  const uidMauro = 'ZWp1FYhTt7c7pZNT8q6qqAVCQuR2';
+  if (rec.segnalatoDaUid === uidMauro && rec.autista === 'Mauro_P') return;
+  _assegnazioneGk956gfInCorso = true;
+  try {
+    await update(ref(db, `segnalazioniMezzi/${id}`), {
+      autista:'Mauro_P',
+      segnalatoDaUid:uidMauro,
+      riassegnataIl:now(),
+      riassegnataDa:window._nomeOperatoreCorrente || window._nomeUtenteCorrente || 'admin',
+      riassegnazioneNota:'Attribuita a Mauro_P su richiesta amministratore'
+    });
+    toast('✓ Segnalazione GK956GF assegnata a Mauro_P', 'ok');
+  } catch(err) {
+    console.error(err);
+    toast('Impossibile assegnare GK956GF a Mauro_P: verifica i permessi', 'err');
+  } finally {
+    _assegnazioneGk956gfInCorso = false;
+  }
+}
 function subscribeMezzi() {
   if (!db) return;
   onValue(ref(db, 'segnalazioniMezzi'), snap => {
     const val = snap.val() || {};
     STATE.segnalazioniMezzi = val;
+    assegnaGk956gfAMauro(val);
     const ids = Object.keys(val);
     if (_mezziInizializzato) {
       ids.forEach(id => {
