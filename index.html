@@ -6,12 +6,12 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="tracker-version" content="49">
-<title>Tracker Cassoni — v49</title>
+<meta name="tracker-version" content="50">
+<title>Tracker Cassoni — v50</title>
 <script>
 // Evita che una vecchia installazione/PWA continui a mostrare un index precedente.
 (function(){
-  var build = '49';
+  var build = '50';
   try {
     if ('serviceWorker' in navigator) navigator.serviceWorker.getRegistrations().then(function(regs){
       regs.forEach(function(reg){ reg.unregister(); });
@@ -1393,7 +1393,7 @@ body.auth-locked{overflow:hidden}
 </div>
 
 <div class="toast" id="toast"></div>
-<div class="app-version" aria-label="Versione applicazione">Versione 49</div>
+<div class="app-version" aria-label="Versione applicazione">Versione 50</div>
 
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
@@ -1527,6 +1527,9 @@ function avviaSubscriptions(ruolo) {
 
 // ── Utility ────────────────────────────────────────
 function now() { return new Date().toISOString(); }
+function descrizioneCassone(c = {}) {
+  return String(c.descrizione || c.note || c.tipo || '').trim() || 'Descrizione non indicata';
+}
 function escapeHTML(value) {
   return String(value ?? '').replace(/[&<>'"]/g, ch => ({
     '&':'&amp;', '<':'&lt;', '>':'&gt;', "'":'&#39;', '"':'&quot;'
@@ -1688,7 +1691,7 @@ window.cercaCassone = function(val) {
       <span style="font-size:16px">${isOut?'🔴':'✅'}</span>
       <div style="flex:1">
         <div style="font-size:14px;font-weight:800;color:var(--ink)">${escapeHTML(id)}</div>
-        <div style="font-size:11px;color:var(--ink2)">${escapeHTML(c.tipo||'—')}</div>
+        <div style="font-size:11px;color:var(--ink2)">${escapeHTML(descrizioneCassone(c))}</div>
         ${ultimo ? `<div style="font-size:11px;color:var(--ink3)">${escapeHTML(ultimo.tipo)} · ${escapeHTML(ultimo.cliente||'—')} · ${fmtDT(ultimo.ts)}</div>` : ''}
       </div>
       <span style="font-size:12px;font-weight:700;color:${isOut?'var(--red)':'var(--green-d)'}">${isOut?'FUORI':'PIAZZALE'}</span>
@@ -2028,11 +2031,11 @@ function renderCassoniSetup() {
   const cas = Object.entries(STATE.cassoni);
   if (!cas.length) { el.innerHTML = '<p style="font-size:12px;color:var(--ink3)">Nessun cassone</p>'; return; }
   el.innerHTML = `<table style="width:100%;font-size:12px;border-collapse:collapse">
-    <thead><tr style="background:var(--surface2)"><th style="padding:5px 8px;text-align:left">Codice</th><th>Tipo</th><th>Stato</th><th>Piazzale</th><th></th></tr></thead>
+    <thead><tr style="background:var(--surface2)"><th style="padding:5px 8px;text-align:left">Codice</th><th>Descrizione</th><th>Stato</th><th>Piazzale</th><th></th></tr></thead>
     <tbody>${cas.map(([id,c]) =>
       `<tr style="border-bottom:1px solid var(--border)">
         <td style="padding:5px 8px;font-weight:700">${id}</td>
-        <td style="padding:5px 8px">${c.tipo}</td>
+        <td style="padding:5px 8px">${escapeHTML(descrizioneCassone(c))}</td>
         <td style="padding:5px 8px"><span class="status-pill ${c.stato==='piazzale'?'pill-in':'pill-out'}">${c.stato}</span></td>
         <td style="padding:5px 8px">${c.stato==='piazzale' ? `<button class="btn btn-ghost btn-sm" onclick="apriModificaPiazzaleCassone('${id}')">${escapeHTML(c.piazzaleAttuale || 'Imposta')}</button>` : '—'}</td>
         <td style="padding:5px 8px"><button class="btn btn-danger btn-sm" onclick="eliminaCassone('${id}')">🗑</button></td>
@@ -2072,11 +2075,11 @@ function onScanInput(val) {
 
   if (!val) { drop.style.display = 'none'; return; }
 
-  // Filtra cassoni che corrispondono (codice o tipo)
+  // Filtra cassoni che corrispondono per codice o descrizione.
   const matches = Object.entries(STATE.cassoni)
     .filter(([id, c]) =>
       id.toUpperCase().includes(val) ||
-      (c.tipo||'').toUpperCase().includes(val)
+      descrizioneCassone(c).toUpperCase().includes(val)
     )
     .sort((a, b) => {
       // Priorità: inizia con il valore cercato
@@ -2091,10 +2094,11 @@ function onScanInput(val) {
   drop.innerHTML = matches.map(([id, c], i) => {
     const statoCls = c.stato === 'piazzale' ? 'stato-piazzale' : 'stato-fuori';
     const statoLbl = c.stato === 'piazzale' ? '✅ Piazzale' : '🔴 Fuori';
-    const tipo = (c.tipo||'').length > 40 ? c.tipo.slice(0,38)+'…' : (c.tipo||'');
+    const descrizioneCompleta = descrizioneCassone(c);
+    const descrizione = descrizioneCompleta.length > 52 ? descrizioneCompleta.slice(0,50)+'…' : descrizioneCompleta;
     return `<div class="scan-drop-item" data-id="${id}" onmousedown="selezionaDaCassone('${id}')">
       <span class="scan-drop-code">${id}</span>
-      <span class="scan-drop-tipo">${tipo}</span>
+      <span class="scan-drop-tipo" title="${escapeHTML(descrizioneCompleta)}">${escapeHTML(descrizione)}</span>
       <span class="scan-drop-stato ${statoCls}">${statoLbl}</span>
     </div>`;
   }).join('');
@@ -2141,7 +2145,7 @@ function confermaScan(val) {
   if (cas) {
     _scanCassoneId = val;
     document.getElementById('found-id').textContent = val;
-    document.getElementById('found-tipo').textContent = cas.tipo;
+    document.getElementById('found-tipo').textContent = descrizioneCassone(cas);
     const stato = cas.stato === 'piazzale' ? '✅ In piazzale — pronto per uscita' : '🔴 Fuori piazzale — in attesa di rientro';
     document.getElementById('found-status').textContent = stato;
     foundEl.classList.add('visible');
@@ -2743,7 +2747,7 @@ window.salvaNuovoCassone = async function(event) {
   btn.textContent = 'Salvataggio…';
   try {
     await set(ref(db, `cassoni/${id}`), {
-      tipo, matricola, note, stato,
+      tipo, matricola, note, descrizione:note, stato,
       clienteAttuale:'', lastMov:'',
       creatoIl:new Date().toISOString()
     });
@@ -2995,7 +2999,7 @@ window.apriInserimentoManutenzione = function() {
   const lista = document.getElementById('man-add-cassoni-list');
   lista.innerHTML = Object.entries(STATE.cassoni || {})
     .sort((a,b) => a[0].localeCompare(b[0], 'it', {numeric:true}))
-    .map(([id,c]) => `<option value="${escapeHTML(id)}">${escapeHTML(c.tipo || '')} · ${c.stato === 'fuori' ? 'Fuori' : 'In piazzale'}</option>`)
+    .map(([id,c]) => `<option value="${escapeHTML(id)}">${escapeHTML(descrizioneCassone(c))} · ${c.stato === 'fuori' ? 'Fuori' : 'In piazzale'}</option>`)
     .join('');
   document.getElementById('man-add-cassone').value = '';
   document.getElementById('man-add-problema').value = '';
