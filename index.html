@@ -6,12 +6,12 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="tracker-version" content="47">
-<title>Tracker Cassoni — v47</title>
+<meta name="tracker-version" content="49">
+<title>Tracker Cassoni — v49</title>
 <script>
 // Evita che una vecchia installazione/PWA continui a mostrare un index precedente.
 (function(){
-  var build = '47';
+  var build = '49';
   try {
     if ('serviceWorker' in navigator) navigator.serviceWorker.getRegistrations().then(function(regs){
       regs.forEach(function(reg){ reg.unregister(); });
@@ -813,7 +813,7 @@ body.auth-locked{overflow:hidden}
       <button class="btn-uscita" id="btn-uscita" onclick="registraMovimento('USCITA')" disabled>
         🔴 USCITA
       </button>
-      <button class="btn-rientro" id="btn-rientro" onclick="registraMovimento('RIENTRO')" disabled>
+      <button class="btn-rientro" id="btn-rientro" onclick="apriSceltaPiazzaleRientro()" disabled>
         🟢 RIENTRO
       </button>
     </div>
@@ -1177,6 +1177,27 @@ body.auth-locked{overflow:hidden}
   </div>
 </div>
 
+<!-- Scelta del piazzale per rientri e correzioni manuali -->
+<div class="modal-overlay" id="piazzale-choice-modal" onclick="if(event.target===this)chiudiSceltaPiazzale()" role="dialog" aria-modal="true" aria-labelledby="piazzale-choice-title">
+  <div class="modal" style="max-width:440px">
+    <div class="modal-header">
+      <span class="modal-title" id="piazzale-choice-title">Scegli il piazzale di rientro</span>
+      <button type="button" class="modal-close" onclick="chiudiSceltaPiazzale()" aria-label="Chiudi">×</button>
+    </div>
+    <div class="modal-body">
+      <div id="piazzale-choice-description" style="font-size:13px;line-height:1.55;color:var(--ink2);margin-bottom:14px">Indica dove viene posizionato il cassone.</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <button type="button" class="btn btn-primary" onclick="confermaSceltaPiazzale('CENTRO')" style="min-height:70px;font-size:14px">Piazzale<br><strong>CENTRO</strong></button>
+        <button type="button" class="btn" onclick="confermaSceltaPiazzale('KEOMA')" style="min-height:70px;font-size:14px;background:var(--amber);color:#fff">Piazzale<br><strong>KEOMA</strong></button>
+      </div>
+      <div class="auth-error" id="piazzale-choice-error" role="alert" style="margin-top:10px"></div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-ghost" onclick="chiudiSceltaPiazzale()">Annulla</button>
+    </div>
+  </div>
+</div>
+
 <!-- Inserimento manuale cassone in manutenzione -->
 <div class="modal-overlay" id="man-add-modal" onclick="if(event.target===this)chiudiInserimentoManutenzione()" role="dialog" aria-modal="true" aria-labelledby="man-add-title">
   <div class="modal" style="max-width:500px">
@@ -1372,7 +1393,7 @@ body.auth-locked{overflow:hidden}
 </div>
 
 <div class="toast" id="toast"></div>
-<div class="app-version" aria-label="Versione applicazione">Versione 47</div>
+<div class="app-version" aria-label="Versione applicazione">Versione 49</div>
 
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
@@ -1432,6 +1453,7 @@ function subscribeAll() {
   const rCas = ref(db, 'cassoni');
   onValue(rCas, snap => {
     STATE.cassoni = snap.val() || {};
+    completaRientriManutenzioneDaAdmin();
     scheduleRenderAll();
   });
   // Movimenti
@@ -1452,6 +1474,7 @@ function subscribeAll() {
     _manAttivazioniViste = new Set(attivazioni);
     _manAttivazioniInizializzate = true;
     STATE.movimenti = nuoviMovimenti;
+    completaRientriManutenzioneDaAdmin();
     scheduleRenderAll();
   });
   // Clienti
@@ -1463,6 +1486,37 @@ function subscribeAll() {
 }
 let _manAttivazioniInizializzate = false;
 let _manAttivazioniViste = new Set();
+let _rientriManutenzioneInCorso = false;
+async function completaRientriManutenzioneDaAdmin() {
+  if (!db || window._ruoloCorrente !== 'admin' || _rientriManutenzioneInCorso) return;
+  const richieste = Object.entries(STATE.movimenti || {}).filter(([,m]) => {
+    const cassone = STATE.cassoni[m.cassoneId];
+    if (!cassone || cassone.stato !== 'fuori' || m.manutenzioneEliminata) return false;
+    const aperta = (m.manutenzioneStato || 'segnalata') !== 'ripristinato';
+    return aperta && m.manutenzioneInseritaManualmente === true &&
+      (m.manutenzioneRientroRichiesto === true || !m.manutenzioneRientroCompletatoIl);
+  });
+  if (!richieste.length) return;
+  _rientriManutenzioneInCorso = true;
+  const ts = now();
+  const updates = {};
+  richieste.forEach(([movId,m]) => {
+    updates[`cassoni/${m.cassoneId}/stato`] = 'piazzale';
+    updates[`cassoni/${m.cassoneId}/clienteAttuale`] = '';
+    updates[`cassoni/${m.cassoneId}/lastMov`] = ts;
+    updates[`movimenti/${movId}/manutenzioneRientroRichiesto`] = false;
+    updates[`movimenti/${movId}/manutenzioneRientroCompletatoIl`] = ts;
+    updates[`movimenti/${movId}/manutenzioneRientroCompletatoDa`] = window._nomeUtenteCorrente || 'admin';
+  });
+  try {
+    await update(ref(db, '/'), updates);
+    toast(`✓ ${richieste.length} rientro${richieste.length===1?'':'i'} da manutenzione completato${richieste.length===1?'':'i'}`, 'ok');
+  } catch(err) {
+    console.error('Rientri manutenzione non completati', err);
+  } finally {
+    _rientriManutenzioneInCorso = false;
+  }
+}
 let _subscriptionsAvviate = false;
 function avviaSubscriptions(ruolo) {
   if (_subscriptionsAvviate || !db) return;
@@ -1589,9 +1643,12 @@ function renderPiazzale() {
         const title = c.stato === 'fuori' && c.clienteAttuale ? ` → ${c.clienteAttuale}` : '';
         const tipoGenerico = /^(PIANALE|COMPATTATORE|CENTINATO|VASCA|SCARRABILE|ALTRO)$/i.test(String(c.tipo||'').trim());
         const descrizione = c.descrizione || c.note || (!tipoGenerico ? c.tipo : '') || 'Descrizione non indicata';
+        const puoModificarePiazzale = c.stato === 'piazzale' && ['admin','ufficio'].includes(window._ruoloCorrente);
+        const piazzale = c.piazzaleAttuale ? `Piazzale ${c.piazzaleAttuale}` : 'Piazzale da indicare';
         return `<div class="cassone-chip ${cls}" title="${escapeHTML(c.id + title + ' · ' + descrizione)}">
           <span class="cassone-chip-main">${ico} <strong>${escapeHTML(c.id)}</strong>${title ? `<span style="font-size:10px;opacity:.75"> ${escapeHTML(title)}</span>` : ''}</span>
           <span class="cassone-chip-desc">${escapeHTML(descrizione)}</span>
+          ${c.stato === 'piazzale' ? `<button type="button" onclick="event.stopPropagation();apriModificaPiazzaleCassone('${escapeHTML(c.id)}')" ${puoModificarePiazzale?'':'disabled'} style="margin-top:4px;border:1px solid var(--green);background:#fff;color:var(--green-d);border-radius:10px;padding:2px 7px;font:700 9px var(--font);cursor:${puoModificarePiazzale?'pointer':'default'};opacity:${puoModificarePiazzale?'1':'.75'}">${escapeHTML(piazzale)}</button>` : ''}
         </div>`;
       }).join('');
 
@@ -1971,12 +2028,13 @@ function renderCassoniSetup() {
   const cas = Object.entries(STATE.cassoni);
   if (!cas.length) { el.innerHTML = '<p style="font-size:12px;color:var(--ink3)">Nessun cassone</p>'; return; }
   el.innerHTML = `<table style="width:100%;font-size:12px;border-collapse:collapse">
-    <thead><tr style="background:var(--surface2)"><th style="padding:5px 8px;text-align:left">Codice</th><th>Tipo</th><th>Stato</th><th></th></tr></thead>
+    <thead><tr style="background:var(--surface2)"><th style="padding:5px 8px;text-align:left">Codice</th><th>Tipo</th><th>Stato</th><th>Piazzale</th><th></th></tr></thead>
     <tbody>${cas.map(([id,c]) =>
       `<tr style="border-bottom:1px solid var(--border)">
         <td style="padding:5px 8px;font-weight:700">${id}</td>
         <td style="padding:5px 8px">${c.tipo}</td>
         <td style="padding:5px 8px"><span class="status-pill ${c.stato==='piazzale'?'pill-in':'pill-out'}">${c.stato}</span></td>
+        <td style="padding:5px 8px">${c.stato==='piazzale' ? `<button class="btn btn-ghost btn-sm" onclick="apriModificaPiazzaleCassone('${id}')">${escapeHTML(c.piazzaleAttuale || 'Imposta')}</button>` : '—'}</td>
         <td style="padding:5px 8px"><button class="btn btn-danger btn-sm" onclick="eliminaCassone('${id}')">🗑</button></td>
       </tr>`
     ).join('')}</tbody></table>`;
@@ -2163,11 +2221,71 @@ function rimuoviFotoSegnalazione(i) {
 }
 window.rimuoviFotoSegnalazione = rimuoviFotoSegnalazione;
 
+let _modalitaSceltaPiazzale = null;
+let _cassonePiazzaleManuale = null;
+
+window.apriSceltaPiazzaleRientro = function() {
+  if (!_scanCassoneId || STATE.cassoni[_scanCassoneId]?.stato !== 'fuori') {
+    toast('Seleziona un cassone attualmente fuori piazzale', 'err'); return;
+  }
+  _modalitaSceltaPiazzale = 'rientro';
+  _cassonePiazzaleManuale = null;
+  document.getElementById('piazzale-choice-title').textContent = 'Scegli il piazzale di rientro';
+  document.getElementById('piazzale-choice-description').innerHTML = `Dove rientra il cassone <strong>${escapeHTML(_scanCassoneId)}</strong>? La scelta sarà salvata nel movimento e nello stato del cassone.`;
+  document.getElementById('piazzale-choice-error').textContent = '';
+  document.getElementById('piazzale-choice-modal').classList.add('open');
+};
+
+window.apriModificaPiazzaleCassone = function(cassoneId) {
+  if (!['admin','ufficio'].includes(window._ruoloCorrente)) return;
+  const cas = STATE.cassoni[cassoneId];
+  if (!cas || cas.stato !== 'piazzale') { toast('Il piazzale si può impostare solo sui cassoni rientrati', 'err'); return; }
+  _modalitaSceltaPiazzale = 'manuale';
+  _cassonePiazzaleManuale = cassoneId;
+  document.getElementById('piazzale-choice-title').textContent = 'Modifica piazzale del cassone';
+  document.getElementById('piazzale-choice-description').innerHTML = `Seleziona il piazzale attuale del cassone <strong>${escapeHTML(cassoneId)}</strong>. Valore attuale: <strong>${escapeHTML(cas.piazzaleAttuale || 'non indicato')}</strong>.`;
+  document.getElementById('piazzale-choice-error').textContent = '';
+  document.getElementById('piazzale-choice-modal').classList.add('open');
+};
+
+window.chiudiSceltaPiazzale = function() {
+  document.getElementById('piazzale-choice-modal')?.classList.remove('open');
+  _modalitaSceltaPiazzale = null;
+  _cassonePiazzaleManuale = null;
+};
+
+window.confermaSceltaPiazzale = async function(piazzale) {
+  if (!['CENTRO','KEOMA'].includes(piazzale)) return;
+  if (_modalitaSceltaPiazzale === 'rientro') {
+    document.getElementById('piazzale-choice-modal')?.classList.remove('open');
+    _modalitaSceltaPiazzale = null;
+    await registraMovimento('RIENTRO', piazzale);
+    return;
+  }
+  if (_modalitaSceltaPiazzale !== 'manuale' || !_cassonePiazzaleManuale || !['admin','ufficio'].includes(window._ruoloCorrente)) return;
+  const cassoneId = _cassonePiazzaleManuale;
+  try {
+    await update(ref(db, `cassoni/${cassoneId}`), {
+      piazzaleAttuale:piazzale,
+      piazzaleModificatoIl:now(),
+      piazzaleModificatoDa:window._nomeUtenteCorrente || ''
+    });
+    window.chiudiSceltaPiazzale();
+    toast(`✓ ${cassoneId} assegnato al piazzale ${piazzale}`, 'ok');
+  } catch(err) {
+    console.error(err);
+    document.getElementById('piazzale-choice-error').textContent = 'Modifica non autorizzata o connessione non disponibile.';
+  }
+};
+
 let _movimentoInSalvataggio = false;
-async function registraMovimento(tipo) {
+async function registraMovimento(tipo, piazzaleRientro = '') {
   if (!db) { toast('Firebase non connesso', 'err'); return; }
   if (_movimentoInSalvataggio) return;
   if (!_scanCassoneId) { toast('Nessun cassone selezionato', 'err'); return; }
+  if (tipo === 'RIENTRO' && !['CENTRO','KEOMA'].includes(piazzaleRientro)) {
+    window.apriSceltaPiazzaleRientro(); return;
+  }
   const cliente = document.getElementById('t-cliente').value.trim();
   const autista = document.getElementById('t-autista').value.trim();
   const note    = document.getElementById('t-note').value.trim();
@@ -2194,6 +2312,7 @@ async function registraMovimento(tipo) {
     const ts = now();
     const movRef = push(ref(db, 'movimenti'));
     const nuovoMov = { cassoneId:_scanCassoneId, tipo, ts, cliente, autista, note:noteManutenzione, ddtNumero:'', ddtTs:'' };
+    if (tipo === 'RIENTRO') nuovoMov.piazzaleRientro = piazzaleRientro;
     if (segnalazioni.length) {
       nuovoMov.manutenzioneStato = 'segnalata';
       nuovoMov.manutenzioneAggiornatoIl = ts;
@@ -2210,6 +2329,7 @@ async function registraMovimento(tipo) {
     updates[`cassoni/${_scanCassoneId}/stato`] = tipo === 'USCITA' ? 'fuori' : 'piazzale';
     updates[`cassoni/${_scanCassoneId}/clienteAttuale`] = tipo === 'USCITA' ? cliente : '';
     updates[`cassoni/${_scanCassoneId}/lastMov`] = ts;
+    updates[`cassoni/${_scanCassoneId}/piazzaleAttuale`] = tipo === 'RIENTRO' ? piazzaleRientro : null;
     if (tipo === 'RIENTRO') {
       // Attiva sul movimento originale tutte le segnalazioni rimaste in attesa durante l'uscita.
       Object.entries(STATE.movimenti || {}).forEach(([id,m]) => {
@@ -2225,7 +2345,7 @@ async function registraMovimento(tipo) {
     }
     await update(ref(db, '/'), updates);
 
-    toast(tipo === 'USCITA' ? '🔴 Uscita registrata — DDT da emettere' : '🟢 Rientro registrato', 'ok');
+    toast(tipo === 'USCITA' ? '🔴 Uscita registrata — DDT da emettere' : `🟢 Rientro registrato — Piazzale ${piazzaleRientro}`, 'ok');
 
   // Reset form
   document.getElementById('scan-input').value = '';
@@ -2270,7 +2390,7 @@ function renderTrasportatoreRecenti(autistaNome) {
     `<div class="trasp-rec-item">
       <span class="mov-badge ${m.tipo==='USCITA'?'badge-out':'badge-in'}" style="font-size:9px">${m.tipo}</span>
       <strong>${m.cassoneId}</strong>
-      <span style="color:var(--ink2);flex:1">${m.cliente||'—'}</span>
+      <span style="color:var(--ink2);flex:1">${m.tipo==='RIENTRO' && m.piazzaleRientro ? `Piazzale ${escapeHTML(m.piazzaleRientro)}` : escapeHTML(m.cliente||'—')}</span>
       <span style="color:var(--ink3)">${fmtDT(m.ts)}</span>
     </div>`
   ).join('');
@@ -2951,6 +3071,8 @@ window.salvaInserimentoManutenzione = async function() {
         manutenzioneProblema:problema,
         manutenzioneInseritaManualmente:true,
         manutenzioneInseritaDa:window._nomeUtenteCorrente || '',
+        manutenzioneRientroRichiesto:eraFuori,
+        manutenzioneRientroRichiestoIl:eraFuori ? ts : null,
         manutenzioneSegnalataIl:ts,
         manutenzioneStato:'segnalata',
         manutenzioneAggiornatoIl:ts,
@@ -2959,14 +3081,9 @@ window.salvaInserimentoManutenzione = async function() {
         manutenzioneEliminata:false,
         manutenzioneTimeline:{segnalata:ts}
       });
-      if (eraFuori) {
-        await update(ref(db, `cassoni/${cassoneId}`), {
-          stato:'piazzale', clienteAttuale:'', lastMov:ts
-        });
-      }
       chiudiInserimentoManutenzione();
       toast(eraFuori
-        ? `✓ ${cassoneId}: rientro automatico e manutenzione registrati`
+        ? `✓ ${cassoneId}: manutenzione registrata; rientro automatico richiesto`
         : `✓ ${cassoneId} inserito in manutenzione al punto 0`, 'ok');
       return;
     }
@@ -4490,6 +4607,7 @@ function aggiornaBadgeUtente(user) {
 const RUOLI_LABEL = { admin:'Admin', ufficio:'Ufficio', manutenzione:'Manutenzione', trasportatore:'Trasportatore' };
 function applicaRuolo(ruolo) {
   window._ruoloCorrente = ruolo;
+  if (ruolo === 'admin') setTimeout(completaRientriManutenzioneDaAdmin, 0);
   const tabDash  = document.querySelector('.nav-tab[onclick*="dashboard"]');
   const tabBoll  = document.querySelector('.nav-tab[onclick*="bollettazione"]');
   const tabArch  = document.getElementById('nav-tab-archivio');
