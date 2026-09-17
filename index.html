@@ -6,12 +6,12 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="tracker-version" content="51">
-<title>Tracker Cassoni — v51</title>
+<meta name="tracker-version" content="52">
+<title>Tracker Cassoni — v52</title>
 <script>
 // Evita che una vecchia installazione/PWA continui a mostrare un index precedente.
 (function(){
-  var build = '51';
+  var build = '52';
   try {
     if ('serviceWorker' in navigator) navigator.serviceWorker.getRegistrations().then(function(regs){
       regs.forEach(function(reg){ reg.unregister(); });
@@ -345,6 +345,20 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);min-height:10
 .ddt-table th{background:var(--ink);color:#fff;padding:6px 10px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em}
 .ddt-table td{padding:7px 10px;border-bottom:1px solid var(--border)}
 .modal-footer{padding:1rem 1.5rem;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end}
+.segnalazioni-dialog{width:min(430px,100%);background:var(--surface);border:2px solid var(--green);border-radius:14px;box-shadow:0 22px 55px rgba(17,43,58,.32);overflow:hidden}
+.segnalazioni-dialog .modal-header{background:var(--ink);color:#fff;border-bottom:3px solid var(--green);padding:1rem 1.15rem}
+.segnalazioni-dialog .modal-title{font-size:15px;color:#fff}
+.segnalazioni-dialog .modal-close{color:#fff;width:32px;height:32px;border:1px solid rgba(255,255,255,.38);border-radius:7px;display:grid;place-items:center;padding:0}
+.segnalazioni-dialog .modal-close:hover{background:rgba(255,255,255,.12)}
+.segnalazioni-body{display:flex;flex-direction:column;gap:10px;padding:1.15rem;background:var(--bg)}
+.segnalazioni-cassone{font-size:13px;font-weight:800;color:var(--ink);background:var(--surface);border:1.5px solid var(--border);border-left:4px solid var(--green);border-radius:8px;padding:10px 12px}
+.segnalazioni-opzione{display:flex;align-items:center;gap:10px;padding:11px 12px;background:var(--surface);border:1.5px solid var(--border);border-radius:8px;cursor:pointer;font-size:13px;font-weight:650;color:var(--ink2);transition:border-color .15s,box-shadow .15s,background .15s}
+.segnalazioni-opzione:hover,.segnalazioni-opzione:has(input:checked){border-color:var(--green);background:#f3fbfa;box-shadow:0 0 0 2px rgba(47,174,158,.10)}
+.segnalazioni-opzione input{width:18px;height:18px;accent-color:var(--green);flex:0 0 auto}
+.segnalazioni-testo{width:100%;font:13px var(--font);padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface);color:var(--ink);resize:vertical;outline:none}
+.segnalazioni-testo:focus{border-color:var(--green);box-shadow:0 0 0 3px rgba(47,174,158,.12)}
+.segnalazioni-dialog .modal-footer{background:var(--surface);border-top:1.5px solid var(--border);padding:.9rem 1.15rem}
+@media(max-width:480px){.modal-overlay{padding:12px}.segnalazioni-dialog{max-height:calc(100vh - 24px);overflow-y:auto}.segnalazioni-body{padding:1rem}.segnalazioni-dialog .modal-footer{position:sticky;bottom:0}.segnalazioni-dialog .modal-footer .btn{flex:1}}
 .presa-carico-field{display:flex;flex-direction:column;gap:5px}
 .presa-carico-field label{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--ink3)}
 .presa-carico-field input,.presa-carico-field textarea{width:100%;font:13px var(--font);color:var(--ink);background:var(--surface);border:1.5px solid var(--border);border-radius:7px;padding:9px 11px;outline:none}
@@ -1148,28 +1162,27 @@ body.auth-locked{overflow:hidden}
 
 <!-- ════════ MODAL SEGNALAZIONI ════════ -->
 <div class="modal-overlay" id="segn-modal" onclick="if(event.target===this)closeSegn()">
-  <div class="modal-box" style="max-width:420px">
+  <div class="modal segnalazioni-dialog" role="dialog" aria-modal="true" aria-labelledby="segn-modal-title">
     <div class="modal-header">
-      <span class="modal-title">🔧 Segnalazioni manutenzione</span>
-      <button class="modal-close" onclick="closeSegn()">×</button>
+      <span class="modal-title" id="segn-modal-title">🔧 Segnalazioni manutenzione</span>
+      <button type="button" class="modal-close" onclick="closeSegn()" aria-label="Chiudi">×</button>
     </div>
-    <div class="modal-body" style="display:flex;flex-direction:column;gap:10px">
-      <div id="segn-cassone-label" style="font-size:13px;font-weight:600;color:var(--ink2)"></div>
-      <label style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--s2);border-radius:7px;border:1.5px solid var(--border);cursor:pointer;font-size:13px">
-        <input type="checkbox" id="segn-tag" style="width:16px;height:16px;accent-color:#c0392b"> 🏷️ Manca tag
+    <div class="modal-body segnalazioni-body">
+      <div id="segn-cassone-label" class="segnalazioni-cassone"></div>
+      <label class="segnalazioni-opzione">
+        <input type="checkbox" id="segn-tag"> 🏷️ Manca tag
       </label>
-      <label style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--s2);border-radius:7px;border:1.5px solid var(--border);cursor:pointer;font-size:13px">
-        <input type="checkbox" id="segn-rotture" style="width:16px;height:16px;accent-color:#c0392b"> 🔧 Presenta rotture
+      <label class="segnalazioni-opzione">
+        <input type="checkbox" id="segn-rotture"> 🔧 Presenta rotture
       </label>
-      <label style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--s2);border-radius:7px;border:1.5px solid var(--border);cursor:pointer;font-size:13px">
-        <input type="checkbox" id="segn-telo" style="width:16px;height:16px;accent-color:#c0392b"> 🪟 Telo danneggiato
+      <label class="segnalazioni-opzione">
+        <input type="checkbox" id="segn-telo"> 🪟 Telo danneggiato
       </label>
-      <label style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--s2);border-radius:7px;border:1.5px solid var(--border);cursor:pointer;font-size:13px">
-        <input type="checkbox" id="segn-altro" onchange="document.getElementById('segn-altro-testo').style.display=this.checked?'block':'none'" style="width:16px;height:16px;accent-color:#c0392b"> ⚠️ Altro
+      <label class="segnalazioni-opzione">
+        <input type="checkbox" id="segn-altro" onchange="document.getElementById('segn-altro-testo').style.display=this.checked?'block':'none'"> ⚠️ Altro
       </label>
-      <textarea id="segn-altro-testo" placeholder="Descrivi il problema..." rows="2"
-        style="display:none;font-family:inherit;font-size:13px;padding:8px 12px;border:1.5px solid var(--border);border-radius:7px;background:var(--s2);color:var(--ink);resize:vertical;outline:none"></textarea>
-      <input id="segn-note-libere" class="form-ctrl" placeholder="Note aggiuntive (opzionale)" style="font-size:13px">
+      <textarea id="segn-altro-testo" class="segnalazioni-testo" placeholder="Descrivi il problema..." rows="2" style="display:none"></textarea>
+      <input id="segn-note-libere" class="segnalazioni-testo" placeholder="Note aggiuntive (opzionale)">
     </div>
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="closeSegn()">Annulla</button>
@@ -1394,7 +1407,7 @@ body.auth-locked{overflow:hidden}
 </div>
 
 <div class="toast" id="toast"></div>
-<div class="app-version" aria-label="Versione applicazione">Versione 51</div>
+<div class="app-version" aria-label="Versione applicazione">Versione 52</div>
 
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
