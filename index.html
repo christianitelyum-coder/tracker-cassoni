@@ -6,12 +6,12 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="tracker-version" content="52">
-<title>Tracker Cassoni — v52</title>
+<meta name="tracker-version" content="53">
+<title>Tracker Cassoni — v53</title>
 <script>
 // Evita che una vecchia installazione/PWA continui a mostrare un index precedente.
 (function(){
-  var build = '52';
+  var build = '53';
   try {
     if ('serviceWorker' in navigator) navigator.serviceWorker.getRegistrations().then(function(regs){
       regs.forEach(function(reg){ reg.unregister(); });
@@ -357,6 +357,15 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);min-height:10
 .segnalazioni-opzione input{width:18px;height:18px;accent-color:var(--green);flex:0 0 auto}
 .segnalazioni-testo{width:100%;font:13px var(--font);padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface);color:var(--ink);resize:vertical;outline:none}
 .segnalazioni-testo:focus{border-color:var(--green);box-shadow:0 0 0 3px rgba(47,174,158,.12)}
+.segnalazioni-foto-box{background:var(--surface);border:1.5px solid var(--border);border-radius:8px;padding:10px 12px}
+.segnalazioni-foto-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.segnalazioni-foto-label{font-size:12px;font-weight:800;color:var(--ink2)}
+.segnalazioni-foto-btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:1.5px solid var(--green);background:#f3fbfa;color:var(--green-d);border-radius:7px;padding:8px 11px;font:800 12px var(--font);cursor:pointer}
+.segnalazioni-foto-btn:hover{background:var(--green);color:#fff}
+.segnalazioni-foto-preview{display:none;flex-wrap:wrap;gap:9px;margin-top:10px}
+.segnalazioni-foto-item{position:relative;width:68px;height:68px}
+.segnalazioni-foto-item img{width:100%;height:100%;object-fit:cover;border-radius:8px;border:2px solid var(--border);background:#fff}
+.segnalazioni-foto-remove{position:absolute;top:-7px;right:-7px;width:23px;height:23px;border-radius:50%;background:var(--red);color:#fff;border:2px solid #fff;font-size:14px;line-height:1;cursor:pointer;font-weight:800;padding:0;box-shadow:0 2px 5px rgba(0,0,0,.2)}
 .segnalazioni-dialog .modal-footer{background:var(--surface);border-top:1.5px solid var(--border);padding:.9rem 1.15rem}
 @media(max-width:480px){.modal-overlay{padding:12px}.segnalazioni-dialog{max-height:calc(100vh - 24px);overflow-y:auto}.segnalazioni-body{padding:1rem}.segnalazioni-dialog .modal-footer{position:sticky;bottom:0}.segnalazioni-dialog .modal-footer .btn{flex:1}}
 .presa-carico-field{display:flex;flex-direction:column;gap:5px}
@@ -1183,6 +1192,16 @@ body.auth-locked{overflow:hidden}
       </label>
       <textarea id="segn-altro-testo" class="segnalazioni-testo" placeholder="Descrivi il problema..." rows="2" style="display:none"></textarea>
       <input id="segn-note-libere" class="segnalazioni-testo" placeholder="Note aggiuntive (opzionale)">
+      <div class="segnalazioni-foto-box">
+        <div class="segnalazioni-foto-head">
+          <span class="segnalazioni-foto-label">📷 Foto della segnalazione</span>
+          <label class="segnalazioni-foto-btn">
+            Scatta foto / Scegli foto
+            <input type="file" id="segn-foto-input" accept="image/*" capture="environment" multiple hidden onchange="onFotoPopupSegnalazione(event)">
+          </label>
+        </div>
+        <div id="segn-foto-preview" class="segnalazioni-foto-preview"></div>
+      </div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="closeSegn()">Annulla</button>
@@ -1407,7 +1426,7 @@ body.auth-locked{overflow:hidden}
 </div>
 
 <div class="toast" id="toast"></div>
-<div class="app-version" aria-label="Versione applicazione">Versione 52</div>
+<div class="app-version" aria-label="Versione applicazione">Versione 53</div>
 
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
@@ -1952,6 +1971,35 @@ window.scaricaPDFDDT = async function(movId) {
 };
 
 let _segnMovId = null;
+let _segnFoto = [];
+
+function renderFotoPopupSegnalazione() {
+  const contenitore = document.getElementById('segn-foto-preview');
+  if (!contenitore) return;
+  contenitore.style.display = _segnFoto.length ? 'flex' : 'none';
+  contenitore.innerHTML = _segnFoto.map((src, indice) => `
+    <div class="segnalazioni-foto-item">
+      <img src="${src}" alt="Foto segnalazione ${indice + 1}">
+      <button type="button" class="segnalazioni-foto-remove" onclick="rimuoviFotoPopupSegnalazione(${indice})" aria-label="Rimuovi foto ${indice + 1}" title="Rimuovi foto">×</button>
+    </div>`).join('');
+}
+
+async function onFotoPopupSegnalazione(event) {
+  const files = Array.from(event.target.files || []);
+  event.target.value = '';
+  for (const file of files) {
+    try { _segnFoto.push(await comprimiFoto(file)); }
+    catch { toast('Impossibile leggere la foto', 'err'); }
+  }
+  renderFotoPopupSegnalazione();
+}
+window.onFotoPopupSegnalazione = onFotoPopupSegnalazione;
+
+function rimuoviFotoPopupSegnalazione(indice) {
+  _segnFoto.splice(indice, 1);
+  renderFotoPopupSegnalazione();
+}
+window.rimuoviFotoPopupSegnalazione = rimuoviFotoPopupSegnalazione;
 
 function openSegnalazioniModal(movId) {
   _segnMovId = movId;
@@ -1970,6 +2018,8 @@ function openSegnalazioniModal(movId) {
   document.getElementById('segn-altro-testo').value   = altroTesto;
   document.getElementById('segn-altro-testo').style.display = hasAltro ? 'block' : 'none';
   document.getElementById('segn-note-libere').value   = noteLibere;
+  _segnFoto = Array.isArray(m.foto) ? m.foto.slice() : [];
+  renderFotoPopupSegnalazione();
   document.getElementById('segn-modal').classList.add('open');
 }
 window.openSegnalazioniModal = openSegnalazioniModal;
@@ -1977,6 +2027,8 @@ window.openSegnalazioniModal = openSegnalazioniModal;
 function closeSegn() {
   document.getElementById('segn-modal').classList.remove('open');
   _segnMovId = null;
+  _segnFoto = [];
+  renderFotoPopupSegnalazione();
 }
 window.closeSegn = closeSegn;
 
@@ -1995,7 +2047,7 @@ async function salvaSegnalazioni() {
   }
   const noteLibere = document.getElementById('segn-note-libere').value.trim();
   const nuovaNota  = [noteLibere, ...segnalazioni].filter(Boolean).join(' | ');
-  const aggiornamenti = { note: nuovaNota };
+  const aggiornamenti = { note: nuovaNota, foto: _segnFoto.length ? _segnFoto.slice() : null };
   if (segnalazioni.length && !avevaSegnalazioni) {
     const ts = now();
     aggiornamenti.manutenzioneStato = 'segnalata';
