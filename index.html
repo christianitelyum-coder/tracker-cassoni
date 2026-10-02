@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="tracker-version" content="59">
+<meta name="tracker-version" content="60">
 <title>Tracker Cassoni — v55</title>
 <script>
 // Evita che una vecchia installazione/PWA continui a mostrare un index precedente.
@@ -1473,11 +1473,12 @@ body.auth-locked{overflow:hidden}
 </div>
 
 <div class="toast" id="toast"></div>
-<div class="app-version" aria-label="Versione applicazione">Versione 59</div>
+<div class="app-version" aria-label="Versione applicazione">Versione 60</div>
 
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.2/dist/html2pdf.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
 <script type="module">
 // ══════════════════════════════════════════════════
 //  FIREBASE INIT
@@ -4258,33 +4259,93 @@ async function attendiImmaginiReport(elemento) {
   await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
 }
 
+function immaginePdfJpeg(dataUrl) {
+  return new Promise(resolve => {
+    const img = new Image();
+    img.onload = () => {
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.naturalWidth || 900; canvas.height = img.naturalHeight || 600;
+        canvas.getContext('2d').drawImage(img,0,0,canvas.width,canvas.height);
+        resolve(canvas.toDataURL('image/jpeg',.88));
+      } catch(e) { resolve(null); }
+    };
+    img.onerror = () => resolve(null);
+    img.src = dataUrl;
+  });
+}
+
+async function creaPdfDirettoMezzo(id) {
+  const r = STATE.segnalazioniMezzi[id];
+  const JsPDF = window.jspdf?.jsPDF || window.jsPDF;
+  if (!r || !JsPDF) throw new Error('jsPDF non disponibile');
+  const doc = new JsPDF({unit:'mm',format:'a4',orientation:'portrait',compress:true});
+  const verde=[128,173,82], blu=[13,43,78], grigio=[75,75,75], chiaro=[238,245,255];
+  const safe=v=>String(v||'—');
+  const linee=(testo,w)=>doc.splitTextToSize(safe(testo),w);
+  const categorie=(r.categorie||[]).map(c=>CATEGORIE_MEZZO[c]?.label||c).join(', ')||'—';
+  const problemi=descrizioneProblemiMezzo(r);
+  const priorita=({bassa:'Bassa',media:'Media',alta:'Alta',urgente:'Urgente'})[r.priorita]||r.priorita||'Media';
+  const chiusura=r.statoTimeline?.ripristinato||(r.stato==='ripristinato'?r.statoAggiornatoIl:'');
+  const intestazione=(titolo,sottotitolo)=>{
+    doc.setFillColor(...verde);doc.rect(65,12,133,18,'F');
+    doc.setTextColor(255);doc.setFont('helvetica','bold');doc.setFontSize(15);doc.text("SOLUZIONI PER L'AMBIENTE",131.5,23,{align:'center'});
+    doc.setTextColor(...blu);doc.setFontSize(16);doc.text(titolo,12,43);
+    doc.setFont('helvetica','normal');doc.setFontSize(9);doc.setTextColor(...grigio);doc.text(sottotitolo,12,49);
+    doc.setDrawColor(...verde);doc.setLineWidth(1.2);doc.line(12,53,198,53);
+  };
+  const campo=(label,valore,y)=>{
+    doc.setFont('helvetica','bold');doc.setFontSize(8);doc.setTextColor(...grigio);doc.text(label,12,y);
+    doc.setFont('helvetica','normal');doc.setFontSize(10);doc.setTextColor(25);doc.text(safe(valore),58,y);
+    doc.setDrawColor(170);doc.line(58,y+1,198,y+1);
+  };
+
+  intestazione('REPORT MANUTENZIONE MEZZO','Scheda compilata automaticamente dalla segnalazione dell’autista');
+  campo('TARGA',r.targa,62);campo('AUTISTA',r.autista,70);campo('TIPOLOGIA',r.tipologia||categorie,78);
+  campo('MARCA / MODELLO',r.modello,86);campo('POSIZIONE',r.posizione,94);campo('PRIORITÀ',priorita,102);
+  campo('DATA RICHIESTA',fmtDT(r.ts),110);campo('DATA CHIUSURA',chiusura?fmtDT(chiusura):'Intervento non ancora chiuso',118);
+  doc.setFillColor(...chiaro);doc.rect(12,126,186,9,'F');doc.setFont('helvetica','bold');doc.setFontSize(9);doc.setTextColor(...blu);doc.text('PROBLEMATICA SEGNALATA',15,132);
+  let y=141;doc.setFont('helvetica','normal');doc.setFontSize(9);doc.setTextColor(30);
+  const elenco=problemi.length?problemi:['Anomalia non specificata'];
+  elenco.forEach((p,i)=>{const righe=linee((i+1)+'. '+p,178);doc.text(righe,16,y);y+=Math.max(7,righe.length*4.5);});
+  y=Math.max(y+3,174);doc.setFont('helvetica','bold');doc.setTextColor(...blu);doc.text('AVANZAMENTO INTERVENTO',12,y);y+=7;
+  const stati=[['Segnalata',r.statoTimeline?.segnalata||r.ts],['Presa in carico',r.statoTimeline?.presa_carico],['In manutenzione',r.statoTimeline?.in_manutenzione],['Ripristinato',chiusura]].filter(x=>x[1]);
+  doc.setFontSize(8.5);stati.forEach(s=>{doc.setFont('helvetica','bold');doc.setTextColor(40);doc.text(s[0],16,y);doc.setFont('helvetica','normal');doc.text(fmtDT(s[1]),75,y);doc.setDrawColor(210);doc.line(16,y+2,194,y+2);y+=8;});
+  y=Math.max(y+12,238);doc.setFontSize(8);doc.setTextColor(...grigio);doc.text('FIRMA AUTISTA',20,y);doc.text('FIRMA UFFICIO LOGISTICA',125,y);doc.setDrawColor(80);doc.line(16,y+14,82,y+14);doc.line(118,y+14,194,y+14);
+  doc.setFontSize(7);doc.setTextColor(140);doc.text('Rif. '+id+' · Generato il '+new Date().toLocaleString('it-IT'),12,287);
+
+  doc.addPage();intestazione('MAPPA DEI DANNI DEL MEZZO','Targa '+safe(r.targa)+' · Indicatori numerati nelle posizioni segnalate');
+  const viste=[['sinistra','LATO SINISTRO'],['fronte','VISTA FRONTALE'],['destra','LATO DESTRO'],['retro','VISTA POSTERIORE'],['alto',"VISTA DALL'ALTO"]];
+  const immagini=await Promise.all(viste.map(v=>immaginePdfJpeg(MEZZO_IMAGE_DATA[v[0]])));
+  const box=[ [12,60,58,50],[76,60,58,50],[140,60,58,50],[43,120,58,50],[109,120,58,50] ];
+  viste.forEach((v,i)=>{const [x,yy,w,h]=box[i];doc.setDrawColor(185);doc.roundedRect(x,yy,w,h,2,2);doc.setFont('helvetica','bold');doc.setFontSize(7);doc.setTextColor(...grigio);doc.text(v[1],x+w/2,yy+5,{align:'center'});if(immagini[i])doc.addImage(immagini[i],'JPEG',x+3,yy+8,w-6,h-11);(r.danni||[]).filter(d=>d.vista===v[0]).forEach((d,j)=>{const n=(r.danni||[]).indexOf(d)+1;const mx=x+3+(Math.max(0,Math.min(100,+d.x||50))/100)*(w-6);const my=yy+8+(Math.max(0,Math.min(100,+d.y||50))/100)*(h-11);doc.setFillColor(220,38,38);doc.circle(mx,my,3,'F');doc.setTextColor(255);doc.setFontSize(6);doc.text(String(n),mx,my+1,{align:'center'});});});
+  y=184;doc.setFont('helvetica','bold');doc.setFontSize(9);doc.setTextColor(...blu);doc.text('RIFERIMENTI DANNI',12,y);y+=7;doc.setFontSize(8);doc.setTextColor(35);
+  (r.danni||[]).forEach((d,i)=>{const txt=(i+1)+'. '+(d.componente||({sinistra:'Lato sinistro',destra:'Lato destro',fronte:'Vista frontale',retro:'Vista posteriore',alto:"Vista dall'alto"}[d.vista]||d.vista));doc.text(linee(txt,178),16,y);y+=7;});
+  if(!(r.danni||[]).length)doc.text('Nessun danno localizzato sulle immagini.',16,y);
+
+  doc.addPage();intestazione('CHECKLIST ISPEZIONE MOTRICE','Targa '+safe(r.targa)+' · Componenti segnalati evidenziati come ANOMALIA');
+  const selezionati=new Set(r.dettagli?.componenti||[]),componenti=CATEGORIE_MEZZO.componenti.opzioni.filter(v=>v!=='Altro');
+  const colW=60,startX=[12,75,138];y=62;componenti.forEach((c,i)=>{const col=i%3,row=Math.floor(i/3),yy=62+row*8.7,x=startX[col];doc.setDrawColor(220);doc.line(x,yy+4.5,x+colW-2,yy+4.5);doc.setFontSize(6.8);doc.setTextColor(35);doc.text(linee(c,colW-21),x+5,yy);doc.setFont('helvetica','bold');doc.setTextColor(selezionati.has(c)?200:60,selezionati.has(c)?35:120,selezionati.has(c)?35:60);doc.text(selezionati.has(c)?'ANOM.':'OK',x+colW-18,yy);doc.setFont('helvetica','normal');});
+  doc.setFontSize(8);doc.setTextColor(...grigio);doc.text('FIRMA AUTISTA',20,274);doc.text('FIRMA UFFICIO LOGISTICA',125,274);doc.setDrawColor(80);doc.line(16,288,82,288);doc.line(118,288,194,288);
+  return {doc,r};
+}
+
 window.scaricaReportMezzo = async function(id) {
-  if (typeof html2pdf === 'undefined') { toast('Generatore PDF non disponibile. Ricarica la pagina.', 'err'); return; }
-  const scheda = creaSchedaReportMezzo(id);
-  if (!scheda) return;
   try {
-    await attendiImmaginiReport(scheda.el);
-    await html2pdf().set(opzioniPdfReportMezzo(scheda.r)).from(scheda.el).save();
-    toast('✓ Report PDF scaricato', 'ok');
-  } catch(err) {
-    console.error(err); toast('Impossibile creare il PDF', 'err');
-  } finally { scheda.el.remove(); }
+    const {doc,r}=await creaPdfDirettoMezzo(id);
+    const targa=String(r.targa||'mezzo').replace(/[^A-Za-z0-9_-]/g,'_');
+    doc.save(`report_manutenzione_${targa}_${String(r.ts||now()).slice(0,10)}.pdf`);
+    toast('✓ Report PDF compilato e scaricato','ok');
+  } catch(err) { console.error(err);toast('Impossibile creare il PDF: ricarica la pagina','err'); }
 };
 
 window.visualizzaReportMezzo = async function(id) {
-  if (typeof html2pdf === 'undefined') { toast('Generatore PDF non disponibile. Ricarica la pagina.', 'err'); return; }
-  const scheda = creaSchedaReportMezzo(id);
-  if (!scheda) return;
-  const finestra = window.open('', '_blank');
+  const finestra=window.open('','_blank');
   try {
-    await attendiImmaginiReport(scheda.el);
-    const url = await html2pdf().set(opzioniPdfReportMezzo(scheda.r)).from(scheda.el).outputPdf('bloburl');
-    if (finestra) finestra.location.href = url;
-    else window.open(url, '_blank');
-  } catch(err) {
-    if (finestra) finestra.close();
-    console.error(err); toast('Impossibile visualizzare il PDF', 'err');
-  } finally { scheda.el.remove(); }
+    const {doc}=await creaPdfDirettoMezzo(id);
+    const url=doc.output('bloburl');
+    if(finestra)finestra.location.href=url;else window.open(url,'_blank');
+  } catch(err) { if(finestra)finestra.close();console.error(err);toast('Impossibile visualizzare il PDF: ricarica la pagina','err'); }
 };
 
 function renderSegnalazioniMezziAutista() {
