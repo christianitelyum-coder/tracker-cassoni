@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="tracker-version" content="72">
+<meta name="tracker-version" content="74">
 <title>Tracker Cassoni — v55</title>
 <script>
 // Evita che una vecchia installazione/PWA continui a mostrare un index precedente.
@@ -1565,7 +1565,7 @@ body.auth-locked{overflow:hidden}
 </div>
 
 <div class="toast" id="toast"></div>
-<div class="app-version" aria-label="Versione applicazione">Versione 72</div>
+<div class="app-version" aria-label="Versione applicazione">Versione 74</div>
 
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
@@ -1868,8 +1868,8 @@ function renderPiazzale() {
         const puoModificarePiazzale = c.stato === 'piazzale' && ['admin','ufficio','manutenzione'].includes(window._ruoloCorrente);
         const piazzale = c.piazzaleAttuale ? `Piazzale ${c.piazzaleAttuale}` : 'Piazzale da indicare';
         const puoAprireScheda = ['admin','ufficio'].includes(window._ruoloCorrente);
-        return `<div class="cassone-chip ${cls}" title="${escapeHTML(c.id + title + ' · ' + descrizione)}" ${puoAprireScheda ? `onclick="apriSchedaCassone('${encodeURIComponent(c.id)}')" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' ')apriSchedaCassone('${encodeURIComponent(c.id)}')" style="cursor:pointer"` : ''}>
-          <span class="cassone-chip-main">${ico} <strong>${escapeHTML(c.id)}</strong>${fuoriUso ? '<span style="font-size:9px;font-weight:900;color:#c2410c;margin-left:4px">FUORI USO</span>' : (title ? `<span style="font-size:10px;opacity:.75"> ${escapeHTML(title)}</span>` : '')}</span>
+        return `<div class="cassone-chip ${cls}" title="${puoAprireScheda ? 'Doppio clic per aprire la scheda · ' : ''}${escapeHTML(c.id + title + ' · ' + descrizione)}" ${puoAprireScheda ? `ondblclick="apriSchedaCassone('${encodeURIComponent(c.id)}')" style="cursor:pointer"` : ''}>
+          <span class="cassone-chip-main">${ico} <strong>${escapeHTML(c.id)}</strong>${fuoriUso ? '<span style="font-size:9px;font-weight:900;color:#c2410c;margin-left:4px">FUORI USO</span>' : (title ? `<span style="font-size:10px;opacity:.75"> ${escapeHTML(title)}</span>` : '')}${c.pdfOmologa?.data ? `<button type="button" onclick="event.stopPropagation();apriPDFOmologaCassone('${encodeURIComponent(c.id)}')" ondblclick="event.stopPropagation()" title="Visualizza PDF omologa" style="margin-left:auto;border:0;background:transparent;font-size:16px;cursor:pointer;padding:0 2px">📄</button>` : ''}</span>
           <span class="cassone-chip-desc">${escapeHTML(descrizione)}</span>
           ${c.stato === 'piazzale' ? `<button type="button" onclick="event.stopPropagation();apriModificaPiazzaleCassone('${escapeHTML(c.id)}')" ${puoModificarePiazzale?'':'disabled'} style="margin-top:4px;border:1px solid var(--green);background:#fff;color:var(--green-d);border-radius:10px;padding:2px 7px;font:700 9px var(--font);cursor:${puoModificarePiazzale?'pointer':'default'};opacity:${puoModificarePiazzale?'1':'.75'}">${escapeHTML(piazzale)}</button>` : ''}
         </div>`;
@@ -1915,22 +1915,32 @@ function renderScadenzarioOmologhe() {
     else if (giorni === 0) { etichetta='Scade oggi'; bg='#fee2e2'; colore='#b42318'; }
     else if (giorni <= 30) { etichetta=`Scade tra ${giorni} giorni`; bg='#fef3c7'; colore='#92400e'; }
     else if (giorni <= 90) { etichetta=`Scade tra ${giorni} giorni`; bg='#e0f2fe'; colore='#075985'; }
-    return `<tr onclick="apriSchedaCassone('${encodeURIComponent(id)}')" style="border-bottom:1px solid var(--border);cursor:pointer">
+    return `<tr ondblclick="apriSchedaCassone('${encodeURIComponent(id)}')" title="Doppio clic per aprire la scheda" style="border-bottom:1px solid var(--border);cursor:pointer">
       <td style="padding:8px;font-weight:800">${escapeHTML(id)}</td>
       <td style="padding:8px">${escapeHTML(matricolaCassone(c) || '—')}</td>
       <td style="padding:8px">${escapeHTML(cespiteCassone(c) || '—')}</td>
       <td style="padding:8px;font-weight:700;white-space:nowrap">${fmtDataOmologa(c.scadenzaOmologa)}</td>
       <td style="padding:8px;font-weight:700">${escapeHTML([c.targa1Associata,c.targa2Associata].filter(Boolean).join(' · ') || '—')}</td>
+      <td style="padding:8px;text-align:center">${c.pdfOmologa?.data ? `<button type="button" onclick="event.stopPropagation();apriPDFOmologaCassone('${encodeURIComponent(id)}')" ondblclick="event.stopPropagation()" title="Visualizza PDF omologa" style="border:0;background:transparent;font-size:18px;cursor:pointer">📄</button>` : '<span style="color:var(--ink3)">—</span>'}</td>
       <td style="padding:8px"><span style="display:inline-block;padding:4px 8px;border-radius:11px;background:${bg};color:${colore};font-size:10px;font-weight:800">${etichetta}</span></td>
     </tr>`;
   }).join('');
-  container.innerHTML = riepilogo + `<div style="overflow:auto;max-height:340px"><table style="width:100%;border-collapse:collapse;font-size:11px;min-width:760px">
-    <thead><tr style="background:var(--surface2);color:var(--ink2)"><th style="padding:7px;text-align:left">Cassone</th><th style="padding:7px;text-align:left">Matricola</th><th style="padding:7px;text-align:left">Cespite</th><th style="padding:7px;text-align:left">Scadenza omologa</th><th style="padding:7px;text-align:left">Targhe associate</th><th style="padding:7px;text-align:left">Stato</th></tr></thead>
+  container.innerHTML = riepilogo + `<div style="overflow:auto;max-height:340px"><table style="width:100%;border-collapse:collapse;font-size:11px;min-width:820px">
+    <thead><tr style="background:var(--surface2);color:var(--ink2)"><th style="padding:7px;text-align:left">Cassone</th><th style="padding:7px;text-align:left">Matricola</th><th style="padding:7px;text-align:left">Cespite</th><th style="padding:7px;text-align:left">Scadenza omologa</th><th style="padding:7px;text-align:left">Targhe associate</th><th style="padding:7px;text-align:center">PDF</th><th style="padding:7px;text-align:left">Stato</th></tr></thead>
     <tbody>${righe}</tbody></table></div>`;
 }
 
 function normalizzaTarga(valore) {
   return String(valore || '').toUpperCase().replace(/[^A-Z0-9]/g,'');
+}
+
+function disponibilitaCassoneADR(id,c) {
+  const giorni = giorniDaOggi(c.scadenzaOmologa);
+  if (giorni !== null && giorni < 0) return {disponibile:false,testo:'NON DISPONIBILE · OMOLOGA SCADUTA'};
+  if (cassoneFuoriUso(id)) return {disponibile:false,testo:'NON DISPONIBILE · FUORI USO'};
+  if (c.stato !== 'piazzale') return {disponibile:false,testo:'NON DISPONIBILE · FUORI PIAZZALE'};
+  const piazzale = String(c.piazzaleAttuale || '').trim();
+  return {disponibile:true,testo:`DISPONIBILE${piazzale ? ` · PIAZZALE ${piazzale}` : ' · IN PIAZZALE'}`};
 }
 
 window.renderFiltroCassoniADR = function() {
@@ -1952,7 +1962,9 @@ window.renderFiltroCassoniADR = function() {
     risultati.innerHTML = `<div style="padding:12px;border:1px dashed var(--border);border-radius:8px;color:var(--ink3);font-size:12px">Nessun cassone ADR associato alla targa selezionata.</div>`;
     return;
   }
-  risultati.innerHTML = `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px"><span style="padding:4px 8px;border-radius:10px;background:var(--amber-l);color:#92400e;font-size:10px;font-weight:800">${filtrati.length} cassoni ADR compatibili</span>${filtro ? `<span style="padding:4px 8px;border-radius:10px;background:var(--surface2);font-size:10px;font-weight:800">Targa ${escapeHTML(filtro)}</span>` : ''}</div>` + filtrati.map(([id,c]) => {
+  const disponibili = filtrati.filter(([id,c]) => disponibilitaCassoneADR(id,c).disponibile).length;
+  const nonDisponibili = filtrati.length - disponibili;
+  risultati.innerHTML = `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px"><span style="padding:4px 8px;border-radius:10px;background:var(--amber-l);color:#92400e;font-size:10px;font-weight:800">${filtrati.length} cassoni ADR compatibili</span><span style="padding:4px 8px;border-radius:10px;background:var(--green-l);color:var(--green-d);font-size:10px;font-weight:800">✅ Disponibili ${disponibili}</span><span style="padding:4px 8px;border-radius:10px;background:var(--red-l);color:var(--red);font-size:10px;font-weight:800">🔴 Non disponibili ${nonDisponibili}</span>${filtro ? `<span style="padding:4px 8px;border-radius:10px;background:var(--surface2);font-size:10px;font-weight:800">Targa ${escapeHTML(filtro)}</span>` : ''}</div>` + filtrati.map(([id,c]) => {
     const giorni = giorniDaOggi(c.scadenzaOmologa);
     const scaduta = giorni < 0;
     const prossima = giorni >= 0 && giorni <= 30;
@@ -1960,12 +1972,17 @@ window.renderFiltroCassoniADR = function() {
     const colore = scaduta || giorni === 0 ? '#b42318' : (prossima ? '#92400e' : 'var(--green-d)');
     const sfondo = scaduta || giorni === 0 ? '#fee2e2' : (prossima ? '#fef3c7' : 'var(--green-l)');
     const targheCassone = [c.targa1Associata,c.targa2Associata].map(normalizzaTarga).filter(Boolean);
-    return `<button type="button" onclick="apriSchedaCassone('${encodeURIComponent(id)}')" style="width:100%;display:grid;grid-template-columns:minmax(90px,.7fr) minmax(150px,1.3fr) minmax(130px,1fr) auto;gap:10px;align-items:center;text-align:left;padding:9px 11px;margin-bottom:5px;border:1px solid var(--border);border-radius:8px;background:#fff;cursor:pointer;font-family:var(--font)">
+    const disponibilita = disponibilitaCassoneADR(id,c);
+    const dispSfondo = disponibilita.disponibile ? 'var(--green-l)' : 'var(--red-l)';
+    const dispColore = disponibilita.disponibile ? 'var(--green-d)' : 'var(--red)';
+    return `<div ondblclick="apriSchedaCassone('${encodeURIComponent(id)}')" title="Doppio clic per aprire la scheda" style="width:100%;display:grid;grid-template-columns:minmax(90px,.7fr) minmax(145px,1.15fr) minmax(125px,1fr) minmax(150px,1.15fr) auto auto;gap:10px;align-items:center;text-align:left;padding:9px 11px;margin-bottom:5px;border:1px solid var(--border);border-radius:8px;background:#fff;cursor:pointer;font-family:var(--font);overflow-x:auto">
       <strong style="font-size:13px;color:var(--ink)">${escapeHTML(id)}</strong>
       <span style="font-size:11px;color:var(--ink2)">Targhe: <strong>${escapeHTML(targheCassone.join(' · ') || 'non associate')}</strong></span>
-      <span style="font-size:11px;color:var(--ink2)">Omologa: <strong>${fmtDataOmologa(c.scadenzaOmologa)}</strong>${c.pdfOmologa?.data ? ' · 📄 PDF' : ' · PDF mancante'}</span>
+      <span style="font-size:11px;color:var(--ink2)">Omologa: <strong>${fmtDataOmologa(c.scadenzaOmologa)}</strong>${c.pdfOmologa?.data ? '' : ' · PDF mancante'}</span>
+      <span style="padding:5px 8px;border-radius:10px;background:${dispSfondo};color:${dispColore};font-size:9px;font-weight:900;white-space:nowrap">${escapeHTML(disponibilita.testo)}</span>
+      ${c.pdfOmologa?.data ? `<button type="button" onclick="event.stopPropagation();apriPDFOmologaCassone('${encodeURIComponent(id)}')" ondblclick="event.stopPropagation()" title="Visualizza PDF omologa" style="border:0;background:var(--surface2);border-radius:8px;font-size:18px;cursor:pointer;padding:5px 8px">📄</button>` : '<span></span>'}
       <span style="padding:4px 7px;border-radius:10px;background:${sfondo};color:${colore};font-size:9px;font-weight:900;white-space:nowrap">${stato}</span>
-    </button>`;
+    </div>`;
   }).join('');
 };
 
@@ -1992,7 +2009,7 @@ window.cercaCassone = function(val) {
       .sort((a,b) => b.ts > a.ts ? 1 : -1);
     const ultimo = movs[0];
     const puoAprireScheda = ['admin','ufficio'].includes(window._ruoloCorrente);
-    return `<div ${puoAprireScheda ? `onclick="apriSchedaCassone('${encodeURIComponent(id)}')" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' ')apriSchedaCassone('${encodeURIComponent(id)}')"` : ''} style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:var(--radius-sm);background:${fuoriUso?'#fff7ed':(isOut?'var(--red-l)':'var(--green-l)')};margin-bottom:5px;border:1px solid ${fuoriUso?'#fdba74':(isOut?'#f0b8b3':'#a3ddd3')};cursor:${puoAprireScheda?'pointer':'default'}">
+    return `<div ${puoAprireScheda ? `ondblclick="apriSchedaCassone('${encodeURIComponent(id)}')" title="Doppio clic per aprire la scheda"` : ''} style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:var(--radius-sm);background:${fuoriUso?'#fff7ed':(isOut?'var(--red-l)':'var(--green-l)')};margin-bottom:5px;border:1px solid ${fuoriUso?'#fdba74':(isOut?'#f0b8b3':'#a3ddd3')};cursor:${puoAprireScheda?'pointer':'default'}">
       <span style="font-size:16px">${fuoriUso?'⛔':(isOut?'🔴':'✅')}</span>
       <div style="flex:1">
         <div style="font-size:14px;font-weight:800;color:var(--ink)">${escapeHTML(id)}</div>
@@ -2000,6 +2017,7 @@ window.cercaCassone = function(val) {
         <div style="font-size:10px;color:var(--ink3)">Matricola: <strong>${escapeHTML(matricolaCassone(c) || '—')}</strong> · Cespite: <strong>${escapeHTML(cespiteCassone(c) || '—')}</strong></div>
         ${ultimo ? `<div style="font-size:11px;color:var(--ink3)">${escapeHTML(ultimo.tipo)} · ${escapeHTML(ultimo.cliente||'—')} · ${fmtDT(ultimo.ts)}</div>` : ''}
       </div>
+      ${c.pdfOmologa?.data ? `<button type="button" onclick="event.stopPropagation();apriPDFOmologaCassone('${encodeURIComponent(id)}')" ondblclick="event.stopPropagation()" title="Visualizza PDF omologa" style="border:0;background:rgba(255,255,255,.75);border-radius:8px;font-size:18px;cursor:pointer;padding:5px 8px">📄</button>` : ''}
       <span style="font-size:12px;font-weight:700;color:${fuoriUso?'#c2410c':(isOut?'var(--red)':'var(--green-d)')}">${fuoriUso?'FUORI USO':(isOut?'FUORI':'PIAZZALE')}</span>
     </div>`;
   }).join('');
@@ -3213,8 +3231,8 @@ window.caricaPDFOmologa = function(event) {
   reader.onerror = () => feedbackSchedaCassone('Impossibile leggere il PDF selezionato.','err');
   reader.readAsDataURL(file);
 };
-function blobPDFOmologa() {
-  const dataUrl = _cassoneOmologaPDF?.data || '';
+function blobPDFOmologa(documento = _cassoneOmologaPDF) {
+  const dataUrl = documento?.data || '';
   const parti = dataUrl.split(',');
   if (parti.length < 2) return null;
   const binario = atob(parti[1]);
@@ -3225,6 +3243,15 @@ function blobPDFOmologa() {
 window.apriPDFOmologa = function() {
   const blob = blobPDFOmologa();
   if (!blob) { toast('PDF omologa non disponibile','err'); return; }
+  const url = URL.createObjectURL(blob);
+  window.open(url,'_blank','noopener');
+  setTimeout(() => URL.revokeObjectURL(url),60000);
+};
+window.apriPDFOmologaCassone = function(codiceCodificato) {
+  const id = decodeURIComponent(String(codiceCodificato || ''));
+  const documento = STATE.cassoni?.[id]?.pdfOmologa;
+  const blob = blobPDFOmologa(documento);
+  if (!blob) { toast(`PDF omologa non disponibile per ${id}`,'err'); return; }
   const url = URL.createObjectURL(blob);
   window.open(url,'_blank','noopener');
   setTimeout(() => URL.revokeObjectURL(url),60000);
