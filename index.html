@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="tracker-version" content="74">
+<meta name="tracker-version" content="75">
 <title>Tracker Cassoni — v55</title>
 <script>
 // Evita che una vecchia installazione/PWA continui a mostrare un index precedente.
@@ -555,10 +555,21 @@ body.auth-locked{overflow:hidden}
       </div>
       <div class="card-body">
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-          <select id="adr-targa-filter" onchange="renderFiltroCassoniADR()" style="flex:1;min-width:240px;font-family:var(--font);font-size:13px;padding:10px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);background:#fff">
+          <select id="adr-targa-filter" onchange="renderFiltroCassoniADR()" aria-label="Filtra per targa" style="flex:1;min-width:210px;font-family:var(--font);font-size:13px;padding:10px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);background:#fff">
             <option value="">Tutte le targhe associate</option>
           </select>
-          <button type="button" class="btn btn-ghost btn-sm" onclick="document.getElementById('adr-targa-filter').value='';renderFiltroCassoniADR()">✕ Azzera filtro</button>
+          <select id="adr-tipo-filter" onchange="renderFiltroCassoniADR()" aria-label="Filtra per tipologia cassone" style="flex:1;min-width:210px;font-family:var(--font);font-size:13px;padding:10px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);background:#fff">
+            <option value="">Tutte le tipologie</option>
+          </select>
+          <select id="adr-stato-filter" onchange="renderFiltroCassoniADR()" aria-label="Filtra per stato cassone" style="flex:1;min-width:210px;font-family:var(--font);font-size:13px;padding:10px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);background:#fff">
+            <option value="">Tutti gli stati</option>
+            <option value="disponibile">Disponibile ADR</option>
+            <option value="piazzale">In piazzale</option>
+            <option value="fuori">Fuori piazzale</option>
+            <option value="fuori_uso">Fuori uso</option>
+            <option value="omologa_scaduta">Omologa scaduta</option>
+          </select>
+          <button type="button" class="btn btn-ghost btn-sm" onclick="azzeraFiltriCassoniADR()">✕ Azzera filtri</button>
         </div>
         <div id="adr-targa-results" style="margin-top:10px"></div>
       </div>
@@ -1565,7 +1576,7 @@ body.auth-locked{overflow:hidden}
 </div>
 
 <div class="toast" id="toast"></div>
-<div class="app-version" aria-label="Versione applicazione">Versione 74</div>
+<div class="app-version" aria-label="Versione applicazione">Versione 75</div>
 
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
@@ -1943,28 +1954,67 @@ function disponibilitaCassoneADR(id,c) {
   return {disponibile:true,testo:`DISPONIBILE${piazzale ? ` · PIAZZALE ${piazzale}` : ' · IN PIAZZALE'}`};
 }
 
+function tipologiaCassoneADR(c = {}) {
+  const testo = [c.descrizione,c.tipo,c.note].filter(Boolean).join(' ').toUpperCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  if (/PIANAL/.test(testo)) return 'Pianale';
+  if (/COMPATTAT/.test(testo)) return 'Compattatore';
+  if (/CENTINAT/.test(testo)) return 'Centinato';
+  if (/VASCA/.test(testo)) return 'Vasca';
+  if (/SCARRAB/.test(testo)) return 'Scarrabile';
+  const tipo = String(c.tipo || c.descrizione || '').trim();
+  return tipo || 'Altro';
+}
+
+window.azzeraFiltriCassoniADR = function() {
+  ['adr-targa-filter','adr-tipo-filter','adr-stato-filter'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.value = '';
+  });
+  renderFiltroCassoniADR();
+};
+
 window.renderFiltroCassoniADR = function() {
   const select = document.getElementById('adr-targa-filter');
+  const selectTipo = document.getElementById('adr-tipo-filter');
+  const selectStato = document.getElementById('adr-stato-filter');
   const risultati = document.getElementById('adr-targa-results');
-  if (!select || !risultati) return;
+  if (!select || !selectTipo || !selectStato || !risultati) return;
   const precedente = normalizzaTarga(select.value);
+  const tipoPrecedente = selectTipo.value;
+  const statoPrecedente = selectStato.value;
   const adr = Object.entries(STATE.cassoni || {})
     .filter(([,c]) => !!dataOmologaISO(c.scadenzaOmologa));
   const targhe = [...new Set(adr.flatMap(([,c]) => [c.targa1Associata,c.targa2Associata])
     .map(normalizzaTarga).filter(Boolean))].sort((a,b) => a.localeCompare(b,'it',{numeric:true}));
   select.innerHTML = '<option value="">Tutte le targhe associate</option>' + targhe.map(t => `<option value="${escapeHTML(t)}">${escapeHTML(t)}</option>`).join('');
   select.value = targhe.includes(precedente) ? precedente : '';
+  const tipologie = [...new Set(adr.map(([,c]) => tipologiaCassoneADR(c)))].sort((a,b) => a.localeCompare(b,'it',{numeric:true}));
+  selectTipo.innerHTML = '<option value="">Tutte le tipologie</option>' + tipologie.map(t => `<option value="${escapeHTML(t)}">${escapeHTML(t)}</option>`).join('');
+  selectTipo.value = tipologie.includes(tipoPrecedente) ? tipoPrecedente : '';
+  selectStato.value = ['disponibile','piazzale','fuori','fuori_uso','omologa_scaduta'].includes(statoPrecedente) ? statoPrecedente : '';
   const filtro = normalizzaTarga(select.value);
+  const filtroTipo = selectTipo.value;
+  const filtroStato = selectStato.value;
   const filtrati = adr
     .filter(([,c]) => !filtro || [c.targa1Associata,c.targa2Associata].some(t => normalizzaTarga(t) === filtro))
+    .filter(([,c]) => !filtroTipo || tipologiaCassoneADR(c) === filtroTipo)
+    .filter(([id,c]) => {
+      if (!filtroStato) return true;
+      if (filtroStato === 'disponibile') return disponibilitaCassoneADR(id,c).disponibile;
+      if (filtroStato === 'piazzale') return c.stato === 'piazzale';
+      if (filtroStato === 'fuori') return c.stato === 'fuori';
+      if (filtroStato === 'fuori_uso') return cassoneFuoriUso(id);
+      if (filtroStato === 'omologa_scaduta') return giorniDaOggi(c.scadenzaOmologa) < 0;
+      return true;
+    })
     .sort((a,b) => dataOmologaISO(a[1].scadenzaOmologa).localeCompare(dataOmologaISO(b[1].scadenzaOmologa)));
   if (!filtrati.length) {
-    risultati.innerHTML = `<div style="padding:12px;border:1px dashed var(--border);border-radius:8px;color:var(--ink3);font-size:12px">Nessun cassone ADR associato alla targa selezionata.</div>`;
+    risultati.innerHTML = `<div style="padding:12px;border:1px dashed var(--border);border-radius:8px;color:var(--ink3);font-size:12px">Nessun cassone ADR corrisponde ai filtri selezionati.</div>`;
     return;
   }
   const disponibili = filtrati.filter(([id,c]) => disponibilitaCassoneADR(id,c).disponibile).length;
   const nonDisponibili = filtrati.length - disponibili;
-  risultati.innerHTML = `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px"><span style="padding:4px 8px;border-radius:10px;background:var(--amber-l);color:#92400e;font-size:10px;font-weight:800">${filtrati.length} cassoni ADR compatibili</span><span style="padding:4px 8px;border-radius:10px;background:var(--green-l);color:var(--green-d);font-size:10px;font-weight:800">✅ Disponibili ${disponibili}</span><span style="padding:4px 8px;border-radius:10px;background:var(--red-l);color:var(--red);font-size:10px;font-weight:800">🔴 Non disponibili ${nonDisponibili}</span>${filtro ? `<span style="padding:4px 8px;border-radius:10px;background:var(--surface2);font-size:10px;font-weight:800">Targa ${escapeHTML(filtro)}</span>` : ''}</div>` + filtrati.map(([id,c]) => {
+  risultati.innerHTML = `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px"><span style="padding:4px 8px;border-radius:10px;background:var(--amber-l);color:#92400e;font-size:10px;font-weight:800">${filtrati.length} cassoni ADR compatibili</span><span style="padding:4px 8px;border-radius:10px;background:var(--green-l);color:var(--green-d);font-size:10px;font-weight:800">✅ Disponibili ${disponibili}</span><span style="padding:4px 8px;border-radius:10px;background:var(--red-l);color:var(--red);font-size:10px;font-weight:800">🔴 Non disponibili ${nonDisponibili}</span>${filtro ? `<span style="padding:4px 8px;border-radius:10px;background:var(--surface2);font-size:10px;font-weight:800">Targa ${escapeHTML(filtro)}</span>` : ''}${filtroTipo ? `<span style="padding:4px 8px;border-radius:10px;background:var(--surface2);font-size:10px;font-weight:800">${escapeHTML(filtroTipo)}</span>` : ''}</div>` + filtrati.map(([id,c]) => {
     const giorni = giorniDaOggi(c.scadenzaOmologa);
     const scaduta = giorni < 0;
     const prossima = giorni >= 0 && giorni <= 30;
@@ -1977,7 +2027,7 @@ window.renderFiltroCassoniADR = function() {
     const dispColore = disponibilita.disponibile ? 'var(--green-d)' : 'var(--red)';
     return `<div ondblclick="apriSchedaCassone('${encodeURIComponent(id)}')" title="Doppio clic per aprire la scheda" style="width:100%;display:grid;grid-template-columns:minmax(90px,.7fr) minmax(145px,1.15fr) minmax(125px,1fr) minmax(150px,1.15fr) auto auto;gap:10px;align-items:center;text-align:left;padding:9px 11px;margin-bottom:5px;border:1px solid var(--border);border-radius:8px;background:#fff;cursor:pointer;font-family:var(--font);overflow-x:auto">
       <strong style="font-size:13px;color:var(--ink)">${escapeHTML(id)}</strong>
-      <span style="font-size:11px;color:var(--ink2)">Targhe: <strong>${escapeHTML(targheCassone.join(' · ') || 'non associate')}</strong></span>
+      <span style="font-size:11px;color:var(--ink2)">${escapeHTML(tipologiaCassoneADR(c))} · Targhe: <strong>${escapeHTML(targheCassone.join(' · ') || 'non associate')}</strong></span>
       <span style="font-size:11px;color:var(--ink2)">Omologa: <strong>${fmtDataOmologa(c.scadenzaOmologa)}</strong>${c.pdfOmologa?.data ? '' : ' · PDF mancante'}</span>
       <span style="padding:5px 8px;border-radius:10px;background:${dispSfondo};color:${dispColore};font-size:9px;font-weight:900;white-space:nowrap">${escapeHTML(disponibilita.testo)}</span>
       ${c.pdfOmologa?.data ? `<button type="button" onclick="event.stopPropagation();apriPDFOmologaCassone('${encodeURIComponent(id)}')" ondblclick="event.stopPropagation()" title="Visualizza PDF omologa" style="border:0;background:var(--surface2);border-radius:8px;font-size:18px;cursor:pointer;padding:5px 8px">📄</button>` : '<span></span>'}
