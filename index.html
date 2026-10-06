@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="tracker-version" content="69">
+<meta name="tracker-version" content="71">
 <title>Tracker Cassoni — v55</title>
 <script>
 // Evita che una vecchia installazione/PWA continui a mostrare un index precedente.
@@ -537,7 +537,7 @@ body.auth-locked{overflow:hidden}
       </div>
       <div class="card-body" style="padding-bottom:.75rem">
         <div style="display:flex;gap:8px">
-          <input id="cerca-cassone-input" type="text" placeholder="Digita il codice cassone (es. ER002)…"
+          <input id="cerca-cassone-input" type="text" placeholder="Cerca per codice, matricola o cespite…"
             style="flex:1;font-family:var(--font);font-size:14px;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--radius-sm);outline:none;transition:border-color .15s"
             oninput="cercaCassone(this.value)" autocomplete="off" autocapitalize="characters"
             onfocus="this.style.borderColor='var(--green)'" onblur="this.style.borderColor='var(--border)'">
@@ -545,6 +545,15 @@ body.auth-locked{overflow:hidden}
         </div>
         <div id="cerca-cassone-result" style="margin-top:8px"></div>
       </div>
+    </div>
+
+    <!-- SCADENZARIO OMOLOGHE CASSONI -->
+    <div class="card" id="scadenzario-omologhe-card" style="grid-column:1/-1">
+      <div class="card-header">
+        <div class="card-title">📅 Scadenzario omologhe cassoni</div>
+        <span style="font-size:10px;color:var(--ink3);font-weight:700">ORDINATO PER SCADENZA</span>
+      </div>
+      <div class="card-body" id="scadenzario-omologhe"></div>
     </div>
 
     <!-- GESTIONE EXCEL CASSONI — amministratore e ufficio -->
@@ -556,7 +565,7 @@ body.auth-locked{overflow:hidden}
       <div class="card-body">
         <div class="excel-cassoni-help">
           Riconcilia l’elenco con il censimento Excel: aggiunge i nuovi cassoni, aggiorna descrizione e matricola di quelli esistenti e archivia i codici indicati come duplicati. Movimenti, manutenzioni e stato operativo già registrati vengono conservati.
-          Colonne riconosciute: <strong>Codice cassone/NR.INTERNO, Descrizione o Tipologia, Matricola, Cespite, Stato, Cliente attuale, Ultimo movimento e Note</strong>.
+          Colonne riconosciute: <strong>Codice cassone/NR.INTERNO, Descrizione o Tipologia, Matricola, Cespite, Scadenza omologa, TARGA_1 ASSOCIATA, TARGA_2 ASSOCIATA, Stato, Cliente attuale, Ultimo movimento e Note</strong>.
         </div>
         <div class="excel-cassoni-actions">
           <label class="btn btn-primary" style="cursor:pointer">
@@ -1505,6 +1514,9 @@ body.auth-locked{overflow:hidden}
         <div class="nuovo-cassone-field"><label for="cas-edit-id">Codice cassone *</label><input id="cas-edit-id" maxlength="40" autocapitalize="characters"></div>
         <div class="nuovo-cassone-field"><label for="cas-edit-matricola">Matricola</label><input id="cas-edit-matricola"></div>
         <div class="nuovo-cassone-field"><label for="cas-edit-cespite">Cespite</label><input id="cas-edit-cespite"></div>
+        <div class="nuovo-cassone-field"><label for="cas-edit-omologa">Scadenza omologa</label><input id="cas-edit-omologa" type="date"></div>
+        <div class="nuovo-cassone-field"><label for="cas-edit-targa1">TARGA_1 ASSOCIATA</label><input id="cas-edit-targa1" maxlength="12" autocapitalize="characters" style="text-transform:uppercase" placeholder="Es. AB123CD"></div>
+        <div class="nuovo-cassone-field"><label for="cas-edit-targa2">TARGA_2 ASSOCIATA</label><input id="cas-edit-targa2" maxlength="12" autocapitalize="characters" style="text-transform:uppercase" placeholder="Es. EF456GH"></div>
         <div class="nuovo-cassone-field"><label for="cas-edit-tipo">Tipologia</label><input id="cas-edit-tipo"></div>
         <div class="nuovo-cassone-field full"><label for="cas-edit-descrizione">Descrizione</label><input id="cas-edit-descrizione"></div>
         <div class="nuovo-cassone-field"><label for="cas-edit-stato">Stato operativo</label><select id="cas-edit-stato"><option value="piazzale">In piazzale</option><option value="fuori">Fuori piazzale</option></select></div>
@@ -1525,7 +1537,7 @@ body.auth-locked{overflow:hidden}
 </div>
 
 <div class="toast" id="toast"></div>
-<div class="app-version" aria-label="Versione applicazione">Versione 69</div>
+<div class="app-version" aria-label="Versione applicazione">Versione 71</div>
 
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
@@ -1699,6 +1711,31 @@ function fmtDate(iso) {
   const d = new Date(iso);
   return d.toLocaleDateString('it-IT',{day:'2-digit',month:'2-digit',year:'numeric'});
 }
+function dataOmologaISO(valore) {
+  const s = String(valore || '').trim();
+  if (!s) return '';
+  let m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (m) return `${m[1]}-${m[2]}-${m[3]}`;
+  m = s.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})$/);
+  if (m) return `${m[3]}-${String(m[2]).padStart(2,'0')}-${String(m[1]).padStart(2,'0')}`;
+  const d = new Date(s);
+  if (Number.isNaN(d.getTime())) return '';
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+function fmtDataOmologa(valore) {
+  const iso = dataOmologaISO(valore);
+  if (!iso) return '—';
+  const [a,m,g] = iso.split('-');
+  return `${g}/${m}/${a}`;
+}
+function giorniDaOggi(valore) {
+  const iso = dataOmologaISO(valore);
+  if (!iso) return null;
+  const [a,m,g] = iso.split('-').map(Number);
+  const oggi = new Date();
+  const oggiUtc = Date.UTC(oggi.getFullYear(),oggi.getMonth(),oggi.getDate());
+  return Math.round((Date.UTC(a,m-1,g)-oggiUtc)/86400000);
+}
 function isOggi(iso) {
   if (!iso) return false;
   const d = new Date(iso); const t = new Date();
@@ -1716,7 +1753,7 @@ function renderAll() {
   const vista = document.querySelector('.view.active')?.id || '';
   renderKPI();
   if (vista === 'view-dashboard') {
-    renderPiazzale(); renderDDTAlerts(); renderAdminSegnalazioniUscita(); renderDashMovimenti();
+    renderPiazzale(); renderScadenzarioOmologhe(); renderDDTAlerts(); renderAdminSegnalazioniUscita(); renderDashMovimenti();
   } else if (vista === 'view-bollettazione') {
     renderBollettazione();
   } else if (vista === 'view-archivio') {
@@ -1821,13 +1858,56 @@ function renderPiazzale() {
   }).join('');
 }
 
+function renderScadenzarioOmologhe() {
+  const container = document.getElementById('scadenzario-omologhe');
+  if (!container) return;
+  const tutti = Object.entries(STATE.cassoni || {});
+  const conScadenza = tutti
+    .filter(([,c]) => dataOmologaISO(c.scadenzaOmologa))
+    .sort((a,b) => dataOmologaISO(a[1].scadenzaOmologa).localeCompare(dataOmologaISO(b[1].scadenzaOmologa)));
+  const senzaScadenza = tutti.length - conScadenza.length;
+  const scadute = conScadenza.filter(([,c]) => giorniDaOggi(c.scadenzaOmologa) < 0).length;
+  const entro30 = conScadenza.filter(([,c]) => { const g=giorniDaOggi(c.scadenzaOmologa); return g >= 0 && g <= 30; }).length;
+  const entro90 = conScadenza.filter(([,c]) => { const g=giorniDaOggi(c.scadenzaOmologa); return g > 30 && g <= 90; }).length;
+  const badge = (testo,sfondo,colore) => `<span style="padding:5px 9px;border-radius:12px;background:${sfondo};color:${colore};font-size:10px;font-weight:800">${testo}</span>`;
+  const riepilogo = `<div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:10px">
+    ${badge(`⛔ Scadute ${scadute}`,'#fee2e2','#b42318')}
+    ${badge(`⚠ Entro 30 giorni ${entro30}`,'#fef3c7','#92400e')}
+    ${badge(`⏳ Entro 90 giorni ${entro90}`,'#e0f2fe','#075985')}
+    ${badge(`Senza data ${senzaScadenza}`,'var(--surface2)','var(--ink3)')}
+  </div>`;
+  if (!conScadenza.length) {
+    container.innerHTML = riepilogo + '<div style="padding:12px;border:1px dashed var(--border);border-radius:8px;color:var(--ink3);font-size:12px">Nessuna scadenza omologa inserita. Apri un cassone dalla dashboard per registrarla.</div>';
+    return;
+  }
+  const righe = conScadenza.map(([id,c]) => {
+    const giorni = giorniDaOggi(c.scadenzaOmologa);
+    let etichetta = `Regolare · ${giorni} giorni`, bg='var(--green-l)', colore='var(--green-d)';
+    if (giorni < 0) { etichetta = `Scaduta da ${Math.abs(giorni)} giorni`; bg='#fee2e2'; colore='#b42318'; }
+    else if (giorni === 0) { etichetta='Scade oggi'; bg='#fee2e2'; colore='#b42318'; }
+    else if (giorni <= 30) { etichetta=`Scade tra ${giorni} giorni`; bg='#fef3c7'; colore='#92400e'; }
+    else if (giorni <= 90) { etichetta=`Scade tra ${giorni} giorni`; bg='#e0f2fe'; colore='#075985'; }
+    return `<tr onclick="apriSchedaCassone('${encodeURIComponent(id)}')" style="border-bottom:1px solid var(--border);cursor:pointer">
+      <td style="padding:8px;font-weight:800">${escapeHTML(id)}</td>
+      <td style="padding:8px">${escapeHTML(matricolaCassone(c) || '—')}</td>
+      <td style="padding:8px">${escapeHTML(cespiteCassone(c) || '—')}</td>
+      <td style="padding:8px;font-weight:700;white-space:nowrap">${fmtDataOmologa(c.scadenzaOmologa)}</td>
+      <td style="padding:8px;font-weight:700">${escapeHTML([c.targa1Associata,c.targa2Associata].filter(Boolean).join(' · ') || '—')}</td>
+      <td style="padding:8px"><span style="display:inline-block;padding:4px 8px;border-radius:11px;background:${bg};color:${colore};font-size:10px;font-weight:800">${etichetta}</span></td>
+    </tr>`;
+  }).join('');
+  container.innerHTML = riepilogo + `<div style="overflow:auto;max-height:340px"><table style="width:100%;border-collapse:collapse;font-size:11px;min-width:760px">
+    <thead><tr style="background:var(--surface2);color:var(--ink2)"><th style="padding:7px;text-align:left">Cassone</th><th style="padding:7px;text-align:left">Matricola</th><th style="padding:7px;text-align:left">Cespite</th><th style="padding:7px;text-align:left">Scadenza omologa</th><th style="padding:7px;text-align:left">Targhe associate</th><th style="padding:7px;text-align:left">Stato</th></tr></thead>
+    <tbody>${righe}</tbody></table></div>`;
+}
+
 window.cercaCassone = function(val) {
   const result = document.getElementById('cerca-cassone-result');
   val = val.trim().toUpperCase();
   if (!val) { result.innerHTML = ''; return; }
 
   const matches = Object.entries(STATE.cassoni)
-    .filter(([id]) => id.includes(val))
+    .filter(([id,c]) => [id,matricolaCassone(c),cespiteCassone(c)].some(campo => String(campo || '').toUpperCase().includes(val)))
     .sort((a,b) => a[0].localeCompare(b[0]))
     .slice(0, 10);
 
@@ -1849,6 +1929,7 @@ window.cercaCassone = function(val) {
       <div style="flex:1">
         <div style="font-size:14px;font-weight:800;color:var(--ink)">${escapeHTML(id)}</div>
         <div style="font-size:11px;color:var(--ink2)">${escapeHTML(descrizioneCassone(c))}</div>
+        <div style="font-size:10px;color:var(--ink3)">Matricola: <strong>${escapeHTML(matricolaCassone(c) || '—')}</strong> · Cespite: <strong>${escapeHTML(cespiteCassone(c) || '—')}</strong></div>
         ${ultimo ? `<div style="font-size:11px;color:var(--ink3)">${escapeHTML(ultimo.tipo)} · ${escapeHTML(ultimo.cliente||'—')} · ${fmtDT(ultimo.ts)}</div>` : ''}
       </div>
       <span style="font-size:12px;font-weight:700;color:${fuoriUso?'#c2410c':(isOut?'var(--red)':'var(--green-d)')}">${fuoriUso?'FUORI USO':(isOut?'FUORI':'PIAZZALE')}</span>
@@ -3043,8 +3124,11 @@ window.apriSchedaCassone = function(codiceCodificato) {
   campoCodice.readOnly = !puoCambiareCodice;
   campoCodice.title = puoCambiareCodice ? 'Codice modificabile da amministratore e ufficio' : 'Modifica non autorizzata';
   campoCodice.style.background = puoCambiareCodice ? '' : 'var(--surface2)';
-  document.getElementById('cas-edit-matricola').value = c.matricola || '';
-  document.getElementById('cas-edit-cespite').value = c.cespite || '';
+  document.getElementById('cas-edit-matricola').value = matricolaCassone(c);
+  document.getElementById('cas-edit-cespite').value = cespiteCassone(c);
+  document.getElementById('cas-edit-omologa').value = dataOmologaISO(c.scadenzaOmologa);
+  document.getElementById('cas-edit-targa1').value = c.targa1Associata || '';
+  document.getElementById('cas-edit-targa2').value = c.targa2Associata || '';
   document.getElementById('cas-edit-tipo').value = c.tipo || '';
   document.getElementById('cas-edit-descrizione').value = c.descrizione || descrizioneCassone(c);
   document.getElementById('cas-edit-stato').value = c.stato === 'fuori' ? 'fuori' : 'piazzale';
@@ -3071,6 +3155,9 @@ window.salvaSchedaCassone = async function() {
   const campiModificati = {
     matricola:document.getElementById('cas-edit-matricola').value.trim(),
     cespite:document.getElementById('cas-edit-cespite').value.trim(),
+    scadenzaOmologa:document.getElementById('cas-edit-omologa').value,
+    targa1Associata:document.getElementById('cas-edit-targa1').value.trim().toUpperCase(),
+    targa2Associata:document.getElementById('cas-edit-targa2').value.trim().toUpperCase(),
     tipo:document.getElementById('cas-edit-tipo').value.trim(),
     descrizione:document.getElementById('cas-edit-descrizione').value.trim(),
     stato:document.getElementById('cas-edit-stato').value,
@@ -4806,7 +4893,7 @@ window.switchView = function(name) {
   document.getElementById('view-' + name)?.classList.add('active');
   const tabAttivo = document.querySelector(`.nav-tab[onclick*="'${name}'"]`);
   if (tabAttivo) tabAttivo.classList.add('active');
-  if (name === 'dashboard') { renderKPI(); renderPiazzale(); renderDDTAlerts(); renderAdminSegnalazioniUscita(); renderDashMovimenti(); }
+  if (name === 'dashboard') { renderKPI(); renderPiazzale(); renderScadenzarioOmologhe(); renderDDTAlerts(); renderAdminSegnalazioniUscita(); renderDashMovimenti(); }
   if (name === 'bollettazione') renderBollettazione();
   if (name === 'archivio')      renderArchivio();
   if (name === 'manutenzione')  renderManutenzione();
@@ -4859,7 +4946,7 @@ window.selezionaDaCassone = selezionaDaCassone;
 
 // ── Gestione Excel cassoni (Dashboard: admin e ufficio) ────────────────
 const CAMPI_CASSONE_EXPORT = [
-  'Codice cassone','Descrizione / tipologia','Matricola','Cespite','Stato',
+  'Codice cassone','Descrizione / tipologia','Matricola','Cespite','Scadenza omologa','TARGA_1 ASSOCIATA','TARGA_2 ASSOCIATA','Stato',
   'Cliente attuale','Ultimo movimento','Note','Data creazione'
 ];
 
@@ -4893,9 +4980,9 @@ function valoreColonna(row, candidati, vietati = []) {
 
 function creaWorkbookCassoni(rows) {
   const ws = XLSX.utils.json_to_sheet(rows, {header:CAMPI_CASSONE_EXPORT});
-  ws['!autofilter'] = {ref:`A1:I${Math.max(rows.length + 1, 2)}`};
+  ws['!autofilter'] = {ref:`A1:L${Math.max(rows.length + 1, 2)}`};
   ws['!cols'] = [
-    {wch:18},{wch:48},{wch:18},{wch:18},{wch:16},
+    {wch:18},{wch:48},{wch:18},{wch:18},{wch:20},{wch:18},{wch:18},{wch:16},
     {wch:30},{wch:23},{wch:42},{wch:23}
   ];
   const wb = XLSX.utils.book_new();
@@ -4910,6 +4997,9 @@ window.scaricaModelloCassoniExcel = function() {
     'Descrizione / tipologia':'CASSONE SCARRABILE',
     'Matricola':'',
     'Cespite':'',
+    'Scadenza omologa':'',
+    'TARGA_1 ASSOCIATA':'',
+    'TARGA_2 ASSOCIATA':'',
     'Stato':'piazzale',
     'Cliente attuale':'',
     'Ultimo movimento':'',
@@ -4931,6 +5021,9 @@ window.esportaCassoniExcel = function() {
       'Descrizione / tipologia':c.tipo || c.descrizione || '',
       'Matricola':matricolaCassone(c),
       'Cespite':cespiteCassone(c),
+      'Scadenza omologa':dataOmologaISO(c.scadenzaOmologa),
+      'TARGA_1 ASSOCIATA':c.targa1Associata || '',
+      'TARGA_2 ASSOCIATA':c.targa2Associata || '',
       'Stato':c.stato || '',
       'Cliente attuale':c.clienteAttuale || '',
       'Ultimo movimento':c.lastMov || '',
@@ -4969,6 +5062,9 @@ window.importaCassoniDashboard = async function(event) {
       const descrizione = valoreColonna(row, ['DESCRIZIONE TIPOLOGIA','DESCRIZIONE CESPITE','TIPOLOGIA','TIPO','DESCRIZIONE']);
       const matricola = valoreColonna(row, ['MATRICOLA','NUMERO MATRICOLA','NR MATRICOLA']);
       const cespite = valoreColonna(row, ['CESPITE','NUMERO CESPITE','NR CESPITE'], ['DESCRIZIONE CESPITE']);
+      const scadenzaOmologa = dataOmologaISO(valoreColonna(row, ['SCADENZA OMOLOGA','OMOLOGA','SCADENZA OMOLOGAZIONE']));
+      const targa1Associata = valoreColonna(row, ['TARGA 1 ASSOCIATA','TARGA_1 ASSOCIATA','PRIMA TARGA ASSOCIATA']).toUpperCase();
+      const targa2Associata = valoreColonna(row, ['TARGA 2 ASSOCIATA','TARGA_2 ASSOCIATA','SECONDA TARGA ASSOCIATA']).toUpperCase();
       const statoRaw = valoreColonna(row, ['STATO','SITUAZIONE']).toLowerCase();
       const stato = /fuori|giro|cliente/.test(statoRaw) ? 'fuori' : 'piazzale';
       const cliente = valoreColonna(row, ['CLIENTE ATTUALE','CLIENTE']);
@@ -4990,7 +5086,7 @@ window.importaCassoniDashboard = async function(event) {
 
       riconciliati[codice] = {
         tipo:descrizioneVisibile, descrizione:descrizioneVisibile,
-        matricola, cespite, stato,
+        matricola, cespite, scadenzaOmologa, targa1Associata, targa2Associata, stato,
         clienteAttuale:stato === 'fuori' ? cliente : '',
         lastMov:ultimoMovimento, note,
         creatoIl:dataCreazione || new Date().toISOString()
@@ -5022,6 +5118,11 @@ window.importaCassoniDashboard = async function(event) {
       updates[`cassoni/${id}/descrizione`] = record.descrizione;
       updates[`cassoni/${id}/matricola`] = record.matricola;
       updates[`cassoni/${id}/cespite`] = record.cespite;
+      // Un file Excel privo della colonna omologa non cancella le scadenze già registrate.
+      if (record.scadenzaOmologa) updates[`cassoni/${id}/scadenzaOmologa`] = record.scadenzaOmologa;
+      // Un file senza le colonne targhe non elimina le associazioni già registrate.
+      if (record.targa1Associata) updates[`cassoni/${id}/targa1Associata`] = record.targa1Associata;
+      if (record.targa2Associata) updates[`cassoni/${id}/targa2Associata`] = record.targa2Associata;
       updates[`cassoni/${id}/note`] = record.note;
       if (!corrente.creatoIl && record.creatoIl) updates[`cassoni/${id}/creatoIl`] = record.creatoIl;
     });
