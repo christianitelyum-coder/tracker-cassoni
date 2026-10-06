@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="tracker-version" content="71">
+<meta name="tracker-version" content="72">
 <title>Tracker Cassoni — v55</title>
 <script>
 // Evita che una vecchia installazione/PWA continui a mostrare un index precedente.
@@ -544,6 +544,23 @@ body.auth-locked{overflow:hidden}
           <button class="btn btn-ghost btn-sm" onclick="document.getElementById('cerca-cassone-input').value='';document.getElementById('cerca-cassone-result').innerHTML=''">✕</button>
         </div>
         <div id="cerca-cassone-result" style="margin-top:8px"></div>
+      </div>
+    </div>
+
+    <!-- RICERCA ADR PER TARGA ASSOCIATA -->
+    <div class="card" id="ricerca-adr-targa-card" style="grid-column:1/-1;border-left:4px solid var(--amber)">
+      <div class="card-header">
+        <div class="card-title">🚩 Ricerca cassoni ADR per targa</div>
+        <span style="font-size:10px;color:var(--ink3);font-weight:700">SOLO OMOLOGHE REGISTRATE</span>
+      </div>
+      <div class="card-body">
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <select id="adr-targa-filter" onchange="renderFiltroCassoniADR()" style="flex:1;min-width:240px;font-family:var(--font);font-size:13px;padding:10px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);background:#fff">
+            <option value="">Tutte le targhe associate</option>
+          </select>
+          <button type="button" class="btn btn-ghost btn-sm" onclick="document.getElementById('adr-targa-filter').value='';renderFiltroCassoniADR()">✕ Azzera filtro</button>
+        </div>
+        <div id="adr-targa-results" style="margin-top:10px"></div>
       </div>
     </div>
 
@@ -1517,6 +1534,17 @@ body.auth-locked{overflow:hidden}
         <div class="nuovo-cassone-field"><label for="cas-edit-omologa">Scadenza omologa</label><input id="cas-edit-omologa" type="date"></div>
         <div class="nuovo-cassone-field"><label for="cas-edit-targa1">TARGA_1 ASSOCIATA</label><input id="cas-edit-targa1" maxlength="12" autocapitalize="characters" style="text-transform:uppercase" placeholder="Es. AB123CD"></div>
         <div class="nuovo-cassone-field"><label for="cas-edit-targa2">TARGA_2 ASSOCIATA</label><input id="cas-edit-targa2" maxlength="12" autocapitalize="characters" style="text-transform:uppercase" placeholder="Es. EF456GH"></div>
+        <div class="nuovo-cassone-field full">
+          <label for="cas-edit-pdf-omologa">PDF OMOLOGA</label>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:10px;border:1.5px dashed var(--border);border-radius:8px;background:var(--surface2)">
+            <label class="btn btn-ghost btn-sm" style="cursor:pointer">📎 Allega o sostituisci PDF<input id="cas-edit-pdf-omologa" type="file" accept="application/pdf,.pdf" onchange="caricaPDFOmologa(event)" style="display:none"></label>
+            <div id="cas-edit-pdf-info" style="flex:1;min-width:180px;font-size:11px;color:var(--ink3)">Nessun PDF allegato</div>
+            <button type="button" class="btn btn-ghost btn-sm" id="cas-edit-pdf-view" onclick="apriPDFOmologa()" style="display:none">👁 Visualizza</button>
+            <button type="button" class="btn btn-ghost btn-sm" id="cas-edit-pdf-download" onclick="scaricaPDFOmologa()" style="display:none">⬇ Scarica</button>
+            <button type="button" class="btn btn-sm" id="cas-edit-pdf-remove" onclick="rimuoviPDFOmologa()" style="display:none;background:var(--red-l);color:var(--red)">✕ Rimuovi</button>
+          </div>
+          <div style="font-size:9px;color:var(--ink3);margin-top:4px">Formato PDF · dimensione massima 5 MB. Il documento viene salvato insieme all’anagrafica.</div>
+        </div>
         <div class="nuovo-cassone-field"><label for="cas-edit-tipo">Tipologia</label><input id="cas-edit-tipo"></div>
         <div class="nuovo-cassone-field full"><label for="cas-edit-descrizione">Descrizione</label><input id="cas-edit-descrizione"></div>
         <div class="nuovo-cassone-field"><label for="cas-edit-stato">Stato operativo</label><select id="cas-edit-stato"><option value="piazzale">In piazzale</option><option value="fuori">Fuori piazzale</option></select></div>
@@ -1537,7 +1565,7 @@ body.auth-locked{overflow:hidden}
 </div>
 
 <div class="toast" id="toast"></div>
-<div class="app-version" aria-label="Versione applicazione">Versione 71</div>
+<div class="app-version" aria-label="Versione applicazione">Versione 72</div>
 
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
@@ -1753,7 +1781,7 @@ function renderAll() {
   const vista = document.querySelector('.view.active')?.id || '';
   renderKPI();
   if (vista === 'view-dashboard') {
-    renderPiazzale(); renderScadenzarioOmologhe(); renderDDTAlerts(); renderAdminSegnalazioniUscita(); renderDashMovimenti();
+    renderPiazzale(); renderFiltroCassoniADR(); renderScadenzarioOmologhe(); renderDDTAlerts(); renderAdminSegnalazioniUscita(); renderDashMovimenti();
   } else if (vista === 'view-bollettazione') {
     renderBollettazione();
   } else if (vista === 'view-archivio') {
@@ -1900,6 +1928,46 @@ function renderScadenzarioOmologhe() {
     <thead><tr style="background:var(--surface2);color:var(--ink2)"><th style="padding:7px;text-align:left">Cassone</th><th style="padding:7px;text-align:left">Matricola</th><th style="padding:7px;text-align:left">Cespite</th><th style="padding:7px;text-align:left">Scadenza omologa</th><th style="padding:7px;text-align:left">Targhe associate</th><th style="padding:7px;text-align:left">Stato</th></tr></thead>
     <tbody>${righe}</tbody></table></div>`;
 }
+
+function normalizzaTarga(valore) {
+  return String(valore || '').toUpperCase().replace(/[^A-Z0-9]/g,'');
+}
+
+window.renderFiltroCassoniADR = function() {
+  const select = document.getElementById('adr-targa-filter');
+  const risultati = document.getElementById('adr-targa-results');
+  if (!select || !risultati) return;
+  const precedente = normalizzaTarga(select.value);
+  const adr = Object.entries(STATE.cassoni || {})
+    .filter(([,c]) => !!dataOmologaISO(c.scadenzaOmologa));
+  const targhe = [...new Set(adr.flatMap(([,c]) => [c.targa1Associata,c.targa2Associata])
+    .map(normalizzaTarga).filter(Boolean))].sort((a,b) => a.localeCompare(b,'it',{numeric:true}));
+  select.innerHTML = '<option value="">Tutte le targhe associate</option>' + targhe.map(t => `<option value="${escapeHTML(t)}">${escapeHTML(t)}</option>`).join('');
+  select.value = targhe.includes(precedente) ? precedente : '';
+  const filtro = normalizzaTarga(select.value);
+  const filtrati = adr
+    .filter(([,c]) => !filtro || [c.targa1Associata,c.targa2Associata].some(t => normalizzaTarga(t) === filtro))
+    .sort((a,b) => dataOmologaISO(a[1].scadenzaOmologa).localeCompare(dataOmologaISO(b[1].scadenzaOmologa)));
+  if (!filtrati.length) {
+    risultati.innerHTML = `<div style="padding:12px;border:1px dashed var(--border);border-radius:8px;color:var(--ink3);font-size:12px">Nessun cassone ADR associato alla targa selezionata.</div>`;
+    return;
+  }
+  risultati.innerHTML = `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px"><span style="padding:4px 8px;border-radius:10px;background:var(--amber-l);color:#92400e;font-size:10px;font-weight:800">${filtrati.length} cassoni ADR compatibili</span>${filtro ? `<span style="padding:4px 8px;border-radius:10px;background:var(--surface2);font-size:10px;font-weight:800">Targa ${escapeHTML(filtro)}</span>` : ''}</div>` + filtrati.map(([id,c]) => {
+    const giorni = giorniDaOggi(c.scadenzaOmologa);
+    const scaduta = giorni < 0;
+    const prossima = giorni >= 0 && giorni <= 30;
+    const stato = scaduta ? `SCADUTA DA ${Math.abs(giorni)} GIORNI` : (giorni === 0 ? 'SCADE OGGI' : `SCADENZA TRA ${giorni} GIORNI`);
+    const colore = scaduta || giorni === 0 ? '#b42318' : (prossima ? '#92400e' : 'var(--green-d)');
+    const sfondo = scaduta || giorni === 0 ? '#fee2e2' : (prossima ? '#fef3c7' : 'var(--green-l)');
+    const targheCassone = [c.targa1Associata,c.targa2Associata].map(normalizzaTarga).filter(Boolean);
+    return `<button type="button" onclick="apriSchedaCassone('${encodeURIComponent(id)}')" style="width:100%;display:grid;grid-template-columns:minmax(90px,.7fr) minmax(150px,1.3fr) minmax(130px,1fr) auto;gap:10px;align-items:center;text-align:left;padding:9px 11px;margin-bottom:5px;border:1px solid var(--border);border-radius:8px;background:#fff;cursor:pointer;font-family:var(--font)">
+      <strong style="font-size:13px;color:var(--ink)">${escapeHTML(id)}</strong>
+      <span style="font-size:11px;color:var(--ink2)">Targhe: <strong>${escapeHTML(targheCassone.join(' · ') || 'non associate')}</strong></span>
+      <span style="font-size:11px;color:var(--ink2)">Omologa: <strong>${fmtDataOmologa(c.scadenzaOmologa)}</strong>${c.pdfOmologa?.data ? ' · 📄 PDF' : ' · PDF mancante'}</span>
+      <span style="padding:4px 7px;border-radius:10px;background:${sfondo};color:${colore};font-size:9px;font-weight:900;white-space:nowrap">${stato}</span>
+    </button>`;
+  }).join('');
+};
 
 window.cercaCassone = function(val) {
   const result = document.getElementById('cerca-cassone-result');
@@ -3093,6 +3161,8 @@ async function eliminaCassone(id) {
 }
 
 let _cassoneSchedaId = '';
+let _cassoneOmologaPDF = null;
+let _cassoneOmologaPDFDirty = false;
 function dataLocaleInput(valore) {
   if (!valore) return '';
   const d = new Date(valore);
@@ -3111,6 +3181,70 @@ function feedbackSchedaCassone(testo, tipo='') {
   el.textContent = testo;
   el.className = 'nuovo-cassone-feedback full' + (tipo ? ' ' + tipo : '');
 }
+function renderPDFOmologaScheda() {
+  const info = document.getElementById('cas-edit-pdf-info');
+  const presente = !!_cassoneOmologaPDF?.data;
+  const dimensione = Number(_cassoneOmologaPDF?.size || 0);
+  if (info) info.innerHTML = presente
+    ? `<strong style="color:var(--ink)">📄 ${escapeHTML(_cassoneOmologaPDF.nome || 'omologa.pdf')}</strong>${dimensione ? ` · ${(dimensione/1048576).toFixed(2)} MB` : ''}`
+    : 'Nessun PDF allegato';
+  ['cas-edit-pdf-view','cas-edit-pdf-download','cas-edit-pdf-remove'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.style.display = presente ? '' : 'none';
+  });
+}
+window.caricaPDFOmologa = function(event) {
+  const input = event.target;
+  const file = input.files?.[0];
+  input.value = '';
+  if (!file) return;
+  if (file.type !== 'application/pdf' && !/\.pdf$/i.test(file.name)) {
+    feedbackSchedaCassone('Seleziona un documento in formato PDF.','err'); return;
+  }
+  if (file.size > 5 * 1024 * 1024) {
+    feedbackSchedaCassone('Il PDF supera 5 MB. Riduci il documento e riprova.','err'); return;
+  }
+  const reader = new FileReader();
+  reader.onload = () => {
+    _cassoneOmologaPDF = {nome:file.name,data:String(reader.result || ''),size:file.size,tipo:'application/pdf',caricatoIl:now()};
+    _cassoneOmologaPDFDirty = true;
+    renderPDFOmologaScheda();
+    feedbackSchedaCassone('PDF pronto. Premi “Salva modifiche” per registrarlo.','ok');
+  };
+  reader.onerror = () => feedbackSchedaCassone('Impossibile leggere il PDF selezionato.','err');
+  reader.readAsDataURL(file);
+};
+function blobPDFOmologa() {
+  const dataUrl = _cassoneOmologaPDF?.data || '';
+  const parti = dataUrl.split(',');
+  if (parti.length < 2) return null;
+  const binario = atob(parti[1]);
+  const bytes = new Uint8Array(binario.length);
+  for (let i=0;i<binario.length;i++) bytes[i] = binario.charCodeAt(i);
+  return new Blob([bytes],{type:'application/pdf'});
+}
+window.apriPDFOmologa = function() {
+  const blob = blobPDFOmologa();
+  if (!blob) { toast('PDF omologa non disponibile','err'); return; }
+  const url = URL.createObjectURL(blob);
+  window.open(url,'_blank','noopener');
+  setTimeout(() => URL.revokeObjectURL(url),60000);
+};
+window.scaricaPDFOmologa = function() {
+  const blob = blobPDFOmologa();
+  if (!blob) { toast('PDF omologa non disponibile','err'); return; }
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = _cassoneOmologaPDF?.nome || `omologa_${_cassoneSchedaId || 'cassone'}.pdf`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url),1000);
+};
+window.rimuoviPDFOmologa = function() {
+  if (!_cassoneOmologaPDF?.data || !confirm('Rimuovere il PDF dell’omologa da questa scheda?')) return;
+  _cassoneOmologaPDF = null;
+  _cassoneOmologaPDFDirty = true;
+  renderPDFOmologaScheda();
+  feedbackSchedaCassone('PDF rimosso. Premi “Salva modifiche” per confermare.','');
+};
 window.apriSchedaCassone = function(codiceCodificato) {
   if (!['admin','ufficio'].includes(window._ruoloCorrente)) { toast('Operazione riservata ad amministratore e ufficio','err'); return; }
   const id = decodeURIComponent(String(codiceCodificato || ''));
@@ -3129,6 +3263,9 @@ window.apriSchedaCassone = function(codiceCodificato) {
   document.getElementById('cas-edit-omologa').value = dataOmologaISO(c.scadenzaOmologa);
   document.getElementById('cas-edit-targa1').value = c.targa1Associata || '';
   document.getElementById('cas-edit-targa2').value = c.targa2Associata || '';
+  _cassoneOmologaPDF = c.pdfOmologa?.data ? c.pdfOmologa : null;
+  _cassoneOmologaPDFDirty = false;
+  renderPDFOmologaScheda();
   document.getElementById('cas-edit-tipo').value = c.tipo || '';
   document.getElementById('cas-edit-descrizione').value = c.descrizione || descrizioneCassone(c);
   document.getElementById('cas-edit-stato').value = c.stato === 'fuori' ? 'fuori' : 'piazzale';
@@ -3144,6 +3281,8 @@ window.apriSchedaCassone = function(codiceCodificato) {
 window.chiudiSchedaCassone = function() {
   document.getElementById('cassone-anagrafica-modal')?.classList.remove('open');
   _cassoneSchedaId = '';
+  _cassoneOmologaPDF = null;
+  _cassoneOmologaPDFDirty = false;
 };
 window.salvaSchedaCassone = async function() {
   if (!['admin','ufficio'].includes(window._ruoloCorrente) || !db || !_cassoneSchedaId) return;
@@ -3167,6 +3306,7 @@ window.salvaSchedaCassone = async function() {
     creatoIl:isoDaInputLocale(document.getElementById('cas-edit-creato').value),
     note:document.getElementById('cas-edit-note').value.trim()
   };
+  if (_cassoneOmologaPDFDirty) campiModificati.pdfOmologa = _cassoneOmologaPDF || null;
   if (campiModificati.stato === 'fuori') campiModificati.piazzaleAttuale = '';
   const btn = document.getElementById('cas-edit-save');
   btn.disabled = true; btn.textContent = 'Salvataggio…';
@@ -4893,7 +5033,7 @@ window.switchView = function(name) {
   document.getElementById('view-' + name)?.classList.add('active');
   const tabAttivo = document.querySelector(`.nav-tab[onclick*="'${name}'"]`);
   if (tabAttivo) tabAttivo.classList.add('active');
-  if (name === 'dashboard') { renderKPI(); renderPiazzale(); renderScadenzarioOmologhe(); renderDDTAlerts(); renderAdminSegnalazioniUscita(); renderDashMovimenti(); }
+  if (name === 'dashboard') { renderKPI(); renderPiazzale(); renderFiltroCassoniADR(); renderScadenzarioOmologhe(); renderDDTAlerts(); renderAdminSegnalazioniUscita(); renderDashMovimenti(); }
   if (name === 'bollettazione') renderBollettazione();
   if (name === 'archivio')      renderArchivio();
   if (name === 'manutenzione')  renderManutenzione();
