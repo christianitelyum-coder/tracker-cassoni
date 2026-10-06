@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="tracker-version" content="65">
+<meta name="tracker-version" content="66">
 <title>Tracker Cassoni — v55</title>
 <script>
 // Evita che una vecchia installazione/PWA continui a mostrare un index precedente.
@@ -1493,8 +1493,39 @@ body.auth-locked{overflow:hidden}
   </div>
 </div>
 
+<!-- Scheda anagrafica cassone dalla dashboard -->
+<div class="modal-overlay" id="cassone-anagrafica-modal" onclick="if(event.target===this)chiudiSchedaCassone()" role="dialog" aria-modal="true" aria-labelledby="cassone-anagrafica-title">
+  <div class="modal" style="max-width:720px">
+    <div class="modal-header">
+      <span class="modal-title" id="cassone-anagrafica-title">📦 Scheda anagrafica cassone</span>
+      <button type="button" class="modal-close" onclick="chiudiSchedaCassone()" aria-label="Chiudi">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="nuovo-cassone-form">
+        <div class="nuovo-cassone-field"><label for="cas-edit-id">Codice cassone *</label><input id="cas-edit-id" maxlength="40" autocapitalize="characters"></div>
+        <div class="nuovo-cassone-field"><label for="cas-edit-matricola">Matricola</label><input id="cas-edit-matricola"></div>
+        <div class="nuovo-cassone-field"><label for="cas-edit-cespite">Cespite</label><input id="cas-edit-cespite"></div>
+        <div class="nuovo-cassone-field"><label for="cas-edit-tipo">Tipologia</label><input id="cas-edit-tipo"></div>
+        <div class="nuovo-cassone-field full"><label for="cas-edit-descrizione">Descrizione</label><input id="cas-edit-descrizione"></div>
+        <div class="nuovo-cassone-field"><label for="cas-edit-stato">Stato operativo</label><select id="cas-edit-stato"><option value="piazzale">In piazzale</option><option value="fuori">Fuori piazzale</option></select></div>
+        <div class="nuovo-cassone-field"><label for="cas-edit-piazzale">Piazzale</label><select id="cas-edit-piazzale"><option value="">Non indicato</option><option value="CENTRO">CENTRO</option><option value="KEOMA">KEOMA</option></select></div>
+        <div class="nuovo-cassone-field"><label for="cas-edit-cliente">Cliente attuale</label><input id="cas-edit-cliente" list="clienti-list"></div>
+        <div class="nuovo-cassone-field"><label for="cas-edit-lastmov">Ultimo movimento</label><input id="cas-edit-lastmov" type="datetime-local"></div>
+        <div class="nuovo-cassone-field"><label for="cas-edit-creato">Data creazione</label><input id="cas-edit-creato" type="datetime-local"></div>
+        <div class="nuovo-cassone-field full"><label for="cas-edit-note">Note</label><input id="cas-edit-note"></div>
+        <div class="nuovo-cassone-feedback full" id="cas-edit-feedback" role="status" aria-live="polite"></div>
+      </div>
+      <div style="margin-top:12px;padding:10px 12px;background:var(--surface2);border-radius:8px;color:var(--ink3);font-size:11px;line-height:1.5">Se modifichi il codice, anche i movimenti e le manutenzioni collegate verranno aggiornati automaticamente.</div>
+    </div>
+    <div class="modal-footer" style="justify-content:space-between;gap:8px;flex-wrap:wrap">
+      <button type="button" class="btn" id="cas-edit-delete" onclick="eliminaCassoneDaScheda()" style="background:var(--red-l);color:var(--red);border:1px solid #f0b8b3">🗑 Elimina cassone</button>
+      <div style="display:flex;gap:8px"><button type="button" class="btn btn-ghost" onclick="chiudiSchedaCassone()">Annulla</button><button type="button" class="btn btn-primary" id="cas-edit-save" onclick="salvaSchedaCassone()">✓ Salva modifiche</button></div>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
-<div class="app-version" aria-label="Versione applicazione">Versione 65</div>
+<div class="app-version" aria-label="Versione applicazione">Versione 66</div>
 
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
@@ -1771,7 +1802,8 @@ function renderPiazzale() {
         const descrizione = c.descrizione || c.note || (!tipoGenerico ? c.tipo : '') || 'Descrizione non indicata';
         const puoModificarePiazzale = c.stato === 'piazzale' && ['admin','ufficio','manutenzione'].includes(window._ruoloCorrente);
         const piazzale = c.piazzaleAttuale ? `Piazzale ${c.piazzaleAttuale}` : 'Piazzale da indicare';
-        return `<div class="cassone-chip ${cls}" title="${escapeHTML(c.id + title + ' · ' + descrizione)}">
+        const puoAprireScheda = ['admin','ufficio'].includes(window._ruoloCorrente);
+        return `<div class="cassone-chip ${cls}" title="${escapeHTML(c.id + title + ' · ' + descrizione)}" ${puoAprireScheda ? `onclick="apriSchedaCassone('${encodeURIComponent(c.id)}')" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' ')apriSchedaCassone('${encodeURIComponent(c.id)}')" style="cursor:pointer"` : ''}>
           <span class="cassone-chip-main">${ico} <strong>${escapeHTML(c.id)}</strong>${fuoriUso ? '<span style="font-size:9px;font-weight:900;color:#c2410c;margin-left:4px">FUORI USO</span>' : (title ? `<span style="font-size:10px;opacity:.75"> ${escapeHTML(title)}</span>` : '')}</span>
           <span class="cassone-chip-desc">${escapeHTML(descrizione)}</span>
           ${c.stato === 'piazzale' ? `<button type="button" onclick="event.stopPropagation();apriModificaPiazzaleCassone('${escapeHTML(c.id)}')" ${puoModificarePiazzale?'':'disabled'} style="margin-top:4px;border:1px solid var(--green);background:#fff;color:var(--green-d);border-radius:10px;padding:2px 7px;font:700 9px var(--font);cursor:${puoModificarePiazzale?'pointer':'default'};opacity:${puoModificarePiazzale?'1':'.75'}">${escapeHTML(piazzale)}</button>` : ''}
@@ -1811,7 +1843,8 @@ window.cercaCassone = function(val) {
       .filter(m => m.cassoneId === id)
       .sort((a,b) => b.ts > a.ts ? 1 : -1);
     const ultimo = movs[0];
-    return `<div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:var(--radius-sm);background:${fuoriUso?'#fff7ed':(isOut?'var(--red-l)':'var(--green-l)')};margin-bottom:5px;border:1px solid ${fuoriUso?'#fdba74':(isOut?'#f0b8b3':'#a3ddd3')}">
+    const puoAprireScheda = ['admin','ufficio'].includes(window._ruoloCorrente);
+    return `<div ${puoAprireScheda ? `onclick="apriSchedaCassone('${encodeURIComponent(id)}')" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' ')apriSchedaCassone('${encodeURIComponent(id)}')"` : ''} style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:var(--radius-sm);background:${fuoriUso?'#fff7ed':(isOut?'var(--red-l)':'var(--green-l)')};margin-bottom:5px;border:1px solid ${fuoriUso?'#fdba74':(isOut?'#f0b8b3':'#a3ddd3')};cursor:${puoAprireScheda?'pointer':'default'}">
       <span style="font-size:16px">${fuoriUso?'⛔':(isOut?'🔴':'✅')}</span>
       <div style="flex:1">
         <div style="font-size:14px;font-weight:800;color:var(--ink)">${escapeHTML(id)}</div>
@@ -2977,6 +3010,106 @@ async function eliminaCassone(id) {
   await set(ref(db, `cassoni/${id}`), null);
   toast('Cassone eliminato', 'ok');
 }
+
+let _cassoneSchedaId = '';
+function dataLocaleInput(valore) {
+  if (!valore) return '';
+  const d = new Date(valore);
+  if (Number.isNaN(d.getTime())) return '';
+  const pad = n => String(n).padStart(2,'0');
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+function isoDaInputLocale(valore) {
+  if (!valore) return '';
+  const d = new Date(valore);
+  return Number.isNaN(d.getTime()) ? '' : d.toISOString();
+}
+function feedbackSchedaCassone(testo, tipo='') {
+  const el = document.getElementById('cas-edit-feedback');
+  if (!el) return;
+  el.textContent = testo;
+  el.className = 'nuovo-cassone-feedback full' + (tipo ? ' ' + tipo : '');
+}
+window.apriSchedaCassone = function(codiceCodificato) {
+  if (!['admin','ufficio'].includes(window._ruoloCorrente)) { toast('Operazione riservata ad amministratore e ufficio','err'); return; }
+  const id = decodeURIComponent(String(codiceCodificato || ''));
+  const c = STATE.cassoni[id];
+  if (!c) { toast('Cassone non trovato','err'); return; }
+  _cassoneSchedaId = id;
+  document.getElementById('cassone-anagrafica-title').textContent = `📦 Scheda cassone ${id}`;
+  document.getElementById('cas-edit-id').value = id;
+  document.getElementById('cas-edit-matricola').value = c.matricola || '';
+  document.getElementById('cas-edit-cespite').value = c.cespite || '';
+  document.getElementById('cas-edit-tipo').value = c.tipo || '';
+  document.getElementById('cas-edit-descrizione').value = c.descrizione || descrizioneCassone(c);
+  document.getElementById('cas-edit-stato').value = c.stato === 'fuori' ? 'fuori' : 'piazzale';
+  document.getElementById('cas-edit-piazzale').value = c.piazzaleAttuale || '';
+  document.getElementById('cas-edit-cliente').value = c.clienteAttuale || '';
+  document.getElementById('cas-edit-lastmov').value = dataLocaleInput(c.lastMov);
+  document.getElementById('cas-edit-creato').value = dataLocaleInput(c.creatoIl);
+  document.getElementById('cas-edit-note').value = c.note || '';
+  document.getElementById('cas-edit-delete').style.display = window._ruoloCorrente === 'admin' ? '' : 'none';
+  feedbackSchedaCassone('','');
+  document.getElementById('cassone-anagrafica-modal').classList.add('open');
+};
+window.chiudiSchedaCassone = function() {
+  document.getElementById('cassone-anagrafica-modal')?.classList.remove('open');
+  _cassoneSchedaId = '';
+};
+window.salvaSchedaCassone = async function() {
+  if (!['admin','ufficio'].includes(window._ruoloCorrente) || !db || !_cassoneSchedaId) return;
+  const nuovoId = document.getElementById('cas-edit-id').value.trim().toUpperCase();
+  if (!nuovoId) { feedbackSchedaCassone('Inserisci il codice del cassone.','err'); return; }
+  if (/[.#$\[\]\/]/.test(nuovoId)) { feedbackSchedaCassone('Il codice non può contenere . # $ [ ] /','err'); return; }
+  if (nuovoId !== _cassoneSchedaId && STATE.cassoni[nuovoId]) { feedbackSchedaCassone('Esiste già un cassone con questo codice.','err'); return; }
+  const precedente = STATE.cassoni[_cassoneSchedaId] || {};
+  const record = {
+    ...precedente,
+    matricola:document.getElementById('cas-edit-matricola').value.trim(),
+    cespite:document.getElementById('cas-edit-cespite').value.trim(),
+    tipo:document.getElementById('cas-edit-tipo').value.trim(),
+    descrizione:document.getElementById('cas-edit-descrizione').value.trim(),
+    stato:document.getElementById('cas-edit-stato').value,
+    piazzaleAttuale:document.getElementById('cas-edit-piazzale').value,
+    clienteAttuale:document.getElementById('cas-edit-cliente').value.trim(),
+    lastMov:isoDaInputLocale(document.getElementById('cas-edit-lastmov').value),
+    creatoIl:isoDaInputLocale(document.getElementById('cas-edit-creato').value),
+    note:document.getElementById('cas-edit-note').value.trim(),
+    modificatoIl:now(), modificatoDa:window._nomeOperatoreCorrente || window._nomeUtenteCorrente || auth?.currentUser?.email || ''
+  };
+  if (record.stato === 'fuori') record.piazzaleAttuale = '';
+  const btn = document.getElementById('cas-edit-save');
+  btn.disabled = true; btn.textContent = 'Salvataggio…';
+  try {
+    const updates = {};
+    updates[`cassoni/${nuovoId}`] = record;
+    if (nuovoId !== _cassoneSchedaId) {
+      updates[`cassoni/${_cassoneSchedaId}`] = null;
+      Object.entries(STATE.movimenti || {}).forEach(([movId,m]) => {
+        if (m.cassoneId === _cassoneSchedaId) updates[`movimenti/${movId}/cassoneId`] = nuovoId;
+      });
+    }
+    await update(ref(db,'/'),updates);
+    toast(`✓ Cassone ${nuovoId} aggiornato`,'ok');
+    chiudiSchedaCassone();
+  } catch(err) {
+    console.error(err); feedbackSchedaCassone('Impossibile salvare le modifiche. Verifica le autorizzazioni.','err');
+  } finally { btn.disabled=false; btn.textContent='✓ Salva modifiche'; }
+};
+window.eliminaCassoneDaScheda = async function() {
+  if (window._ruoloCorrente !== 'admin' || !db || !_cassoneSchedaId) { toast('Eliminazione riservata all’amministratore','err'); return; }
+  const id = _cassoneSchedaId;
+  if (!confirm(`Eliminare il cassone ${id} dall’anagrafica?\n\nI movimenti e le manutenzioni rimarranno nello storico. Una copia della scheda verrà archiviata.`)) return;
+  try {
+    const record = STATE.cassoni[id] || {};
+    const updates = {};
+    updates[`cassoni_archiviati/${id}`] = {...record,codice:id,archiviatoIl:now(),motivoArchiviazione:'Eliminazione manuale da scheda anagrafica'};
+    updates[`cassoni/${id}`] = null;
+    await update(ref(db,'/'),updates);
+    toast(`Cassone ${id} eliminato dall’elenco`,'ok');
+    chiudiSchedaCassone();
+  } catch(err) { console.error(err); feedbackSchedaCassone('Eliminazione non riuscita. Verifica le autorizzazioni.','err'); }
+};
 
 async function aggiungiCliente() {
   if (!db) { toast('Firebase non connesso', 'err'); return; }
