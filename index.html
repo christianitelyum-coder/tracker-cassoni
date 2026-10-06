@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="tracker-version" content="66">
+<meta name="tracker-version" content="69">
 <title>Tracker Cassoni — v55</title>
 <script>
 // Evita che una vecchia installazione/PWA continui a mostrare un index precedente.
@@ -1515,7 +1515,7 @@ body.auth-locked{overflow:hidden}
         <div class="nuovo-cassone-field full"><label for="cas-edit-note">Note</label><input id="cas-edit-note"></div>
         <div class="nuovo-cassone-feedback full" id="cas-edit-feedback" role="status" aria-live="polite"></div>
       </div>
-      <div style="margin-top:12px;padding:10px 12px;background:var(--surface2);border-radius:8px;color:var(--ink3);font-size:11px;line-height:1.5">Se modifichi il codice, anche i movimenti e le manutenzioni collegate verranno aggiornati automaticamente.</div>
+      <div id="cas-edit-help" style="margin-top:12px;padding:10px 12px;background:var(--surface2);border-radius:8px;color:var(--ink3);font-size:11px;line-height:1.5">Amministratore e Ufficio possono modificare tutti i dati, cambiare il codice ed eliminare il cassone. Modificando il codice vengono aggiornati anche i movimenti collegati.</div>
     </div>
     <div class="modal-footer" style="justify-content:space-between;gap:8px;flex-wrap:wrap">
       <button type="button" class="btn" id="cas-edit-delete" onclick="eliminaCassoneDaScheda()" style="background:var(--red-l);color:var(--red);border:1px solid #f0b8b3">🗑 Elimina cassone</button>
@@ -1525,7 +1525,7 @@ body.auth-locked{overflow:hidden}
 </div>
 
 <div class="toast" id="toast"></div>
-<div class="app-version" aria-label="Versione applicazione">Versione 66</div>
+<div class="app-version" aria-label="Versione applicazione">Versione 69</div>
 
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
@@ -3037,7 +3037,12 @@ window.apriSchedaCassone = function(codiceCodificato) {
   if (!c) { toast('Cassone non trovato','err'); return; }
   _cassoneSchedaId = id;
   document.getElementById('cassone-anagrafica-title').textContent = `📦 Scheda cassone ${id}`;
-  document.getElementById('cas-edit-id').value = id;
+  const campoCodice = document.getElementById('cas-edit-id');
+  const puoCambiareCodice = ['admin','ufficio'].includes(window._ruoloCorrente);
+  campoCodice.value = id;
+  campoCodice.readOnly = !puoCambiareCodice;
+  campoCodice.title = puoCambiareCodice ? 'Codice modificabile da amministratore e ufficio' : 'Modifica non autorizzata';
+  campoCodice.style.background = puoCambiareCodice ? '' : 'var(--surface2)';
   document.getElementById('cas-edit-matricola').value = c.matricola || '';
   document.getElementById('cas-edit-cespite').value = c.cespite || '';
   document.getElementById('cas-edit-tipo').value = c.tipo || '';
@@ -3048,7 +3053,7 @@ window.apriSchedaCassone = function(codiceCodificato) {
   document.getElementById('cas-edit-lastmov').value = dataLocaleInput(c.lastMov);
   document.getElementById('cas-edit-creato').value = dataLocaleInput(c.creatoIl);
   document.getElementById('cas-edit-note').value = c.note || '';
-  document.getElementById('cas-edit-delete').style.display = window._ruoloCorrente === 'admin' ? '' : 'none';
+  document.getElementById('cas-edit-delete').style.display = ['admin','ufficio'].includes(window._ruoloCorrente) ? '' : 'none';
   feedbackSchedaCassone('','');
   document.getElementById('cassone-anagrafica-modal').classList.add('open');
 };
@@ -3063,8 +3068,7 @@ window.salvaSchedaCassone = async function() {
   if (/[.#$\[\]\/]/.test(nuovoId)) { feedbackSchedaCassone('Il codice non può contenere . # $ [ ] /','err'); return; }
   if (nuovoId !== _cassoneSchedaId && STATE.cassoni[nuovoId]) { feedbackSchedaCassone('Esiste già un cassone con questo codice.','err'); return; }
   const precedente = STATE.cassoni[_cassoneSchedaId] || {};
-  const record = {
-    ...precedente,
+  const campiModificati = {
     matricola:document.getElementById('cas-edit-matricola').value.trim(),
     cespite:document.getElementById('cas-edit-cespite').value.trim(),
     tipo:document.getElementById('cas-edit-tipo').value.trim(),
@@ -3074,22 +3078,25 @@ window.salvaSchedaCassone = async function() {
     clienteAttuale:document.getElementById('cas-edit-cliente').value.trim(),
     lastMov:isoDaInputLocale(document.getElementById('cas-edit-lastmov').value),
     creatoIl:isoDaInputLocale(document.getElementById('cas-edit-creato').value),
-    note:document.getElementById('cas-edit-note').value.trim(),
-    modificatoIl:now(), modificatoDa:window._nomeOperatoreCorrente || window._nomeUtenteCorrente || auth?.currentUser?.email || ''
+    note:document.getElementById('cas-edit-note').value.trim()
   };
-  if (record.stato === 'fuori') record.piazzaleAttuale = '';
+  if (campiModificati.stato === 'fuori') campiModificati.piazzaleAttuale = '';
   const btn = document.getElementById('cas-edit-save');
   btn.disabled = true; btn.textContent = 'Salvataggio…';
   try {
-    const updates = {};
-    updates[`cassoni/${nuovoId}`] = record;
-    if (nuovoId !== _cassoneSchedaId) {
+    if (nuovoId === _cassoneSchedaId) {
+      // Scrittura limitata alla singola anagrafica: compatibile con i permessi Ufficio.
+      await update(ref(db,`cassoni/${_cassoneSchedaId}`),campiModificati);
+    } else {
+      // Amministratore e Ufficio possono rinominare il codice e riallineare lo storico.
+      const updates = {};
+      updates[`cassoni/${nuovoId}`] = {...precedente,...campiModificati};
       updates[`cassoni/${_cassoneSchedaId}`] = null;
       Object.entries(STATE.movimenti || {}).forEach(([movId,m]) => {
         if (m.cassoneId === _cassoneSchedaId) updates[`movimenti/${movId}/cassoneId`] = nuovoId;
       });
+      await update(ref(db,'/'),updates);
     }
-    await update(ref(db,'/'),updates);
     toast(`✓ Cassone ${nuovoId} aggiornato`,'ok');
     chiudiSchedaCassone();
   } catch(err) {
@@ -3097,18 +3104,28 @@ window.salvaSchedaCassone = async function() {
   } finally { btn.disabled=false; btn.textContent='✓ Salva modifiche'; }
 };
 window.eliminaCassoneDaScheda = async function() {
-  if (window._ruoloCorrente !== 'admin' || !db || !_cassoneSchedaId) { toast('Eliminazione riservata all’amministratore','err'); return; }
+  if (!['admin','ufficio'].includes(window._ruoloCorrente) || !db || !_cassoneSchedaId) { toast('Eliminazione riservata ad amministratore e ufficio','err'); return; }
   const id = _cassoneSchedaId;
   if (!confirm(`Eliminare il cassone ${id} dall’anagrafica?\n\nI movimenti e le manutenzioni rimarranno nello storico. Una copia della scheda verrà archiviata.`)) return;
   try {
     const record = STATE.cassoni[id] || {};
-    const updates = {};
-    updates[`cassoni_archiviati/${id}`] = {...record,codice:id,archiviatoIl:now(),motivoArchiviazione:'Eliminazione manuale da scheda anagrafica'};
-    updates[`cassoni/${id}`] = null;
-    await update(ref(db,'/'),updates);
+    // La copia di sicurezza resta locale: le regole Firebase autorizzano la
+    // cancellazione in /cassoni ma non la scrittura in /cassoni_archiviati.
+    try {
+      const storico = JSON.parse(localStorage.getItem('tracker_cassoni_eliminati_v1') || '[]');
+      storico.unshift({...record,codice:id,archiviatoIl:now(),motivoArchiviazione:'Eliminazione manuale da scheda anagrafica'});
+      localStorage.setItem('tracker_cassoni_eliminati_v1',JSON.stringify(storico.slice(0,100)));
+    } catch(e) { console.warn('Archivio locale cassoni eliminati non disponibile:',e); }
+    await set(ref(db,`cassoni/${id}`),null);
     toast(`Cassone ${id} eliminato dall’elenco`,'ok');
     chiudiSchedaCassone();
-  } catch(err) { console.error(err); feedbackSchedaCassone('Eliminazione non riuscita. Verifica le autorizzazioni.','err'); }
+  } catch(err) {
+    console.error(err);
+    const messaggio = err?.code === 'PERMISSION_DENIED' || /permission/i.test(String(err?.message||''))
+      ? 'Il profilo non è autorizzato dal database a eliminare cassoni. Verifica le regole di accesso per il ruolo Ufficio.'
+      : 'Eliminazione non riuscita. Controlla la connessione e riprova.';
+    feedbackSchedaCassone(messaggio,'err');
+  }
 };
 
 async function aggiungiCliente() {
